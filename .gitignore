@@ -1,0 +1,8 @@
+node_modules/
+.vagrant/
+.idea/
+/jskernel-posix/headers
+/jskernel-posix/types
+/jskernel-sys/build
+
+

@@ -1,0 +1,26 @@
+{
+  "name": "jskernel-sys",
+  "description": "syscall() function for Node.js",
+  "keywords": [
+    "syscall",
+    "system-call",
+    "kernel",
+    "exokernel",
+    "exo-kernel",
+    "read",
+    "write",
+    "open",
+    "sys",
+    "system"
+  ],
+  "version": "1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/streamich/jskernel-sys.git"
+  },
+  "main": "./build/Release/jskernel-sys.node",
+  "engines": {
+    "node": ">= 4.4.3"
+  },
+  "gypfile": true
+}
