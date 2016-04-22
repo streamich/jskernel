@@ -60,6 +60,14 @@ function addr64(buffer: Buffer): [number, number];
     
 `addr64` returns a tuple which represents 64-bit number, where first element contains the lower
 32 bits and second element has the high 32 bits.
+
+### `asm`  [NOT IMPLEMENTED]
+
+Execute assembly code, `buffer` contains raw op-codes to run. 
+
+```ts
+function asm(buffer: Buffer);
+```
     
 ## Installation
 

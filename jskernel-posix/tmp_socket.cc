@@ -44,6 +44,68 @@ using namespace std;
 
 int main() {
 
+
+    int sockfd = 0, n = 0;
+    char recvBuff[1024];
+    struct sockaddr_in serv_addr;
+
+
+    char addr[] = "192.168.1.150";
+
+    memset(recvBuff, '0',sizeof(recvBuff));
+    if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    {
+        printf("\n Error : Could not create socket \n");
+        return 1;
+    }
+
+    memset(&serv_addr, '0', sizeof(serv_addr));
+
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(80);
+
+    std::cout << AF_INET << endl;
+    std::cout << htons(80) << endl;
+
+    if(inet_pton(AF_INET, addr, &serv_addr.sin_addr)<=0)
+    {
+        printf("\n inet_pton error occured\n");
+        return 1;
+    }
+
+    std::cout << inet_addr(addr) << endl;
+
+    int res = connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
+
+    std::cout << "Connect: " << res << endl;
+
+    if( res < 0)
+    {
+       printf("\n Error : Connect Failed \n");
+       return 1;
+    }
+
+    char get_msg[] = "GET /\n\n";
+    write(sockfd, get_msg, strlen(get_msg));
+
+    while ( (n = read(sockfd, recvBuff, sizeof(recvBuff)-1)) > 0)
+    {
+        recvBuff[n] = 0;
+        if(fputs(recvBuff, stdout) == EOF)
+        {
+            printf("\n Error : Fputs error\n");
+        }
+    }
+
+    if(n < 0)
+    {
+        printf("\n Read error \n");
+    }
+
+    return 0;
+
+
+
 //    int listenfd = 0, connfd = 0;
 //    struct sockaddr_in serv_addr;
 //
@@ -53,29 +115,18 @@ int main() {
 //    listenfd = socket(AF_INET, SOCK_STREAM, 0);
 //    std::cout << listenfd << endl;
 //
-    std::cout << "EAGAIN = " << EAGAIN  << endl;
-    std::cout << "EWOULDBLOCK = " << EWOULDBLOCK  << endl;
-    std::cout << "EBADF = " << EBADF  << endl;
-    std::cout << "ECONNREFUSED = " << ECONNREFUSED  << endl;
-    std::cout << "EFAULT = " << EFAULT  << endl;
-    std::cout << "EINTR = " << EINTR  << endl;
-    std::cout << "EINVAL = " << EINVAL  << endl;
-    std::cout << "ENOMEM = " << ENOMEM  << endl;
-    std::cout << "ENOTCONN = " << ENOTCONN  << endl;
-    std::cout << "ENOTSOCK = " << ENOTSOCK  << endl;
-
-//    std::cout << "EADDRINUSE = " << EADDRINUSE  << endl;
-//    std::cout << "EBADF = " << EBADF  << endl;
-//    std::cout << "EINVAL = " << EINVAL  << endl;
-//    std::cout << "ENOTSOCK = " << ENOTSOCK  << endl;
-//    std::cout << "EADDRNOTAVAIL = " << EADDRNOTAVAIL  << endl;
-//    std::cout << "EFAULT = " << EFAULT  << endl;
-//    std::cout << "ELOOP = " << ELOOP  << endl;
-//    std::cout << "ENAMETOOLONG = " << ENAMETOOLONG  << endl;
-//    std::cout << "ENOENT = " << ENOENT  << endl;
-//    std::cout << "ENOMEM = " << ENOMEM  << endl;
-//    std::cout << "ENOTDIR = " << ENOTDIR  << endl;
-//    std::cout << "EROFS = " << EROFS  << endl;
+//    std::cout << "AF_UNIX = " << AF_UNIX  << endl;
+//    std::cout << "AF_LOCAL = " << AF_LOCAL  << endl;
+//    std::cout << "AF_INET = " << AF_INET  << endl;
+//    std::cout << "AF_INET6 = " << AF_INET6  << endl;
+//    std::cout << "AF_IPX = " << AF_IPX  << endl;
+//    std::cout << "AF_NETLINK = " << AF_NETLINK  << endl;
+//    std::cout << "AF_X25 = " << AF_X25  << endl;
+//    std::cout << "AF_AX25 = " << AF_AX25  << endl;
+//    std::cout << "AF_ATMPVC = " << AF_ATMPVC  << endl;
+//    std::cout << "AF_APPLETALK = " << AF_APPLETALK  << endl;
+//    std::cout << "AF_PACKET = " << AF_PACKET  << endl;
+//    std::cout << "AF_ALG = " << AF_ALG  << endl;
 //
 //    std::cout << "SOCK_STREAM = " << SOCK_STREAM  << endl;
 //    std::cout << "SOCK_DGRAM = " << SOCK_DGRAM  << endl;
