@@ -20,11 +20,14 @@ syscall(1, 1, buf, buf.length);
 
 See [jskernel-posix](http://www.npmjs.com/package/jskernel-posix) for POSIX command implementation.
 
-## Reference:
+## Reference
+
+### `syscall` and `syscall64`
 
 ```ts
 type TArg = number|string|Buffer;
-syscall: (command: number, ...args: TArg[]) => number;
+function syscall(command: number, ...args: TArg[]): number;
+function syscall64(command: number, ...args: TArg[]): [number, number];
 ```
 
 `syscall` accepts up to 6 command arguments `args`, which are treated as
@@ -37,13 +40,22 @@ follows depending on their type:
 `syscall` return a `number` which is the result returned by the kernel,
 numbers below -1 usually represent an error.
 
-## Extra methods
+### `malloc`
 
-Return physical address of `Buffer` contents.
+Returns a `Buffer` object of size `size` that is mapped to memory location
+specified in `addr` argument.
 
 ```ts
-addr: (buffer: Buffer) => number;
-addr64: (buffer: Buffer) => [number, number];
+function malloc(addr: number, size: number): Buffer;
+```
+
+### `addr` and `addr64`
+
+Return memory address of `Buffer`'s data contents.
+
+```ts
+function addr(buffer: Buffer): number;
+function addr64(buffer: Buffer): [number, number];
 ```
     
 `addr64` returns a tuple which represents 64-bit number, where first element contains the lower

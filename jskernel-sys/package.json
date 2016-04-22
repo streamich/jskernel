@@ -13,7 +13,7 @@
     "sys",
     "system"
   ],
-  "version": "1.0.0",
+  "version": "1.0.2",
   "repository": {
     "type": "git",
     "url": "git://github.com/streamich/jskernel-sys.git"
