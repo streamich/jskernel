@@ -7,6 +7,18 @@ exports.int16 = typebase_1.Type.define(2, buf.readInt16LE, buf.writeInt16LE);
 exports.uint16 = typebase_1.Type.define(2, buf.readUInt16LE, buf.writeUInt16LE);
 exports.int32 = typebase_1.Type.define(4, buf.readInt32LE, buf.writeInt32LE);
 exports.uint32 = typebase_1.Type.define(4, buf.readUInt32LE, buf.writeUInt32LE);
+exports.uint64 = typebase_1.Arr.define(exports.uint32, 2);
+exports.ipv4 = typebase_1.Type.define(4, function (offset) {
+    if (offset === void 0) { offset = 0; }
+    var buf = this;
+    var socket = require('../../socket');
+    var octets = socket.Ipv4.type.unpack(buf, offset);
+    return new socket.Ipv4(octets);
+}, function (data, offset) {
+    if (offset === void 0) { offset = 0; }
+    var buf = this;
+    data.toBuffer().copy(buf, offset);
+});
 // <asm/stat.h> line 82:
 // struct stat {
 //     __kernel_ulong_t	st_dev;
@@ -77,7 +89,7 @@ exports.stat = typebase_1.Struct.define(31 * 4, [
 //     unsigned long s_addr;  // load with inet_aton()
 // };
 exports.in_addr = typebase_1.Struct.define(4, [
-    [0, exports.uint32, 's_addr'],
+    [0, exports.ipv4, 's_addr'],
 ]);
 exports.sockaddr_in = typebase_1.Struct.define(16, [
     [0, exports.int16, 'sin_family'],
@@ -103,4 +115,19 @@ exports.sockaddr_in = typebase_1.Struct.define(16, [
 exports.sockaddr = typebase_1.Struct.define(1, [
     [0, 'sa_family', exports.uint16],
     [2, 'sa_data', typebase_1.Arr.define(exports.int8, 14)],
+]);
+// typedef union epoll_data {
+//     void    *ptr;
+//     int      fd;
+//     uint32_t u32;
+//     uint64_t u64;
+// } epoll_data_t;
+//
+// struct epoll_event {
+//     uint32_t     events;    /* Epoll events */
+//     epoll_data_t data;      /* User data variable */
+// };
+exports.epoll_event = typebase_1.Struct.define(4 + 8, [
+    [0, exports.uint32, 'events'],
+    [4, exports.uint64, 'data'],
 ]);

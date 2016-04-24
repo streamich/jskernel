@@ -1,17 +1,22 @@
 "use strict";
 var sys = require('./sys');
 var defs = require('./definitions');
+var debug = require('debug')('jskernel-posix:syscall');
 // Files ---------------------------------------------------------------------------------------------------------------
 function read(fd, buf) {
+    debug('read', fd);
     return sys.syscall(defs.syscalls.read, fd, buf, buf.length);
 }
 exports.read = read;
-function write(fd, str) {
-    var buf = new Buffer(str + '\0');
+function write(fd, buf) {
+    debug('write', fd);
+    if (!(buf instanceof Buffer))
+        buf = new Buffer(buf + '\0');
     return sys.syscall(defs.syscalls.write, fd, buf, buf.length);
 }
 exports.write = write;
 function open(pathname, flags, mode) {
+    debug('write', pathname, flags, mode);
     var args = [defs.syscalls.open, pathname, flags];
     if (typeof mode === 'number')
         args.push(mode);
@@ -19,10 +24,12 @@ function open(pathname, flags, mode) {
 }
 exports.open = open;
 function close(fd) {
+    debug('close', fd);
     return sys.syscall(defs.syscalls.close, fd);
 }
 exports.close = close;
 function stat(filepath) {
+    debug('stat', filepath);
     var buf = new Buffer(defs.stat.size);
     var result = sys.syscall(defs.syscalls.stat, filepath, buf);
     if (result == 0)
@@ -31,6 +38,7 @@ function stat(filepath) {
 }
 exports.stat = stat;
 function lstat(linkpath) {
+    debug('lstat', linkpath);
     var buf = new Buffer(defs.stat.size);
     var result = sys.syscall(defs.syscalls.lstat, linkpath, buf);
     if (result == 0)
@@ -39,6 +47,7 @@ function lstat(linkpath) {
 }
 exports.lstat = lstat;
 function fstat(fd) {
+    debug('fstat', fd);
     var buf = new Buffer(defs.stat.size);
     var result = sys.syscall(defs.syscalls.fstat, fd, buf);
     if (result == 0)
@@ -47,6 +56,7 @@ function fstat(fd) {
 }
 exports.fstat = fstat;
 function lseek(fd, offset, whence) {
+    debug('lseek', fd, offset, whence);
     return sys.syscall(defs.syscalls.lseek, fd, offset, whence);
 }
 exports.lseek = lseek;
@@ -54,11 +64,13 @@ exports.lseek = lseek;
 // TODO: Could not make `mmap` work for some reason.
 // void *mmap(void *addr, size_t lengthint " prot ", int " flags, int fd, off_t offset);
 function mmap(addr, length, prot, flags, fd, offset) {
+    debug('mmap', addr, length, prot, flags, fd, offset);
     return sys.syscall(defs.syscalls.mmap, length, prot, flags, fd, offset);
 }
 exports.mmap = mmap;
 // int munmap(void *addr, size_t length);
 function munmap(addr, length) {
+    debug('munmap');
     return sys.syscall(defs.syscalls.munmap, addr, length);
 }
 exports.munmap = munmap;
@@ -69,24 +81,53 @@ exports.munmap = munmap;
 // https://banu.com/blog/2/how-to-use-epoll-a-complete-example-in-c/epoll-example.c
 // int socket(int domain, int type, int protocol);
 function socket(domain, type, protocol) {
+    debug('socket', domain, type, protocol);
     return sys.syscall(defs.syscalls.socket, domain, type, protocol);
 }
 exports.socket = socket;
 // connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr))
 function connect(fd, sockaddr) {
+    debug('connect', fd, sockaddr.sin_addr.s_addr.toString(), sockaddr.sin_port);
     var buf = defs.sockaddr_in.pack(sockaddr);
     return sys.syscall(defs.syscalls.connect, fd, buf, buf.length);
 }
 exports.connect = connect;
 function bind(fd, sockaddr) {
-    var buf = defs.sockaddr.pack(sockaddr);
+    debug('bind', fd, sockaddr.sin_addr.s_addr.toString(), sockaddr.sin_port);
+    var buf = defs.sockaddr_in.pack(sockaddr);
     return sys.syscall(defs.syscalls.bind, fd, buf, buf.length);
 }
 exports.bind = bind;
+// int listen(int sockfd, int backlog);
+function listen(fd, backlog) {
+    debug('listen', fd, backlog);
+    return sys.syscall(defs.syscalls.listen, fd, backlog);
+}
+exports.listen = listen;
+// int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+function accept(fd, buf) {
+    debug('accept', fd);
+    var buflen = defs.int32.pack(buf.length);
+    return sys.syscall(defs.syscalls.accept, fd, buf, buflen);
+}
+exports.accept = accept;
+// int accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags);
+function accept4(fd, buf, flags) {
+    debug('accept4', fd, flags);
+    var buflen = defs.int32.pack(buf.length);
+    return sys.syscall(defs.syscalls.accept4, fd, buf, buflen, flags);
+}
+exports.accept4 = accept4;
+function shutdown(fd, how) {
+    debug('shutdown', fd, how);
+    return sys.syscall(defs.syscalls.shutdown, fd, how);
+}
+exports.shutdown = shutdown;
 // TODO: does not work yet...
 // ssize_t sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen);
 function sendto(fd, buf, flags, addr) {
     if (flags === void 0) { flags = 0; }
+    debug('sendto', fd);
     var params = [defs.syscalls.sendto, fd, buf, buf.length, flags];
     if (addr) {
         var addrbuf = defs.sockaddr.pack(addr);
@@ -99,36 +140,44 @@ exports.sendto = sendto;
 // ssize_t send(int sockfd, const void *buf, size_t len, int flags);
 function send(fd, buf, flags) {
     if (flags === void 0) { flags = 0; }
+    debug('send', fd);
     return sendto(fd, buf, flags);
 }
 exports.send = send;
 // Process -------------------------------------------------------------------------------------------------------------
 function getpid() {
+    debug('getpid');
     return sys.syscall(defs.syscalls.getpid);
 }
 exports.getpid = getpid;
 function getppid() {
+    debug('getppid');
     return sys.syscall(defs.syscalls.getppid);
 }
 exports.getppid = getppid;
 function getuid() {
+    debug('getuid');
     return sys.syscall(defs.syscalls.getuid);
 }
 exports.getuid = getuid;
 function geteuid() {
+    debug('geteuid');
     return sys.syscall(defs.syscalls.geteuid);
 }
 exports.geteuid = geteuid;
 function getgid() {
+    debug('getgid');
     return sys.syscall(defs.syscalls.getgid);
 }
 exports.getgid = getgid;
 function getegid() {
+    debug('getegid');
     return sys.syscall(defs.syscalls.getegid);
 }
 exports.getegid = getegid;
 // Events --------------------------------------------------------------------------------------------------------------
 function fcntl(fd, cmd, arg) {
+    debug('fcntl', fd, cmd, arg);
     var params = [defs.syscalls, fd, cmd];
     if (typeof arg !== 'undefined')
         params.push(arg);
@@ -137,14 +186,20 @@ function fcntl(fd, cmd, arg) {
 exports.fcntl = fcntl;
 // getaddrinfo
 // freeaddrinfo
-// epoll_create
-// epoll_create1
-// epoll_ctl
-// epoll_wait
 // http://davmac.org/davpage/linux/async-io.html#epoll
-function epoll_create() {
+// int epoll_create(int size);
+// Size is ignored, but most be greater than 0.
+function epoll_create(size) {
+    debug('epoll_create', size);
+    return sys.syscall(defs.syscalls.epoll_create, size);
 }
 exports.epoll_create = epoll_create;
+// int epoll_create1(int flags);
+function epoll_create1(flags) {
+    debug('epoll_create1');
+    return sys.syscall(defs.syscalls.epoll_create1, flags);
+}
+exports.epoll_create1 = epoll_create1;
 // typedef union epoll_data {
 //     void    *ptr;
 //     int      fd;
@@ -158,6 +213,18 @@ exports.epoll_create = epoll_create;
 // };
 // http://man7.org/linux/man-pages/man2/epoll_wait.2.html
 // int epoll_wait(int epfd, struct epoll_event *events, int maxevents, int timeout);
-function epoll_wait() {
+function epoll_wait(epfd, buf, maxevents, timeout) {
+    debug('epoll_wait', epfd, maxevents, timeout);
+    return sys.syscall(defs.syscalls.epoll_wait, epfd, buf, maxevents, timeout);
 }
 exports.epoll_wait = epoll_wait;
+// int epoll_pwait(int epfd, struct epoll_event *events, int maxevents, int timeout, const sigset_t *sigmask);
+// export function epoll_pwait() {
+//
+// }
+// int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event);
+function epoll_ctl(epfd, op, fd, epoll_event) {
+    var buf = defs.epoll_event.pack(epoll_event);
+    return sys.syscall(defs.syscalls.epoll_ctl, epfd, op, fd, buf);
+}
+exports.epoll_ctl = epoll_ctl;

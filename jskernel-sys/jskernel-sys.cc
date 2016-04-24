@@ -8,6 +8,7 @@
 #include <v8.h>
 #include <stdint.h>
 #include <string.h>
+#include <errno.h>
 
 namespace jskernel {
 
@@ -42,30 +43,52 @@ namespace jskernel {
         }
     }
 
-    uint64_t ExecSyscall(const FunctionCallbackInfo<Value>& args) {
+    int64_t ExecSyscall(const FunctionCallbackInfo<Value>& args) {
         char len = (char) args.Length();
 
-        uint64_t cmd = (uint64_t) args[0]->Int32Value();
-        if(len == 1) return syscall(cmd);
+        int64_t cmd = (uint64_t) args[0]->Int32Value();
+        if(len == 1) {
+            int64_t res = syscall(cmd);
+            // Fix the `errno` returned
+            // http://yarchive.net/comp/linux/errno.html
+            return res == -1 ? -errno : res;
+        }
 
-        uint64_t arg1 = ArgToInt(args[1]);
-        if(len == 2) return syscall(cmd, arg1);
+        int64_t arg1 = ArgToInt(args[1]);
+        if(len == 2) {
+            int64_t res = syscall(cmd, arg1);
+            return res == -1 ? -errno : res;
+        }
 
-        uint64_t arg2 = ArgToInt(args[2]);
-        if(len == 3) return syscall(cmd, arg1, arg2);
+        int64_t arg2 = ArgToInt(args[2]);
+        if(len == 3) {
+            int64_t res = syscall(cmd, arg1, arg2);
+            return res == -1 ? -errno : res;
+        }
 
-        uint64_t arg3 = ArgToInt(args[3]);
-        if(len == 4) return syscall(cmd, arg1, arg2, arg3);
+        int64_t arg3 = ArgToInt(args[3]);
+        if(len == 4) {
+            int64_t res = syscall(cmd, arg1, arg2, arg3);
+            return res == -1 ? -errno : res;
+        }
 
-        uint64_t arg4 = ArgToInt(args[4]);
-        if(len == 5) return syscall(cmd, arg1, arg2, arg3, arg4);
+        int64_t arg4 = ArgToInt(args[4]);
+        if(len == 5) {
+             int64_t res = syscall(cmd, arg1, arg2, arg3, arg4);
+             return res == -1 ? -errno : res;
+         }
 
-        uint64_t arg5 = ArgToInt(args[5]);
-        if(len == 6) return syscall(cmd, arg1, arg2, arg3, arg4, arg5);
+        int64_t arg5 = ArgToInt(args[5]);
+        if(len == 6) {
+            int64_t res = syscall(cmd, arg1, arg2, arg3, arg4, arg5);
+            return res == -1 ? -errno : res;
+        }
 
-        uint64_t arg6 = ArgToInt(args[6]);
-        if(len == 7) return syscall(cmd, arg1, arg2, arg3, arg4, arg5, arg6);
-        return -1;
+        int64_t arg6 = ArgToInt(args[6]);
+        if(len == 7) {
+            int64_t res = syscall(cmd, arg1, arg2, arg3, arg4, arg5, arg6);
+            return res == -1 ? -errno : res;
+        }
     }
 
     void MethodSyscall(const FunctionCallbackInfo<Value>& args) {
@@ -122,6 +145,11 @@ namespace jskernel {
         args.GetReturnValue().Set(buf);
     }
 
+    void MethodErrno(const FunctionCallbackInfo<Value>& args) {
+        Isolate* isolate = args.GetIsolate();
+        args.GetReturnValue().Set(Integer::New(isolate, errno));
+    }
+
 //    void MethodGen(const FunctionCallbackInfo<Value>& args) {
 //        Isolate* isolate = args.GetIsolate();
 //
@@ -141,6 +169,7 @@ namespace jskernel {
         NODE_SET_METHOD(exports, "addr",        MethodBufAddr32);
         NODE_SET_METHOD(exports, "addr64",      MethodBufAddr64);
         NODE_SET_METHOD(exports, "malloc",      MethodMalloc);
+        NODE_SET_METHOD(exports, "errno",       MethodErrno);
 //        NODE_SET_METHOD(exports, "gen",         MethodGen);
     }
 

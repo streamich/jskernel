@@ -2,6 +2,9 @@
 
 The Node.js exokernel dream.
 
+There are already two projects: [NodeOS](https://node-os.com/) and [runtime.js](http://runtimejs.org/) that work
+towards creating Node.js operating system, or kernel. See [architecture comparison](./docs/exokernels.md)
+with jskernel proposal.
 
 
 ## Development
@@ -23,7 +26,7 @@ Start a Docker container:
     
 Next time just do:
 
-    sudo docker start -it -v /share:/share myjskernel /bin/bash
+    sudo docker start -i myjskernel
     
     
     

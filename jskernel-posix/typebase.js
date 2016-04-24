@@ -59,10 +59,12 @@ var Arr = (function () {
         if (offset === void 0) { offset = 0; }
         if (!buf)
             buf = new Buffer(this.size);
-        var off;
-        for (var i = 0; (i < this.len) && (i < data.length); i++) {
-            off = offset + (i * this.type.size);
-            this.type.pack(data[i], buf, off);
+        if (data) {
+            var off;
+            for (var i = 0; (i < this.len) && (i < data.length); i++) {
+                off = offset + (i * this.type.size);
+                this.type.pack(data[i], buf, off);
+            }
         }
         return buf;
     };

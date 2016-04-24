@@ -3,6 +3,5 @@ node_modules/
 .idea/
 /jskernel-posix/headers
 /jskernel-posix/types
+/jskernel-posix/tmp
 /jskernel-sys/build
-
-

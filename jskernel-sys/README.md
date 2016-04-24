@@ -69,6 +69,14 @@ Execute assembly code, `buffer` contains raw op-codes to run.
 function asm(buffer: Buffer);
 ```
     
+### `errno`
+
+Returns `errno` variable.
+
+```ts
+function errno(): number;
+```
+    
 ## Installation
 
     npm i jskernel-sys

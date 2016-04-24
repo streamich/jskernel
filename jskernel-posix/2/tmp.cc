@@ -38,6 +38,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <arpa/inet.h>
+#include <sys/epoll.h>
 
 
 using namespace std;
@@ -53,16 +54,25 @@ int main() {
 //    listenfd = socket(AF_INET, SOCK_STREAM, 0);
 //    std::cout << listenfd << endl;
 //
-    std::cout << "EAGAIN = " << EAGAIN  << endl;
-    std::cout << "EWOULDBLOCK = " << EWOULDBLOCK  << endl;
-    std::cout << "EBADF = " << EBADF  << endl;
-    std::cout << "ECONNREFUSED = " << ECONNREFUSED  << endl;
-    std::cout << "EFAULT = " << EFAULT  << endl;
-    std::cout << "EINTR = " << EINTR  << endl;
-    std::cout << "EINVAL = " << EINVAL  << endl;
-    std::cout << "ENOMEM = " << ENOMEM  << endl;
-    std::cout << "ENOTCONN = " << ENOTCONN  << endl;
-    std::cout << "ENOTSOCK = " << ENOTSOCK  << endl;
+    std::cout << "EPOLLIN = " << EPOLLIN  << endl;
+    std::cout << "EPOLLOUT = " << EPOLLOUT  << endl;
+    std::cout << "EPOLLRDHUP = " << EPOLLRDHUP  << endl;
+    std::cout << "EPOLLPRI = " << EPOLLPRI  << endl;
+    std::cout << "EPOLLERR = " << EPOLLERR  << endl;
+    std::cout << "EPOLLHUP = " << EPOLLHUP  << endl;
+    std::cout << "EPOLLET = " << EPOLLET  << endl;
+    std::cout << "EPOLLONESHOT = " << EPOLLONESHOT  << endl;
+    std::cout << "EPOLLWAKEUP = " << EPOLLWAKEUP  << endl;
+
+//    std::cout << "EWOULDBLOCK = " << EWOULDBLOCK  << endl;
+//    std::cout << "EBADF = " << EBADF  << endl;
+//    std::cout << "ECONNREFUSED = " << ECONNREFUSED  << endl;
+//    std::cout << "EFAULT = " << EFAULT  << endl;
+//    std::cout << "EINTR = " << EINTR  << endl;
+//    std::cout << "EINVAL = " << EINVAL  << endl;
+//    std::cout << "ENOMEM = " << ENOMEM  << endl;
+//    std::cout << "ENOTCONN = " << ENOTCONN  << endl;
+//    std::cout << "ENOTSOCK = " << ENOTSOCK  << endl;
 
 //    std::cout << "EADDRINUSE = " << EADDRINUSE  << endl;
 //    std::cout << "EBADF = " << EBADF  << endl;

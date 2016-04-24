@@ -24,14 +24,14 @@ export class Type implements IType {
     }
 
     size = 1; // 1 byte
-    unpackF:() => void;
-    packF:() => void;
+    unpackF: (offset: number) => void;
+    packF: (data: any, offset: number) => void;
 
     unpack(buf: Buffer, offset: number = 0): any {
         return this.unpackF.call(buf, offset);
     }
 
-    pack(data: any, buf:Buffer, offset: number = 0) {
+    pack(data: any, buf?: Buffer, offset: number = 0) {
         if(!buf) buf = new Buffer(this.size);
         if(data instanceof Buffer) data.copy(buf, offset);
         else if(typeof data == 'object') data.toBuffer().copy(buf, offset);
@@ -67,10 +67,12 @@ export class Arr {
 
     pack(data: any, buf?: Buffer, offset: number = 0) {
         if(!buf) buf = new Buffer(this.size);
-        var off;
-        for(var i = 0; (i < this.len) && (i < data.length); i++) {
-            off = offset + (i * this.type.size);
-            this.type.pack(data[i], buf, off);
+        if(data) {
+            var off;
+            for(var i = 0; (i < this.len) && (i < data.length); i++) {
+                off = offset + (i * this.type.size);
+                this.type.pack(data[i], buf, off);
+            }
         }
         return buf;
     }
@@ -85,10 +87,10 @@ export class Struct implements IType {
         return new_struct;
     }
 
-    defs:any = [];
+    defs: any = [];
     size = 0; // Full size, not just the size sum of elements in definitions.
 
-    unpack(buf:Buffer, offset:number = 0):any {
+    unpack(buf: Buffer, offset: number = 0):any {
         var result = {};
         for (var field of this.defs) {
             var [off, type, name] = field;

@@ -80,6 +80,16 @@ export var syscalls: any = {
     setpgid:        109,
     getppid:        110,
 
+    epoll_create:   213,
+
+    epoll_wait:     232,
+    epoll_ctl:      233,
+
+    accept4:        288,
+
+    epoll_create1:  291,
+
+
 
 
 

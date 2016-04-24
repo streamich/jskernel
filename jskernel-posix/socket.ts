@@ -1,5 +1,6 @@
 import {Arr} from './typebase';
 import {isLE as IS_LE, uint8} from './definitions';
+import {uint16} from "./platforms/linux_x86_64/types";
 
 
 export function flip(buf: Buffer, offset = 0, len = buf.length) {
@@ -14,8 +15,15 @@ export function flip(buf: Buffer, offset = 0, len = buf.length) {
     return buf;
 }
 
+// TODO: We cannot use 4-byte `htonl`, because JS allows bit shifting only up to 4-bytes
+// TODO: AND those 4-bytes are treated as SIGNED int, so the 32-nd bit will change the sign of the number.
+// export function htons32(num: number): number {
+//     if(IS_LE) return ((num & 0xFF00) >> 8) + ((num & 0xFF) << 8);
+//     else return num;
+// }
 
-export function htons32(num: number): number {
+
+export function hton16(num: number): number {
     if(IS_LE) return ((num & 0xFF00) >> 8) + ((num & 0xFF) << 8);
     else return num;
 }
@@ -36,32 +44,58 @@ export function htons(buf: Buffer, offset = 0, len = buf.length) {
 // }
 
 
-export class Ipv4 {
-    static type = Arr.define(uint8, 4);
+export class Ip {
+    sep = '.';
 
     buf: Buffer;
 
-    constructor(ip: string) {
-        this.buf = new Buffer(ip.split('.'));
+    constructor(ip: string|number[]) {
+        if(typeof ip === 'string') {
+            this.buf = new Buffer(ip.split(this.sep));
+        } else if(ip instanceof Array) {
+            this.buf = new Buffer(ip);
+        }
     }
 
     toString() {
-        return Ipv4.type.unpack(this.buf).join('.');
+        return Ipv4.type.unpack(this.buf).join(this.sep);
     }
 
     toBuffer() {
         return this.buf;
     }
 
-    // htons(): this {
-        // TODO: IP byte ordering is always correct in this way?
-        // TODO: So we don't need this function.
-        // if(!IS_LE) this.buf = htons(this.buf);
-        // return this;
-    // }
+    presentationToOctet(presentation) {
+        return +presentation;
+    }
+
+    octetToPresentation(octet) {
+        return octet;
+    }
 }
 
-export class Ipv6 extends Buffer {
+export class Ipv4 extends Ip {
+    static type = Arr.define(uint8, 4);
 
+    constructor(ip: string|number[] = '127.0.0.1') {
+        super(ip);
+    }
 }
 
+export class Ipv6 extends Ip {
+    static type = Arr.define(uint16, 16);
+
+    sep = ':';
+
+    constructor(ip: string|number[] = '0:0:0:0:0:0:0:1') {
+        super(ip);
+    }
+
+    presentationToOctet(presentation) {
+        return parseInt(presentation, 16);
+    }
+
+    octetToPresentation(octet) {
+        return octet.toString(16);
+    }
+}

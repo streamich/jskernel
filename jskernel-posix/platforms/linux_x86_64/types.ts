@@ -10,6 +10,19 @@ export var int16   = Type.define(2, buf.readInt16LE,    buf.writeInt16LE);
 export var uint16  = Type.define(2, buf.readUInt16LE,   buf.writeUInt16LE);
 export var int32   = Type.define(4, buf.readInt32LE,    buf.writeInt32LE);
 export var uint32  = Type.define(4, buf.readUInt32LE,   buf.writeUInt32LE);
+export var uint64  = Arr.define(uint32, 2);
+export var ipv4    = Type.define(4,
+    function (offset: number = 0) {
+        var buf = this as Buffer;
+        var socket = require('../../socket');
+        var octets = socket.Ipv4.type.unpack(buf, offset);
+        return new socket.Ipv4(octets);
+    }, function (data: Ipv4, offset: number = 0) {
+        var buf = this as Buffer;
+        data.toBuffer().copy(buf, offset);
+    });
+
+
 
 
 // http://man7.org/linux/man-pages/man2/mmap.2.html
@@ -273,6 +286,8 @@ export const enum SOCK {
     RAW = 3,
     RDM = 4,
     PACKET = 10,
+
+    // accept4
     NONBLOCK = 2048,
     CLOEXEC = 524288,
 }
@@ -289,7 +304,7 @@ export const enum SOCK {
 //     unsigned long s_addr;  // load with inet_aton()
 // };
 export var in_addr = Struct.define(4, [
-    [0, uint32, 's_addr'], // load with inet_aton()
+    [0, ipv4, 's_addr'], // load with inet_aton()
 ]);
 
 export interface in_addr {
@@ -360,6 +375,133 @@ export const enum ERROR {
     ECONNREFUSED = 111,
     EINTR = 4,
     ENOTCONN = 107,
+
+
+    // TODO: get error numbers for the below:
+    // EADDRINUSE, // Another socket is already listening on the same port.
+    // EBADF, // The argument sockfd is not a valid descriptor.
+    // ENOTSOCK, // The argument sockfd is not a socket.
+    // EOPNOTSUPP, // The socket is not of a type that supports the listen() operation.
+    // E2BIG = 0, //           Argument list too long (POSIX.1)
+    // EACCES = 0, //          Permission denied (POSIX.1)
+    // EADDRINUSE = 0, //      Address already in use (POSIX.1)
+    // EADDRNOTAVAIL = 0, //   Address not available (POSIX.1)
+    // EAFNOSUPPORT = 0, //    Address family not supported (POSIX.1)
+    // EAGAIN = 0, //          Resource temporarily unavailable (may be the same value as EWOULDBLOCK) (POSIX.1)
+    // EALREADY = 0, //        Connection already in progress (POSIX.1)
+    // EBADE = 0, //           Invalid exchange
+    // EBADF = 0, //           Bad file descriptor (POSIX.1)
+    // EBADFD = 0, //          File descriptor in bad state
+    // EBADMSG = 0, //         Bad message (POSIX.1)
+    // EBADR = 0, //           Invalid request descriptor
+    // EBADRQC = 0, //         Invalid request code
+    // EBADSLT = 0, //         Invalid slot
+    // EBUSY = 0, //           Device or resource busy (POSIX.1)
+    // ECANCELED = 0, //       Operation canceled (POSIX.1)
+    // ECHILD = 0, //          No child processes (POSIX.1)
+    // ECHRNG = 0, //          Channel number out of range
+    // ECOMM = 0, //           Communication error on send
+    // ECONNABORTED = 0, //    Connection aborted (POSIX.1)
+    // ECONNREFUSED = 0, //    Connection refused (POSIX.1)
+    // ECONNRESET = 0, //      Connection reset (POSIX.1)
+    // EDEADLK = 0, //         Resource deadlock avoided (POSIX.1)
+    // EDEADLOCK = 0, //       Synonym for EDEADLK
+    // EDESTADDRREQ = 0, //    Destination address required (POSIX.1)
+    // EDOM = 0, //            Mathematics argument out of domain of function (POSIX.1, C99)
+    // EDQUOT = 0, //          Disk quota exceeded (POSIX.1)
+    // EEXIST = 0, //          File exists (POSIX.1)
+    // EFAULT = 0, //          Bad address (POSIX.1)
+    // EFBIG = 0, //           File too large (POSIX.1)
+    // EHOSTDOWN = 0, //       Host is down
+    // EHOSTUNREACH = 0, //    Host is unreachable (POSIX.1)
+    // EIDRM = 0, //           Identifier removed (POSIX.1)
+    // EILSEQ = 0, //          Illegal byte sequence (POSIX.1, C99)
+    // EINPROGRESS = 0, //     Operation in progress (POSIX.1)
+    // EINTR = 0, //           Interrupted function call (POSIX.1); see signal(7).
+    // EINVAL = 0, //          Invalid argument (POSIX.1)
+    // EIO = 0, //             Input/output error (POSIX.1)
+    // EISCONN = 0, //         Socket is connected (POSIX.1)
+    // EISDIR = 0, //          Is a directory (POSIX.1)
+    // EISNAM = 0, //          Is a named type file
+    // EKEYEXPIRED = 0, //     Key has expired
+    // EKEYREJECTED = 0, //    Key was rejected by service
+    // EKEYREVOKED = 0, //     Key has been revoked
+    // EL2HLT = 0, //          Level 2 halted
+    // EL2NSYNC = 0, //        Level 2 not synchronized
+    // EL3HLT = 0, //          Level 3 halted
+    // EL3RST = 0, //          Level 3 halted
+    // ELIBACC = 0, //         Cannot access a needed shared library
+    // ELIBBAD = 0, //         Accessing a corrupted shared library
+    // ELIBMAX = 0, //         Attempting to link in too many shared libraries
+    // ELIBSCN = 0, //         lib section in a.out corrupted
+    // ELIBEXEC = 0, //        Cannot exec a shared library directly
+    // ELOOP = 0, //           Too many levels of symbolic links (POSIX.1)
+    // EMEDIUMTYPE = 0, //     Wrong medium type
+    // EMFILE = 0, //          Too many open files (POSIX.1); commonly caused by exceeding the RLIMIT_NOFILE resource limit described in getrlimit(2)
+    // EMLINK = 0, //          Too many links (POSIX.1)
+    // EMSGSIZE = 0, //        Message too long (POSIX.1)
+    // EMULTIHOP = 0, //       Multihop attempted (POSIX.1)
+    // ENAMETOOLONG = 0, //    Filename too long (POSIX.1)
+    // ENETDOWN = 0, //        Network is down (POSIX.1)
+    // ENETRESET = 0, //       Connection aborted by network (POSIX.1)
+    // ENETUNREACH = 0, //     Network unreachable (POSIX.1)
+    // ENFILE = 0, //          Too many open files in system (POSIX.1); on Linux, this is probably a result of encountering the /proc/sys/fs/file-max limit (see proc(5)).
+    // ENOBUFS = 0, //         No buffer space available (POSIX.1 (XSI STREAMS option))
+    // ENODATA = 0, //         No message is available on the STREAM head read queue (POSIX.1)
+    // ENODEV = 0, //          No such device (POSIX.1)
+    // ENOENT = 0, //          No such file or directory (POSIX.1) Typically, this error results when a specified pathname does not exist, or one of the components in the directory prefix of a pathname does not exist, or the specified pathname is a dangling symbolic link.
+    // ENOEXEC = 0, //         Exec format error (POSIX.1)
+    // ENOKEY = 0, //          Required key not available
+    // ENOLCK = 0, //          No locks available (POSIX.1)
+    // ENOLINK = 0, //         Link has been severed (POSIX.1)
+    // ENOMEDIUM = 0, //       No medium found
+    // ENOMEM = 0, //          Not enough space (POSIX.1)
+    // ENOMSG = 0, //          No message of the desired type (POSIX.1)
+    // ENONET = 0, //          Machine is not on the network
+    // ENOPKG = 0, //          Package not installed
+    // ENOPROTOOPT = 0, //     Protocol not available (POSIX.1)
+    // ENOSPC = 0, //          No space left on device (POSIX.1)
+    // ENOSR = 0, //           No STREAM resources (POSIX.1 (XSI STREAMS option))
+    // ENOSTR = 0, //          Not a STREAM (POSIX.1 (XSI STREAMS option))
+    // ENOSYS = 0, //          Function not implemented (POSIX.1)
+    // ENOTBLK = 0, //         Block device required
+    // ENOTCONN = 0, //        The socket is not connected (POSIX.1)
+    // ENOTDIR = 0, //         Not a directory (POSIX.1)
+    // ENOTEMPTY = 0, //       Directory not empty (POSIX.1)
+    // ENOTSOCK = 0, //        Not a socket (POSIX.1)
+    // ENOTSUP = 0, //         Operation not supported (POSIX.1)
+    // ENOTTY = 0, //          Inappropriate I/O control operation (POSIX.1)
+    // ENOTUNIQ = 0, //        Name not unique on network
+    // ENXIO = 0, //           No such device or address (POSIX.1)
+    // EOPNOTSUPP = 0, //      Operation not supported on socket (POSIX.1)
+    // EOVERFLOW = 0, //       Value too large to be stored in data type (POSIX.1)
+    // EPERM = 0, //           Operation not permitted (POSIX.1)
+    // EPFNOSUPPORT = 0, //    Protocol family not supported
+    // EPIPE = 0, //           Broken pipe (POSIX.1)
+    // EPROTO = 0, //          Protocol error (POSIX.1)
+    // EPROTONOSUPPORT = 0, // Protocol not supported (POSIX.1)
+    // EPROTOTYPE = 0, //      Protocol wrong type for socket (POSIX.1)
+    // ERANGE = 0, //          Result too large (POSIX.1, C99)
+    // EREMCHG = 0, //         Remote address changed
+    // EREMOTE = 0, //         Object is remote
+    // EREMOTEIO = 0, //       Remote I/O error
+    // ERESTART = 0, //        Interrupted system call should be restarted
+    // EROFS = 0, //           Read-only filesystem (POSIX.1)
+    // ESHUTDOWN = 0, //       Cannot send after transport endpoint shutdown
+    // ESPIPE = 0, //          Invalid seek (POSIX.1)
+    // ESOCKTNOSUPPORT = 0, // Socket type not supported
+    // ESRCH = 0, //           No such process (POSIX.1)
+    // ESTALE = 0, //          Stale file handle (POSIX.1) This error can occur for NFS and for other filesystems
+    // ESTRPIPE = 0, //        Streams pipe error
+    // ETIME = 0, //           Timer expired (POSIX.1 (XSI STREAMS option)) (POSIX.1 says "STREAM ioctl(2) timeout")
+    // ETIMEDOUT = 0, //       Connection timed out (POSIX.1)
+    // ETXTBSY = 0, //         Text file busy (POSIX.1)
+    // EUCLEAN = 0, //         Structure needs cleaning
+    // EUNATCH = 0, //         Protocol driver not attached
+    // EUSERS = 0, //          Too many users
+    // EWOULDBLOCK = 0, //     Operation would block (may be same value as EAGAIN) (POSIX.1)
+    // EXDEV = 0, //           Improper link (POSIX.1)
+    // EXFULL = 0, //          Exchange full
 }
 
 
@@ -373,3 +515,54 @@ export const enum MSG {
     TRUNC = 32,
     WAITALL = 256,
 }
+
+export const enum SHUT {
+    RD = 0,		/* No more receptions.  */
+    WR,		/* No more transmissions.  */
+    RDWR,		/* No more receptions or transmissions.  */
+}
+
+
+export const enum EPOLL_EVENTS {
+    EPOLLIN = 1,
+    EPOLLOUT = 4,
+    EPOLLRDHUP = 8192,
+    EPOLLPRI = 2,
+    EPOLLERR = 8,
+    EPOLLHUP = 16,
+    EPOLLET = 2147483648,
+    EPOLLONESHOT = 1073741824,
+    EPOLLWAKEUP = 536870912,
+}
+
+export const enum EPOLL {
+    CLOEXEC = 524288, // Set the close-on-exec (FD_CLOEXEC) flag on the new file descriptor.  See the description of the O_CLOEXEC flag in open(2) for reasons why this may be useful.
+}
+
+export const enum EPOLL_CTL {
+    CTL_ADD = 1,
+    CTL_MOD = 3,
+    CTL_DEL = 2,
+}
+
+// typedef union epoll_data {
+//     void    *ptr;
+//     int      fd;
+//     uint32_t u32;
+//     uint64_t u64;
+// } epoll_data_t;
+//
+// struct epoll_event {
+//     uint32_t     events;    /* Epoll events */
+//     epoll_data_t data;      /* User data variable */
+// };
+export var epoll_event = Struct.define(4 + 8, [
+    [0, uint32, 'events'],
+    [4, uint64, 'data'],
+]);
+
+export interface epoll_event {
+    events: EPOLL_EVENTS;
+    data: [number, number];
+}
+
