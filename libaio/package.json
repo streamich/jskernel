@@ -1,0 +1,34 @@
+{
+  "name": "libaio",
+  "description": "Asynchronous IO using libjs",
+  "version": "1.0.1",
+  "main": "libaio.js",
+  "keywords": [
+    "libaio",
+    "libc",
+    "libjs",
+    "linux",
+    "posix",
+    "syscall",
+    "system-call",
+    "kernel",
+    "exokernel",
+    "exo-kernel",
+    "read",
+    "write",
+    "open",
+    "sys",
+    "system"
+  ],
+  "repository": {
+    "type": "http",
+    "url": "http://github.com/streamich/libaio"
+  },
+  "engines": {
+    "node": ">= 4.4.3"
+  },
+  "dependencies": {
+    "libjs": "*",
+    "debug": "*"
+  }
+}

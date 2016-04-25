@@ -51,6 +51,6 @@ directly from JavaScript.
  1. *Zero* native dependencies.
  2. Use any JS interpreter.
  3. [`unode`](http://www.npmjs.com/package/unode) will provide Node.js compatible API.
- 4. Can be used in kernel space of user space.
+ 4. Can be used in kernel space or user space.
  5. The only dependency is the `syscall` function.
  6. Written completely in JavaScript.

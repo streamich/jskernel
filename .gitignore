@@ -1,7 +1,8 @@
 node_modules/
 .vagrant/
 .idea/
-/jskernel-posix/headers
-/jskernel-posix/types
-/jskernel-posix/tmp
-/jskernel-sys/build
+/libjs/headers
+/libjs/types
+/libsys/build
+/node
+

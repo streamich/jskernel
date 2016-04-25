@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "jskernel-sys": "*",
-    "debug": "*"
-  }
-}

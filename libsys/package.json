@@ -1,0 +1,26 @@
+{
+  "name": "libsys",
+  "description": "syscall() function for Node.js",
+  "version": "1.0.6",
+  "keywords": [
+    "syscall",
+    "system-call",
+    "kernel",
+    "exokernel",
+    "exo-kernel",
+    "read",
+    "write",
+    "open",
+    "sys",
+    "system"
+  ],
+  "repository": {
+    "type": "http",
+    "url": "http://github.com/streamich/libsys"
+  },
+  "main": "./build/Release/jskernel-sys.node",
+  "engines": {
+    "node": ">= 4.4.3"
+  },
+  "gypfile": true
+}

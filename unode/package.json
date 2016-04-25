@@ -1,11 +1,11 @@
 {
   "name": "unode",
-  "version": "1.0.0",
-  "description": "Drop-in replacement for node.js on steroids",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "",
-  "license": "ISC"
+  "version": "1.0.2",
+  "description": "Node.js without dependencies",
+  "main": "unode.js",
+  "bin": "./bin/unode",
+  "preferGlobal": true,
+  "dependencies": {
+    "libjs": "*"
+  }
 }

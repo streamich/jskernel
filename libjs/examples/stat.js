@@ -1,0 +1,11 @@
+"use strict";
+var libjs = require('../libjs');
+var defs = require('../definitions');
+var fs = require('fs');
+var filepath = '/share/libjs/examples/read.txt';
+var fd = libjs.open(filepath, 0 /* O_RDONLY */);
+var stats = libjs.stat(filepath);
+console.log(stats);
+var stats2 = libjs.fstat(fd);
+console.log(stats2);
+console.log(fs.statSync(filepath));

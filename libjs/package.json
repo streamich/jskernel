@@ -1,0 +1,33 @@
+{
+  "name": "libjs",
+  "description": "POSIX/libc functions implemented in JavaScript",
+  "version": "1.0.2",
+  "main": "libjs.js",
+  "keywords": [
+    "libc",
+    "libjs",
+    "linux",
+    "posix",
+    "syscall",
+    "system-call",
+    "kernel",
+    "exokernel",
+    "exo-kernel",
+    "read",
+    "write",
+    "open",
+    "sys",
+    "system"
+  ],
+  "repository": {
+    "type": "http",
+    "url": "http://github.com/streamich/libjs"
+  },
+  "engines": {
+    "node": ">= 4.4.3"
+  },
+  "dependencies": {
+    "libsys": "*",
+    "debug": "*"
+  }
+}

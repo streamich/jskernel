@@ -1,11 +1,11 @@
 "use strict";
-var Script = (function () {
-    function Script() {
+var Asm = (function () {
+    function Asm() {
         this.bytes = [];
         this.eax = 0;
         this.ecx = 1;
     }
-    Script.prototype.add = function (src, dst) {
+    Asm.prototype.add = function (src, dst) {
         this.bytes.push(1); // Adding 32bit values.
         if ((src == this.eax) && (dst == this.ecx)) {
             // 11000001
@@ -16,18 +16,18 @@ var Script = (function () {
         }
         return this;
     };
-    Script.prototype.mov = function (src, dst) {
+    Asm.prototype.mov = function (src, dst) {
         return this;
     };
-    Script.prototype.jmp = function () {
+    Asm.prototype.jmp = function (code) {
         return this;
     };
-    Script.prototype.int = function (val) {
+    Asm.prototype.int = function (val) {
         return this;
     };
-    Script.prototype.system = function () {
+    Asm.prototype.system = function () {
         return this.int(80);
     };
-    return Script;
+    return Asm;
 }());
-exports.Script = Script;
+exports.Asm = Asm;

@@ -1,7 +1,7 @@
 
 
 
-export class Script {
+export class Asm {
 
     bytes = [];
 
@@ -25,8 +25,8 @@ export class Script {
         return this;
     }
 
-    jmp(): this {
-
+    jmp(code: Asm): this {
+        
         return this;
     }
 
