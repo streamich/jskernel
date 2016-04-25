@@ -1,4 +1,4 @@
-## jskernel
+# jskernel
 
 The Node.js exo-kernel dream: this is a proposal to create a JavaScript exo-kernel
 that would have API compatible to Node.js but would be possible to run as part of the Linux kernel.
@@ -7,7 +7,7 @@ that would have API compatible to Node.js but would be possible to run as part o
 
 Well, I don't know, but imagine you could have:
 
- 1. A complete OS image (not just a container, but including the kernel and Node.js) at less than 20Mb and it would boot in a couple of dozen milliseconds.
+ 1. A complete OS image (not just a container, but including the kernel and Node.js) at less than 10Mb and it would boot in a couple of dozen milliseconds.
  2. Full access to hardware from JavaScript.
  3. Write hardware drivers in JavaScript.
 
@@ -25,12 +25,12 @@ The proposal of `jskernel` is to have the best of both worlds:
 
 > Create a [Node.js standard library](https://github.com/nodejs/node/tree/master/lib) that would be able to run in *kernel space* (or *user space*).
 
-So, here is how to achieve that:
+So, here is how to achieve it:
 
  1. Write everything in JavaScript (or TypeScript), no C/C++ bindings.
  2. No dependencies, only the `syscall` function, syscalls executed directly from JavaScript.
  
-This way we can re-create Node.js standard library whose only dependency will be
+This way we can re-create Node.js standard library whose only dependency will be the
 [system call function](https://en.wikipedia.org/wiki/System_call).
 We would remove all native dependencies from Node.js, including Node.js itself, `libuv`, `libc` and even V8.
 
@@ -40,7 +40,7 @@ be to port the `syscall` function, as it will be our only dependency.
 You might think it is impossible and would take too much effort to rewrite `libc` and `libuv`,
 but, hey, we are coding in JavaScript, `libc` in JavaScript sounds like a little weekend project. Moreover, below is
 a road map with some working prototypes, so its possible and it is actually simpler than it looks like because
-many thing we can take straight from node's standard library and to make a first working prototype we just need to implement
+many thing we can take straight from node's standard library. To make a first working prototype we just need to implement
 the networking stack: `dgram`, `dns`, `net`, `http`.
 
 Also, Node.js devs usually write their own database drivers and parsers in Node.js, instead 
@@ -63,7 +63,7 @@ Here is a simple example that prints `Hello world` in console:
 require('libsys').syscall(1, 1, new Buffer('Hello world\n'), 12);
 ```
 
-Here we basically execute `1` system call which is `SYS_write` to `1` file
+Here we basically execute No. `1` system call which is `SYS_write` to No. `1` file
 descriptor which is `STDOUT`, so it goes to our consoles.
 
 Done, we have a `syscall` function, let's move further.
@@ -118,7 +118,7 @@ sock.connect({host: '192.168.1.150', port: 80});
 
 [`eloop`](http://www.npmjs.com/package/eloop) will implement worker pool to outsource
 CPU intensive operations that we cannot run asynchronously. Basically its task will
-be similar to what `libuv` does for node.js -- provides a thread poll to run file IO.
+be similar to what `libuv` does for node.js -- provides a thread poll to run file IO and other CPU intensive tasks.
 
 ### `unode`
 
@@ -129,7 +129,7 @@ where you run your apps with `unode` instead of `node`:
 
     unode app.js
 
-Meanwhile, `unode` will run on node.js replacing already implemented functionality.
+Meanwhile, for time being `unode` will run on node.js patching already implemented functionality.
 
 Here is a list of modules from node's standard library that need to be implemented:
 
@@ -152,10 +152,10 @@ and with little modification (or none at all) use in `unode`:
     string_decoder.js
         
 *Special:* When I said `syscall` function will be our only dependency, I actually lied. If you
-look carefully at our system call function, it accepts numbers, strings, and `Buffer`s as arguments, where
+look carefully at our system call function: it accepts numbers, strings, and `Buffer`s as arguments, where
 it uses `Buffer` as a pointer to a memory location of data. However, V8 has typed arrays and we will shim somehow the
 `Buffer` class function, there are already [buffer clones](https://github.com/feross/buffer) that work on typed arrays, we
-just need to make sure we can pass a pointer to the memory address of buffer's contents in the `syscall` function:
+just need to make sure we can pass a pointer to the memory address of buffer's contents in our system calls:
     
     buffer.js
     
@@ -167,7 +167,7 @@ They are perfectly doable using Linux's asynchronous sockets with `epoll` system
     net.js    
     http.js
     
-*File system:* `fs` is not an immediate priority because of two reasons: (1) the is no good async way on Linux
+*File system:* `fs` is not an immediate priority because of two reasons: (1) there is no good async way on Linux
 to handle files, you have to resort to threads; (2) we don't really need a file system in our first prototype,
 instead we can use an in-memory file system like [memfs](https://github.com/streamich/memfs):
 
@@ -181,9 +181,8 @@ instead we can use an in-memory file system like [memfs](https://github.com/stre
     tty.js
     timers.js
 
-*Hard ones:* And finally we get to the modules that are hard to implement in pure JavaScript. These are either
-computationally intensive modules that we would need a worker pool to run in background, or modules like `tls`,
-which probably don't have a JavaScript implementation:
+*Hard ones:* And finally we get to the modules that are hard to implement in pure JavaScript. These are
+computationally intensive modules for which we would need a worker pool to run in background:
     
     child_process.js
     cluster.js   
@@ -192,23 +191,29 @@ which probably don't have a JavaScript implementation:
     https.js
     tls.js
     zlib.js
+
+And even these *"hard ones"* are not that hard, because pure JavaScript implementations
+already exist, we just need to solve the background worker pool problem:
+    
+ - [`forge`](https://github.com/digitalbazaar/forge) is JavaScript implementation of `tls.js`
+ - [`pako`](https://github.com/nodeca/pako) is JavaScript implementation of `zlib.js`
     
 
-### Moving Inside the Kernel
+## Moving Inside the Kernel
 
-Imagine that we have `unode` completely done with the whole Node.js API. So, what we have achieved
-as anything but an exo-kernel. However, the whole stack now has only one dependency -- the `syscall`
-function, this means we can very esily port it anywhere we like, including inside the kernel.
+Imagine that we have `unode` complete with the whole node's API. Remember
+that now our whole stack has only one dependency -- the `syscall` function -- we have 
+removed all C/C++ dependecies. This, means that to port all of that to a different
+JS runtime or into the Linux kernel is as simple as porting the `syscall` function.
 
-Once inside the kernel we can expose more ways for 
-
-
-
-
+Finally, once inside the kernel we can expose more of the kernel's functionality
+to JavaScript.
 
 ## Development
 
-If you don't have Docker yet:
+    git clone https://github.com/streamich/jskernel
+
+If you don't have Docker:
 
     vagrant up
     vagrant ssh
