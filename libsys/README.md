@@ -18,7 +18,9 @@ syscall(1, 1, buf, buf.length);
 // buf.length - size of the memory block to print
 ```
 
-See [jskernel-posix](http://www.npmjs.com/package/jskernel-posix) for POSIX command implementation.
+See [libjs](http://www.npmjs.com/package/libjs) for POSIX command implementation.
+
+Part of [jskernel](http://www.github.com/streamich/jskernel) project.
 
 ## Reference
 

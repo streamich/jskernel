@@ -1,7 +1,7 @@
 {
   "name": "libsys",
   "description": "syscall() function for Node.js",
-  "version": "1.0.6",
+  "version": "1.0.9",
   "keywords": [
     "syscall",
     "system-call",
@@ -16,7 +16,7 @@
   ],
   "repository": {
     "type": "http",
-    "url": "http://github.com/streamich/libsys"
+    "url": "http://github.com/streamich/jskernel"
   },
   "main": "./build/Release/jskernel-sys.node",
   "engines": {

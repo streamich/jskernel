@@ -1,11 +1,27 @@
 {
   "name": "jskernel",
-  "version": "1.0.0",
-  "description": "Linux JS kernel",
+  "version": "1.0.2",
+  "description": "JS exo-kernel",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "",
-  "license": "ISC"
+  "keywords": [
+    "jskernel",
+    "libc",
+    "libjs",
+    "linux",
+    "posix",
+    "syscall",
+    "system-call",
+    "kernel",
+    "exokernel",
+    "exo-kernel",
+    "read",
+    "write",
+    "open",
+    "sys",
+    "system"
+  ],
+  "repository": {
+    "type": "http",
+    "url": "http://github.com/streamich/jskernel"
+  }
 }

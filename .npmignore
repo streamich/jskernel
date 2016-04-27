@@ -1,3 +1,10 @@
 /jskernel
 .vagrant
 .idea
+/jskernel-asm
+/libsys
+/libjs
+/libaio
+/eloop
+/unode
+/typings

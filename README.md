@@ -38,7 +38,7 @@ The only thing you would need to do to port this thing inside the Linux kernel o
 be to port the `syscall` function, as it will be our only dependency.
 
 You might think it is impossible and would take too much effort to rewrite `libc` and `libuv`,
-but, hey, we are coding in JavaScript, `libc` in JavaScript sounds like a little weekend project. Moreover, below is
+but hey, we are coding in JavaScript, `libc` in JavaScript sounds like a little weekend project. Moreover, below is
 a road map with some working prototypes, so its possible and it is actually simpler than it looks like because
 many thing we can take straight from node's standard library. To make a first working prototype we just need to implement
 the networking stack: `dgram`, `dns`, `net`, `http`.
