@@ -72,6 +72,8 @@ export var syscalls: any = {
     setsockopt:     54,
     getsockopt:     55,
 
+    shmdt:          67,
+
     fcntl:          72,
 
     unlink:         87,

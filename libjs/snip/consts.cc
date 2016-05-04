@@ -11,7 +11,6 @@
 #include <sys/mman.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -24,10 +23,8 @@
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
-#include <sys/types.h>
 #include <time.h>
 #include <sys/socket.h>
-#include <sys/types.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <stdio.h>
@@ -36,6 +33,8 @@
 #include <unistd.h>
 #include <errno.h>
 #include <arpa/inet.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
 
 
 using namespace std;
@@ -61,6 +60,31 @@ int main() {
     std::cout << "SYS_epoll_wait = " << SYS_epoll_wait << "," << endl;
     std::cout << "SYS_epoll_ctl = " << SYS_epoll_ctl << "," << endl;
     std::cout << "SYS_epoll_create1 = " << SYS_epoll_create1 << "," << endl;
+
+
+
+    std::cout << "IPC_CREAT = " << IPC_CREAT << "," << endl;
+    std::cout << "IPC_EXCL = " << IPC_EXCL << "," << endl;
+    std::cout << "IPC_RMID = " << IPC_RMID << "," << endl;
+    std::cout << "IPC_STAT = " << IPC_STAT << "," << endl;
+    std::cout << "IPC_SET = " << IPC_SET << "," << endl;
+    std::cout << "IPC_RMID = " << IPC_RMID << "," << endl;
+    std::cout << "IPC_INFO = " << IPC_INFO << "," << endl;
+
+    std::cout << "SHM_INFO = " << SHM_INFO << "," << endl;
+    std::cout << "SHM_STAT = " << SHM_STAT << "," << endl;
+    std::cout << "SHM_LOCK = " << SHM_LOCK << "," << endl;
+    std::cout << "SHM_UNLOCK = " << SHM_UNLOCK << "," << endl;
+    std::cout << "SHM_R = " << SHM_R << "," << endl;
+    std::cout << "SHM_W = " << SHM_W << "," << endl;
+    std::cout << "SHM_RDONLY = " << SHM_RDONLY << "," << endl;
+    std::cout << "SHM_RND = " << SHM_RND << "," << endl;
+    std::cout << "SHM_REMAP = " << SHM_REMAP << "," << endl;
+    std::cout << "SHM_EXEC = " << SHM_EXEC << "," << endl;
+    std::cout << "SHM_DEST = " << SHM_DEST << "," << endl;
+    std::cout << "SHM_LOCKED = " << SHM_LOCKED << "," << endl;
+    std::cout << "SHM_HUGETLB = " << SHM_HUGETLB << "," << endl;
+    std::cout << "SHM_NORESERVE = " << SHM_NORESERVE << "," << endl;
 
 
     // Errors
@@ -188,10 +212,65 @@ int main() {
     std::cout << "EXDEV = " << EXDEV << "," << endl;
     std::cout << "EXFULL = " << EXFULL << "," << endl;
 
-    std::cout << "EPOLL_CTL_ADD = " << EPOLL_CTL_ADD << "," << endl;
-    std::cout << "EPOLL_CTL_MOD = " << EPOLL_CTL_MOD << "," << endl;
-    std::cout << "EPOLL_CTL_DEL = " << EPOLL_CTL_DEL << "," << endl;
+    std::cout << "sizeof(size_t) = " << sizeof(size_t) << "," << endl;
+    std::cout << "sizeof(time_t) = " << sizeof(time_t) << "," << endl;
+    std::cout << "sizeof(__time_t) = " << sizeof(__time_t) << "," << endl;
+    std::cout << "sizeof(pid_t) = " << sizeof(pid_t) << "," << endl;
+    std::cout << "sizeof(__pid_t) = " << sizeof(__pid_t) << "," << endl;
+    std::cout << "sizeof(shmatt_t) = " << sizeof(shmatt_t) << "," << endl;
+    std::cout << "sizeof(__gid_t) = " << sizeof(__gid_t) << "," << endl;
+    std::cout << "sizeof(__uid_t) = " << sizeof(__uid_t) << "," << endl;
+    std::cout << "sizeof(__key_t) = " << sizeof(__key_t) << "," << endl;
+    std::cout << "sizeof(unsigned long int) = " << sizeof(unsigned long int) << "," << endl;
+    std::cout << "sizeof(unsigned short int) = " << sizeof(unsigned short int) << "," << endl;
+    std::cout << "sizeof(ipc_perm) = " << sizeof(ipc_perm) << "," << endl;
+    std::cout << "sizeof(shmid_ds) = " << sizeof(shmid_ds) << "," << endl;
 
+
+//    int64_t result = 140455768256512;
+
+    //                    hi                                   lo
+    // ||........|........|........|........||........|........|........|........||
+    //   ^------------------------------------^
+    //        switches these two sign bits
+    int64_t result = -13;
+
+//    uint64_t uresult = result;
+//    if(result < 0) uresult = -result;
+//
+//    uint32_t sign = (0x8000000000000000 & result) >> 32; // The sign flipping bit.
+//    sign = 0x7fffffffffffffff;
+
+    uint32_t lo = result & 0xffffffff;
+    uint32_t signlo = 0x80000000 & lo;
+
+    uint32_t hi = result >> 32;
+    uint32_t signhi = 0x80000000 & hi;
+
+    lo = lo & 0x7fffffff | signhi;
+    hi = hi & 0x7fffffff | signlo;
+
+    int32_t los = (int32_t) lo;
+    int32_t his = (int32_t) hi;
+
+    std::cout << result << endl;
+    std::cout << los << endl;
+    std::cout << his << endl;
+
+
+    int64_t back = (his << 32) | los;
+    back = (back & 0x7fffffffffffffff) | ((los & 0x80000000) << 32);
+    back = (back & 0xffffffff7fffffff) | (his & 0x80000000);
+
+    std::cout << "back: " << back << endl;
+    int32_t has_bit = (los & 0x80000000);
+    std::cout << ((los & 0x80000000) << 32) << endl;
+
+
+//    std::cout << "EPOLL_CTL_ADD = " << EPOLL_CTL_ADD << "," << endl;
+//    std::cout << "EPOLL_CTL_MOD = " << EPOLL_CTL_MOD << "," << endl;
+//    std::cout << "EPOLL_CTL_DEL = " << EPOLL_CTL_DEL << "," << endl;
+//
 
 //    std::cout << "AF_LOCAL = " << AF_LOCAL  << "," << endl;
 //    std::cout << "AF_INET = " << AF_INET  << "," << endl;

@@ -22,6 +22,7 @@ namespace jskernel {
     using v8::Array;
     using v8::Integer;
     using v8::Exception;
+    using v8::ArrayBuffer;
 
     uint64_t GetBufferAddr(Local<Object> obj) {
         return (uint64_t) node::Buffer::Data(obj);
@@ -98,38 +99,34 @@ namespace jskernel {
         else args.GetReturnValue().Set(Integer::New(isolate, ExecSyscall(args)));
     }
 
+    Handle<Array> Int64ToArray(Isolate* isolate, int64_t number) {
+        int32_t lo = number & 0xffffffff;
+        int32_t hi = number >> 32;
+
+        Handle<Array> array = Array::New(isolate, 2);
+        array->Set(0, Integer::New(isolate, lo));
+        array->Set(1, Integer::New(isolate, hi));
+        return array;
+    }
+
     void MethodSyscall64(const FunctionCallbackInfo<Value>& args) {
         Isolate* isolate = args.GetIsolate();
         char len = (char) args.Length();
         if(len > 7) isolate->ThrowException(String::NewFromUtf8(isolate, "Syscall with over 6 arguments."));
         else {
-            uint64_t result = ExecSyscall(args);
-            uint32_t lo = (uint32_t) (result & 0xffffffff);
-            uint32_t hi = (uint32_t) (result >> 32);
-
-            Handle<Array> array = Array::New(isolate, 2);
-            array->Set(0, Integer::New(isolate, lo));
-            array->Set(1, Integer::New(isolate, hi));
-
-            args.GetReturnValue().Set(array);
+            int64_t result = ExecSyscall(args);
+            std::cout << " sys64: " << result << std::endl;
+            args.GetReturnValue().Set(Int64ToArray(isolate, result));
         }
     }
 
     void MethodBufAddr64(const FunctionCallbackInfo<Value>& args) {
         Isolate* isolate = args.GetIsolate();
-
-        uint64_t addr = GetBufferAddr(args[0]->ToObject());
-        uint32_t lo = (uint32_t) (addr & 0xffffffff);
-        uint32_t hi = (uint32_t) (addr >> 32);
-
-
-        Handle<Array> array = Array::New(isolate, 2);
-        array->Set(0, Integer::New(isolate, lo));
-        array->Set(1, Integer::New(isolate, hi));
-        args.GetReturnValue().Set(array);
+        int64_t addr = GetBufferAddr(args[0]->ToObject());
+        args.GetReturnValue().Set(Int64ToArray(isolate, addr));
     }
 
-    void MethodBufAddr32(const FunctionCallbackInfo<Value>& args) {
+    void MethodBufAddr(const FunctionCallbackInfo<Value>& args) {
         Isolate* isolate = args.GetIsolate();
         uint64_t addr = GetBufferAddr(args[0]->ToObject());
         args.GetReturnValue().Set(Integer::New(isolate, addr));
@@ -141,7 +138,23 @@ namespace jskernel {
         char* addr = (char*) args[0]->Int32Value();
         size_t size = (size_t) args[1]->Int32Value();
 
-        v8::Local<v8::Object> buf = node::Buffer::New(isolate, addr, size).ToLocalChecked();
+        Local<ArrayBuffer> buf = ArrayBuffer::New(isolate, (void*) addr, size);
+        args.GetReturnValue().Set(buf);
+    }
+
+    void MethodMalloc64(const FunctionCallbackInfo<Value>& args) {
+        Isolate* isolate = args.GetIsolate();
+
+        int32_t lo = (int32_t) args[0]->Int32Value();
+        int32_t hi = (int32_t) args[1]->Int32Value();
+        int64_t addr = (((int64_t) hi) << 32) | ((int64_t) lo);
+
+        std::cout << " malloc addr: " << addr << std::endl;
+
+        size_t size = (size_t) args[2]->Int32Value();
+
+        Local<ArrayBuffer> buf = ArrayBuffer::New(isolate, (void*) addr, size);
+//        v8::Local<v8::Object> buf = node::Buffer::New(isolate, (char*) addr, size).ToLocalChecked();
         args.GetReturnValue().Set(buf);
     }
 
@@ -166,9 +179,10 @@ namespace jskernel {
     void init(Local<Object> exports) {
         NODE_SET_METHOD(exports, "syscall",     MethodSyscall);
         NODE_SET_METHOD(exports, "syscall64",   MethodSyscall64);
-        NODE_SET_METHOD(exports, "addr",        MethodBufAddr32);
+        NODE_SET_METHOD(exports, "addr",        MethodBufAddr);
         NODE_SET_METHOD(exports, "addr64",      MethodBufAddr64);
         NODE_SET_METHOD(exports, "malloc",      MethodMalloc);
+        NODE_SET_METHOD(exports, "malloc64",    MethodMalloc64);
         NODE_SET_METHOD(exports, "errno",       MethodErrno);
 //        NODE_SET_METHOD(exports, "gen",         MethodGen);
     }

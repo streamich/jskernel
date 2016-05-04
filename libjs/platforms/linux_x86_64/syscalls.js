@@ -68,6 +68,7 @@ exports.syscalls = {
     socketpair: 53,
     setsockopt: 54,
     getsockopt: 55,
+    shmdt: 67,
     fcntl: 72,
     unlink: 87,
     getuid: 102,

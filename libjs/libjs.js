@@ -233,3 +233,117 @@ function epoll_ctl(epfd, op, fd, epoll_event) {
     return sys.syscall(defs.syscalls.epoll_ctl, epfd, op, fd, buf);
 }
 exports.epoll_ctl = epoll_ctl;
+// ## Memory
+/**
+ * Allocates a shared memory segment. shmget() returns the identifier of the shared memory segment associated with the
+ * value of the argument key. A new shared memory segment, with size equal to the value of size rounded up to a multiple
+ * of PAGE_SIZE, is created if key has the value IPC_PRIVATE or key isn't IPC_PRIVATE, no shared memory segment
+ * corresponding to key exists, and IPC_CREAT is specified in shmflg.
+ *
+ * In `libc`:
+ *
+ *      int shmget ( key_t key, int size, int shmflg );
+ *
+ * Reference:
+ *
+ *  - http://linux.die.net/man/2/shmget
+ *
+ * @param key {number}
+ * @param size {number}
+ * @param shmflg {IPC|FLAG} If shmflg specifies both IPC_CREAT and IPC_EXCL and a shared memory segment already exists
+ *      for key, then shmget() fails with errno set to EEXIST. (This is analogous to the effect of the combination
+ *      O_CREAT | O_EXCL for open(2).)
+ * @returns {number} `shmid` -- ID of the allocated memory, if positive.
+ *      If negative: errno =
+ *          EINVAL (Invalid segment size specified)
+ *          EEXIST (Segment exists, cannot create)
+ *          EIDRM (Segment is marked for deletion, or was removed)
+ *          ENOENT (Segment does not exist)
+ *          EACCES (Permission denied)
+ *          ENOMEM (Not enough memory to create segment)
+ */
+function shmget(key, size, shmflg) {
+    debug('shmget', key, size, shmflg);
+    return sys.syscall(defs.syscalls.shmget, key, size, shmflg);
+}
+exports.shmget = shmget;
+/**
+ * Attaches the shared memory segment identified by shmid to the address space of the calling process.
+ *
+ * In `libc`:
+ *
+ *      void *shmat(int shmid, const void *shmaddr, int shmflg);
+ *
+ * Reference:
+ *
+ *  - http://linux.die.net/man/2/shmat
+ *
+ * @param shmid {number} ID returned by `shmget`.
+ * @param shmaddr {number} Optional approximate address where to allocate memory, or NULL.
+ * @param shmflg {SHM}
+ * @returns {number} On success shmat() returns the address of the attached shared memory segment; on error (void *) -1
+ *      is returned, and errno is set to indicate the cause of the error.
+ */
+function shmat(shmid, shmaddr, shmflg) {
+    if (shmaddr === void 0) { shmaddr = defs.NULL; }
+    if (shmflg === void 0) { shmflg = 0; }
+    debug('shmat', shmid, shmaddr, shmflg);
+    return sys.syscall64(defs.syscalls.shmat, shmid, shmaddr, shmflg);
+}
+exports.shmat = shmat;
+/**
+ * Detaches the shared memory segment located at the address specified by shmaddr from the address space of the calling
+ * process. The to-be-detached segment must be currently attached with shmaddr equal to the value returned by the
+ * attaching shmat() call.
+ *
+ * In `libc`:
+ *
+ *      int shmdt(const void *shmaddr);
+ *
+ * Reference:
+ *
+ *  - http://linux.die.net/man/2/shmat
+ *
+ * @param shmaddr {number}
+ * @returns {number} On success shmdt() returns 0; on error -1 is returned, and errno is set to indicate the cause of the error.
+ */
+function shmdt(shmaddr) {
+    debug('shmdt', shmaddr);
+    return sys.syscall(defs.syscalls.shmdt, shmaddr);
+}
+exports.shmdt = shmdt;
+/**
+ * Performs the control operation specified by cmd on the shared memory segment whose identifier is given in shmid.
+ *
+ * In `libc`:
+ *
+ *      int shmctl(int shmid, int cmd, struct shmid_ds *buf);
+ *
+ * Reference:
+ *
+ *  - http://linux.die.net/man/2/shmctl
+ *
+ * @param shmid {number}
+ * @param cmd {defs.IPC|defs.SHM}
+ * @param buf {Buffer|defs.shmid_ds|defs.NULL} Buffer of size `defs.shmid_ds.size` where kernel will write reponse, or
+ *      `defs.shmid_ds` structure that will be serialized for kernel to read data from, or 0 if no argument needed.
+ * @returns {number} A successful IPC_INFO or SHM_INFO operation returns the index of the highest used entry in the
+ *      kernel's internal array recording information about all shared memory segments. (This information can be used
+ *      with repeated SHM_STAT operations to obtain information about all shared memory segments on the system.) A
+ *      successful SHM_STAT operation returns the identifier of the shared memory segment whose index was given in
+ *      shmid. Other operations return 0 on success. On error, -1 is returned, and errno is set appropriately.
+ */
+function shmctl(shmid, cmd, buf) {
+    if (buf === void 0) { buf = defs.NULL; }
+    debug('shmctl', shmid, cmd, buf instanceof Buffer ? '[Buffer]' : buf);
+    if (buf instanceof Buffer) {
+    }
+    else if (typeof buf === 'object') {
+        // User provided `defs.shmid_ds` object, so we serialize it.
+        buf = defs.shmid_ds.pack(buf);
+    }
+    else {
+    }
+    return sys.syscall(defs.syscalls.shmctl, shmid, cmd, buf);
+}
+exports.shmctl = shmctl;

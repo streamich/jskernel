@@ -1,18 +1,59 @@
+// # libjs
+// 
+// `libjs` creates wrappers around system calls, similar to what `libc` does for `C` language.
+
+
+// `libsys` library contains our only native dependency -- the `syscall` function.
+// 
+//     sys.syscall(cmd: number, ...args): number
 import * as util from './util';
 import * as sys from './sys';
-import * as defs from './definitions';
-var debug = require('debug')('jskernel-posix:syscall');
 
+// `defs` provides platform specific constants and structs, the default one we use is `x86_64`.
+import * as defs from './definitions';
+
+// In development mode we use `debug` library to trace all our system calls. To see debug output,
+// set `DEBUG` environment variable to `libjs:*`, example:
+// 
+//     DEBUG=libjs:* node script.js
+var debug = require('debug')('libjs:syscall');
+
+// Export definitions and other modules all as part of the library.
 export * from './definitions';
 export * from './socket';
 
 
-// Files ---------------------------------------------------------------------------------------------------------------
+// ## Files
+// 
+// Standard file operations.
 
+// ### read
+//
+//     read(fd: number, buf: Buffer): number
+// 
+// Read data from file associated with `fd` file descriptor into buffer `buf`.
+// Up to size of the `buf.length` will be read or less.
+//
+// Returns a `number` which is the actual bytes read into the buffer, if negative,
+// represents an error.
+
+/**
+ * @param fd {number}
+ * @param buf {Buffer}
+ * @returns {number}
+ */
 export function read(fd: number, buf: Buffer): number {
     debug('read', fd);
     return sys.syscall(defs.syscalls.read, fd, buf, buf.length);
 }
+
+// ### write
+//
+//     write(fd: number, buf: string|Buffer): number
+//
+// Write data to a file descriptor. Example, write to console (where `STDOUT` has value `1` as a file descriptor):
+//
+//     libjs.write(1, 'Hello console\n');
 
 export function write(fd: number, buf: string|Buffer): number {
     debug('write', fd);
@@ -20,7 +61,19 @@ export function write(fd: number, buf: string|Buffer): number {
     return sys.syscall(defs.syscalls.write, fd, buf, buf.length);
 }
 
-export function open (pathname: string, flags: defs.FLAG, mode?: defs.MODE): number {
+// ### open
+// 
+//     open(pathname: string, flags: defs.FLAG, mode?: defs.MODE): number
+// 
+// Opens a file, returns file descriptor on success or a negative number representing an error.
+// 
+// Read data from a file:
+// 
+//     var fd = libjs.open('/tmp/data.txt', libjs.FLAG...);
+//     var buf = new Buffer(1024);
+//     libjs.read(fd, buf);
+
+export function open(pathname: string, flags: defs.FLAG, mode?: defs.MODE): number {
     debug('write', pathname, flags, mode);
     var args = [defs.syscalls.open, pathname, flags];
     if(typeof mode === 'number') args.push(mode);
@@ -32,7 +85,35 @@ export function close(fd: number): number {
     return sys.syscall(defs.syscalls.close, fd);
 }
 
-
+// ### stat, lstat, fstat
+// 
+// Fetches and returns statistics about a file.
+//
+//     stat(filepath: string): defs.stat
+//     lstat(linkpath: string): defs.stat
+//     fstat(fd: number): defs.stat
+// 
+// Returns a `stat` object of the form:
+//
+//     interface stat {
+//         dev: number;
+//         ino: number;
+//         nlink: number;
+//         mode: number;
+//         uid: number;
+//         gid: number;
+//         rdev: number;
+//         size: number;
+//         blksize: number;
+//         blocks: number;
+//         atime: number;
+//         atime_nsec: number;
+//         mtime: number;
+//         mtime_nsec: number;
+//         ctime: number;
+//         ctime_nsec: number;
+//     }
+//
 export function stat(filepath: string): defs.stat { // Throws number
     debug('stat', filepath);
     var buf = new Buffer(defs.stat.size);
@@ -235,4 +316,138 @@ export function epoll_wait(epfd: number, buf: Buffer, maxevents: number, timeout
 export function epoll_ctl(epfd: number, op: defs.EPOLL_CTL, fd: number, epoll_event: defs.epoll_event): number {
     var buf = defs.epoll_event.pack(epoll_event);
     return sys.syscall(defs.syscalls.epoll_ctl, epfd, op, fd, buf);
+}
+
+
+// ## Memory
+
+
+// ### shmget
+// 
+//     shmget(key: number, size: number, shmflg: defs.IPC|defs.FLAG): number
+//
+// Allocates a shared memory segment. `shmget()` returns the identifier of the shared memory segment associated with the
+// value of the argument key. A new shared memory segment, with size equal to the value of size rounded up to a multiple
+// of `PAGE_SIZE`, is created if key has the value `IPC.PRIVATE` or key isn't `IPC.PRIVATE`, no shared memory segment
+// corresponding to key exists, and `IPC.CREAT` is specified in `shmflg`.
+// 
+// In `libc`:
+// 
+//     int shmget (key_t key, int size, int shmflg);
+//
+// Reference:
+// 
+//  - http://linux.die.net/man/2/shmget
+// 
+// Returns:
+// 
+//  - If positive: identifier of the shared memory block.
+//  - If negative: `errno` =
+//    - `EINVAL` -- Invalid segment size specified
+//    - `EEXIST` -- Segment exists, cannot create
+//    - `EIDRM` -- Segment is marked for deletion, or was removed
+//    - `ENOENT` -- Segment does not exist
+//    - `EACCES` -- Permission denied
+//    - `ENOMEM` -- Not enough memory to create segment
+ 
+ 
+/**
+ * @param key {number}
+ * @param size {number}
+ * @param shmflg {IPC|FLAG} If shmflg specifies both IPC_CREAT and IPC_EXCL and a shared memory segment already exists
+ *      for key, then shmget() fails with errno set to EEXIST. (This is analogous to the effect of the combination
+ *      O_CREAT | O_EXCL for open(2).)
+ * @returns {number} `shmid` -- ID of the allocated memory, if positive.
+ */
+export function shmget(key: number, size: number, shmflg: defs.IPC|defs.FLAG): number {
+    debug('shmget', key, size, shmflg);
+    return sys.syscall(defs.syscalls.shmget, key, size, shmflg);
+}
+
+
+// ### shmat`
+//
+//     shmat(shmid: number, shmaddr: number = defs.NULL, shmflg: defs.SHM = 0): [number, number]
+//
+// Attaches the shared memory segment identified by shmid to the address space of the calling process.
+// 
+// In `libc`:
+// 
+//     void *shmat(int shmid, const void *shmaddr, int shmflg);
+// 
+// Reference:
+// 
+//  - http://linux.die.net/man/2/shmat
+//
+// Returns:
+//
+//  - On success shmat() returns the address of the attached shared memory segment; on error (void *) -1
+//  is returned, and errno is set to indicate the cause of the error.
+
+/**
+ *
+ * @param shmid {number} ID returned by `shmget`.
+ * @param shmaddr {number} Optional approximate address where to allocate memory, or NULL.
+ * @param shmflg {SHM}
+ * @returns {number}
+ */
+export function shmat(shmid: number, shmaddr: number = defs.NULL, shmflg: defs.SHM = 0): [number, number] {
+    debug('shmat', shmid, shmaddr, shmflg);
+    return sys.syscall64(defs.syscalls.shmat, shmid, shmaddr, shmflg);
+}
+
+
+/**
+ * Detaches the shared memory segment located at the address specified by shmaddr from the address space of the calling
+ * process. The to-be-detached segment must be currently attached with shmaddr equal to the value returned by the
+ * attaching shmat() call.
+ *
+ * In `libc`:
+ *
+ *      int shmdt(const void *shmaddr);
+ *
+ * Reference:
+ *
+ *  - http://linux.die.net/man/2/shmat
+ *
+ * @param shmaddr {number}
+ * @returns {number} On success shmdt() returns 0; on error -1 is returned, and errno is set to indicate the cause of the error.
+ */
+export function shmdt(shmaddr: number): number {
+    debug('shmdt', shmaddr);
+    return sys.syscall(defs.syscalls.shmdt, shmaddr);
+}
+
+/**
+ * Performs the control operation specified by cmd on the shared memory segment whose identifier is given in shmid.
+ *
+ * In `libc`:
+ *
+ *      int shmctl(int shmid, int cmd, struct shmid_ds *buf);
+ *
+ * Reference:
+ *
+ *  - http://linux.die.net/man/2/shmctl
+ *
+ * @param shmid {number}
+ * @param cmd {defs.IPC|defs.SHM}
+ * @param buf {Buffer|defs.shmid_ds|defs.NULL} Buffer of size `defs.shmid_ds.size` where kernel will write reponse, or
+ *      `defs.shmid_ds` structure that will be serialized for kernel to read data from, or 0 if no argument needed.
+ * @returns {number} A successful IPC_INFO or SHM_INFO operation returns the index of the highest used entry in the
+ *      kernel's internal array recording information about all shared memory segments. (This information can be used
+ *      with repeated SHM_STAT operations to obtain information about all shared memory segments on the system.) A
+ *      successful SHM_STAT operation returns the identifier of the shared memory segment whose index was given in
+ *      shmid. Other operations return 0 on success. On error, -1 is returned, and errno is set appropriately.
+ */
+export function shmctl(shmid: number, cmd: defs.IPC|defs.SHM, buf: Buffer|defs.shmid_ds|number = defs.NULL): number {
+    debug('shmctl', shmid, cmd, buf instanceof Buffer ? '[Buffer]' : buf);
+    if(buf instanceof Buffer) {
+        // User provided us buffer of size `defs.shmid_ds.size` where kernel will write reponse.
+    } else if(typeof buf === 'object') {
+        // User provided `defs.shmid_ds` object, so we serialize it.
+        buf = defs.shmid_ds.pack(buf) as Buffer;
+    } else {
+        // Third argument is just `defs.NULL`.
+    }
+    return sys.syscall(defs.syscalls.shmctl, shmid, cmd, buf as Buffer|number);
 }

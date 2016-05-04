@@ -1,5 +1,6 @@
 "use strict";
 var typebase_1 = require('../../typebase');
+exports.NULL = 0;
 var buf = Buffer.prototype;
 exports.int8 = typebase_1.Type.define(1, buf.readInt8, buf.writeInt8);
 exports.uint8 = typebase_1.Type.define(1, buf.readUInt8, buf.readUInt8);
@@ -8,6 +9,9 @@ exports.uint16 = typebase_1.Type.define(2, buf.readUInt16LE, buf.writeUInt16LE);
 exports.int32 = typebase_1.Type.define(4, buf.readInt32LE, buf.writeInt32LE);
 exports.uint32 = typebase_1.Type.define(4, buf.readUInt32LE, buf.writeUInt32LE);
 exports.uint64 = typebase_1.Arr.define(exports.uint32, 2);
+exports.size_t = exports.uint64;
+exports.time_t = exports.uint64;
+exports.pid_t = exports.uint32;
 exports.ipv4 = typebase_1.Type.define(4, function (offset) {
     if (offset === void 0) { offset = 0; }
     var buf = this;
@@ -19,33 +23,38 @@ exports.ipv4 = typebase_1.Type.define(4, function (offset) {
     var buf = this;
     data.toBuffer().copy(buf, offset);
 });
-// <asm/stat.h> line 82:
-// struct stat {
-//     __kernel_ulong_t	st_dev;
-//     __kernel_ulong_t	st_ino;
-//     __kernel_ulong_t	st_nlink;
-//
-//     unsigned int		st_mode;
-//     unsigned int		st_uid;
-//     unsigned int		st_gid;
-//     unsigned int		__pad0;
-//     __kernel_ulong_t	st_rdev;
-//     __kernel_long_t		st_size;
-//     __kernel_long_t		st_blksize;
-//     __kernel_long_t		st_blocks;	/* Number 512-byte blocks allocated. */
-//
-//     __kernel_ulong_t	st_atime;
-//     __kernel_ulong_t	st_atime_nsec;
-//     __kernel_ulong_t	st_mtime;
-//     __kernel_ulong_t	st_mtime_nsec;
-//     __kernel_ulong_t	st_ctime;
-//     __kernel_ulong_t	st_ctime_nsec;
-//     __kernel_long_t		__unused[3];
-// };
-// __kernel_ulong_t = unsigned long long // 64+ bits
-// __kernel_long_t = long long // 64+ bits
-// unsigned int // 32+ bits
-// Total: 64 * 14 + 32 * 4 = 896 + 128 = 1024
+/**
+ * See <asm/stat.h> line 82:
+ *
+ *      __kernel_ulong_t = unsigned long long // 64+ bits
+ *      __kernel_long_t = long long // 64+ bits
+ *      unsigned int // 32+ bits
+ *
+ * In `libc`:
+ *
+ *      struct stat {
+ *          __kernel_ulong_t	st_dev;
+ *          __kernel_ulong_t	st_ino;
+ *          __kernel_ulong_t	st_nlink;
+ *          unsigned int		st_mode;
+ *          unsigned int		st_uid;
+ *          unsigned int		st_gid;
+ *          unsigned int		__pad0;
+ *          __kernel_ulong_t	st_rdev;
+ *          __kernel_long_t		st_size;
+ *          __kernel_long_t		st_blksize;
+ *          __kernel_long_t		st_blocks;	// Number 512-byte blocks allocated.
+ *          __kernel_ulong_t	st_atime;
+ *          __kernel_ulong_t	st_atime_nsec;
+ *          __kernel_ulong_t	st_mtime;
+ *          __kernel_ulong_t	st_mtime_nsec;
+ *          __kernel_ulong_t	st_ctime;
+ *          __kernel_ulong_t	st_ctime_nsec;
+ *          __kernel_long_t		__unused[3];
+ *      };
+ *
+ * @type {Struct}
+ */
 exports.stat = typebase_1.Struct.define(31 * 4, [
     [0, exports.uint32, 'dev'],
     // dev_hi:         [1 * 4,     buffer.int32],
@@ -130,4 +139,86 @@ exports.sockaddr = typebase_1.Struct.define(1, [
 exports.epoll_event = typebase_1.Struct.define(4 + 8, [
     [0, exports.uint32, 'events'],
     [4, exports.uint64, 'data'],
+]);
+/**
+ * In `libc`, <bits/ipc.h> line 42:
+ *
+ *      struct ipc_perm {
+ *          __key_t __key;			// Key.
+ *          __uid_t uid;			// Owner's user ID.
+ *          __gid_t gid;			// Owner's group ID.
+ *          __uid_t cuid;			// Creator's user ID.
+ *          __gid_t cgid;			// Creator's group ID.
+ *          unsigned short int mode;		// Read/write permission.
+ *          unsigned short int __pad1;
+ *          unsigned short int __seq;		// Sequence number.
+ *          unsigned short int __pad2;
+ *          __syscall_ulong_t __glibc_reserved1;
+ *          __syscall_ulong_t __glibc_reserved2;
+ *      };
+ *
+ * `__syscall_ulong_t` is `unsigned long long int`
+ *
+ * @type {Struct}
+ */
+exports.ipc_perm = typebase_1.Struct.define(48, [
+    [0, exports.int32, '__key'],
+    [4, exports.uint32, 'uid'],
+    [8, exports.uint32, 'gid'],
+    [12, exports.uint32, 'cuid'],
+    [16, exports.uint32, 'cgid'],
+    [20, exports.uint16, 'mode'],
+    // [22, uint16, '__pad1'],
+    [24, exports.uint16, '__seq'],
+]);
+/**
+ * In `libc`, <bits/shm.h> line 49:
+ *
+ *      struct shmid_ds {
+ *          struct ipc_perm shm_perm;		// operation permission struct
+ *          size_t shm_segsz;			// size of segment in bytes
+ *          __time_t shm_atime;			// time of last shmat()
+ *      #ifndef __x86_64__
+ *          unsigned long int __glibc_reserved1;
+ *      #endif
+ *          __time_t shm_dtime;			// time of last shmdt()
+ *      #ifndef __x86_64__
+ *          unsigned long int __glibc_reserved2;
+ *      #endif
+ *          __time_t shm_ctime;			// time of last change by shmctl()
+ *      #ifndef __x86_64__
+ *          unsigned long int __glibc_reserved3;
+ *      #endif
+ *          __pid_t shm_cpid;			// pid of creator
+ *          __pid_t shm_lpid;			// pid of last shmop
+ *          shmatt_t shm_nattch;		// number of current attaches
+ *          __syscall_ulong_t __glibc_reserved4;
+ *          __syscall_ulong_t __glibc_reserved5;
+ *      };
+ *
+ * From internet:
+ *
+ *      struct shmid_ds {
+ *          struct ipc_perm shm_perm;    // Ownership and permissions
+ *          size_t          shm_segsz;   // Size of segment (bytes)
+ *          time_t          shm_atime;   // Last attach time
+ *          time_t          shm_dtime;   // Last detach time
+ *          time_t          shm_ctime;   // Last change time
+ *          pid_t           shm_cpid;    // PID of creator
+ *          pid_t           shm_lpid;    // PID of last shmat(2)/shmdt(2)
+ *          shmatt_t        shm_nattch;  // No. of current attaches
+ *          // ...
+ *      };
+ *
+ * @type {Struct}
+ */
+exports.shmid_ds = typebase_1.Struct.define(112, [
+    [0, exports.ipc_perm, 'shm_perm'],
+    [48, exports.size_t, 'shm_segsz'],
+    [56, exports.time_t, 'shm_atime'],
+    [64, exports.time_t, 'shm_dtime'],
+    [72, exports.time_t, 'shm_ctime'],
+    [80, exports.pid_t, 'shm_cpid'],
+    [84, exports.pid_t, 'shm_lpid'],
+    [88, exports.uint64, 'shm_nattch'],
 ]);

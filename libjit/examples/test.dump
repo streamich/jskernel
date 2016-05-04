@@ -1,0 +1,74 @@
+
+examples/test.o:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000000000 <main>:
+
+
+using namespace std;
+
+main()
+{
+   0:	55                   	push   rbp
+   1:	48 89 e5             	mov    rbp,rsp
+   4:	48 83 ec 10          	sub    rsp,0x10
+    uint64_t a = 123;
+   8:	48 c7 45 f8 7b 00 00 	mov    QWORD PTR [rbp-0x8],0x7b
+   f:	00 
+    a++;
+  10:	48 83 45 f8 01       	add    QWORD PTR [rbp-0x8],0x1
+    std::cout << a << endl;
+  15:	48 8b 45 f8          	mov    rax,QWORD PTR [rbp-0x8]
+  19:	48 89 c6             	mov    rsi,rax
+  1c:	bf 00 00 00 00       	mov    edi,0x0
+  21:	e8 00 00 00 00       	call   26 <main+0x26>
+  26:	be 00 00 00 00       	mov    esi,0x0
+  2b:	48 89 c7             	mov    rdi,rax
+  2e:	e8 00 00 00 00       	call   33 <main+0x33>
+
+    printf("Hello World");
+  33:	bf 00 00 00 00       	mov    edi,0x0
+  38:	b8 00 00 00 00       	mov    eax,0x0
+  3d:	e8 00 00 00 00       	call   42 <main+0x42>
+
+
+}
+  42:	b8 00 00 00 00       	mov    eax,0x0
+  47:	c9                   	leave  
+  48:	c3                   	ret    
+
+0000000000000049 <_Z41__static_initialization_and_destruction_0ii>:
+  49:	55                   	push   rbp
+  4a:	48 89 e5             	mov    rbp,rsp
+  4d:	48 83 ec 10          	sub    rsp,0x10
+  51:	89 7d fc             	mov    DWORD PTR [rbp-0x4],edi
+  54:	89 75 f8             	mov    DWORD PTR [rbp-0x8],esi
+  57:	83 7d fc 01          	cmp    DWORD PTR [rbp-0x4],0x1
+  5b:	75 27                	jne    84 <_Z41__static_initialization_and_destruction_0ii+0x3b>
+  5d:	81 7d f8 ff ff 00 00 	cmp    DWORD PTR [rbp-0x8],0xffff
+  64:	75 1e                	jne    84 <_Z41__static_initialization_and_destruction_0ii+0x3b>
+  extern wostream wclog;	/// Linked to standard error (buffered)
+#endif
+  //@}
+
+  // For construction of filebuffers for cout, cin, cerr, clog et. al.
+  static ios_base::Init __ioinit;
+  66:	bf 00 00 00 00       	mov    edi,0x0
+  6b:	e8 00 00 00 00       	call   70 <_Z41__static_initialization_and_destruction_0ii+0x27>
+  70:	ba 00 00 00 00       	mov    edx,0x0
+  75:	be 00 00 00 00       	mov    esi,0x0
+  7a:	bf 00 00 00 00       	mov    edi,0x0
+  7f:	e8 00 00 00 00       	call   84 <_Z41__static_initialization_and_destruction_0ii+0x3b>
+  84:	c9                   	leave  
+  85:	c3                   	ret    
+
+0000000000000086 <_GLOBAL__sub_I_main>:
+  86:	55                   	push   rbp
+  87:	48 89 e5             	mov    rbp,rsp
+  8a:	be ff ff 00 00       	mov    esi,0xffff
+  8f:	bf 01 00 00 00       	mov    edi,0x1
+  94:	e8 b0 ff ff ff       	call   49 <_Z41__static_initialization_and_destruction_0ii>
+  99:	5d                   	pop    rbp
+  9a:	c3                   	ret    
