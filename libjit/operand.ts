@@ -1,5 +1,6 @@
 import * as func from './function';
 import * as instruction from './instruction';
+import {Variable, t_i8, t_i32} from '../libmem/struct';
 
 
 export abstract class Operand {
@@ -30,6 +31,18 @@ export class OperandValue extends Operand {
         op.value = value;
         return op;
     }
+}
+
+export class OperandInt extends OperandValue {
+    variable: Variable;
+}
+
+export class OperandInt8 extends OperandInt {
+    type = t_i8;
+}
+
+export class OperandInt32 extends OperandInt {
+    type = t_i32;
 }
 
 // Label created by `instruction.InsLabel`.

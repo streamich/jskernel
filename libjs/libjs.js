@@ -1,18 +1,50 @@
+// # libjs
+// 
+// `libjs` creates wrappers around system calls, similar to what `libc` does for `C` language.
 "use strict";
 function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 var sys = require('./sys');
+// `defs` provides platform specific constants and structs, the default one we use is `x86_64`.
 var defs = require('./definitions');
-var debug = require('debug')('jskernel-posix:syscall');
+// In development mode we use `debug` library to trace all our system calls. To see debug output,
+// set `DEBUG` environment variable to `libjs:*`, example:
+// 
+//     DEBUG=libjs:* node script.js
+var debug = require('debug')('libjs:syscall');
+// Export definitions and other modules all as part of the library.
 __export(require('./definitions'));
 __export(require('./socket'));
-// Files ---------------------------------------------------------------------------------------------------------------
+// ## Files
+// 
+// Standard file operations.
+// ### read
+//
+//     read(fd: number, buf: Buffer): number
+// 
+// Read data from file associated with `fd` file descriptor into buffer `buf`.
+// Up to size of the `buf.length` will be read or less.
+//
+// Returns a `number` which is the actual bytes read into the buffer, if negative,
+// represents an error.
+/**
+ * @param fd {number}
+ * @param buf {Buffer}
+ * @returns {number}
+ */
 function read(fd, buf) {
     debug('read', fd);
     return sys.syscall(defs.syscalls.read, fd, buf, buf.length);
 }
 exports.read = read;
+// ### write
+//
+//     write(fd: number, buf: string|Buffer): number
+//
+// Write data to a file descriptor. Example, write to console (where `STDOUT` has value `1` as a file descriptor):
+//
+//     libjs.write(1, 'Hello console\n');
 function write(fd, buf) {
     debug('write', fd);
     if (!(buf instanceof Buffer))
@@ -20,6 +52,17 @@ function write(fd, buf) {
     return sys.syscall(defs.syscalls.write, fd, buf, buf.length);
 }
 exports.write = write;
+// ### open
+// 
+//     open(pathname: string, flags: defs.FLAG, mode?: defs.MODE): number
+// 
+// Opens a file, returns file descriptor on success or a negative number representing an error.
+// 
+// Read data from a file:
+// 
+//     var fd = libjs.open('/tmp/data.txt', libjs.FLAG...);
+//     var buf = new Buffer(1024);
+//     libjs.read(fd, buf);
 function open(pathname, flags, mode) {
     debug('write', pathname, flags, mode);
     var args = [defs.syscalls.open, pathname, flags];
@@ -33,6 +76,35 @@ function close(fd) {
     return sys.syscall(defs.syscalls.close, fd);
 }
 exports.close = close;
+// ### stat, lstat, fstat
+// 
+// Fetches and returns statistics about a file.
+//
+//     stat(filepath: string): defs.stat
+//     lstat(linkpath: string): defs.stat
+//     fstat(fd: number): defs.stat
+// 
+// Returns a `stat` object of the form:
+//
+//     interface stat {
+//         dev: number;
+//         ino: number;
+//         nlink: number;
+//         mode: number;
+//         uid: number;
+//         gid: number;
+//         rdev: number;
+//         size: number;
+//         blksize: number;
+//         blocks: number;
+//         atime: number;
+//         atime_nsec: number;
+//         mtime: number;
+//         mtime_nsec: number;
+//         ctime: number;
+//         ctime_nsec: number;
+//     }
+//
 function stat(filepath) {
     debug('stat', filepath);
     var buf = new Buffer(defs.stat.size);
@@ -234,55 +306,70 @@ function epoll_ctl(epfd, op, fd, epoll_event) {
 }
 exports.epoll_ctl = epoll_ctl;
 // ## Memory
+// ### shmget
+// 
+//     shmget(key: number, size: number, shmflg: defs.IPC|defs.FLAG): number
+//
+// Allocates a shared memory segment. `shmget()` returns the identifier of the shared memory segment associated with the
+// value of the argument key. A new shared memory segment, with size equal to the value of size rounded up to a multiple
+// of `PAGE_SIZE`, is created if key has the value `IPC.PRIVATE` or key isn't `IPC.PRIVATE`, no shared memory segment
+// corresponding to key exists, and `IPC.CREAT` is specified in `shmflg`.
+// 
+// In `libc`:
+// 
+//     int shmget (key_t key, int size, int shmflg);
+//
+// Reference:
+// 
+//  - http://linux.die.net/man/2/shmget
+// 
+// Returns:
+// 
+//  - If positive: identifier of the shared memory block.
+//  - If negative: `errno` =
+//    - `EINVAL` -- Invalid segment size specified
+//    - `EEXIST` -- Segment exists, cannot create
+//    - `EIDRM` -- Segment is marked for deletion, or was removed
+//    - `ENOENT` -- Segment does not exist
+//    - `EACCES` -- Permission denied
+//    - `ENOMEM` -- Not enough memory to create segment
 /**
- * Allocates a shared memory segment. shmget() returns the identifier of the shared memory segment associated with the
- * value of the argument key. A new shared memory segment, with size equal to the value of size rounded up to a multiple
- * of PAGE_SIZE, is created if key has the value IPC_PRIVATE or key isn't IPC_PRIVATE, no shared memory segment
- * corresponding to key exists, and IPC_CREAT is specified in shmflg.
- *
- * In `libc`:
- *
- *      int shmget ( key_t key, int size, int shmflg );
- *
- * Reference:
- *
- *  - http://linux.die.net/man/2/shmget
- *
  * @param key {number}
  * @param size {number}
  * @param shmflg {IPC|FLAG} If shmflg specifies both IPC_CREAT and IPC_EXCL and a shared memory segment already exists
  *      for key, then shmget() fails with errno set to EEXIST. (This is analogous to the effect of the combination
  *      O_CREAT | O_EXCL for open(2).)
  * @returns {number} `shmid` -- ID of the allocated memory, if positive.
- *      If negative: errno =
- *          EINVAL (Invalid segment size specified)
- *          EEXIST (Segment exists, cannot create)
- *          EIDRM (Segment is marked for deletion, or was removed)
- *          ENOENT (Segment does not exist)
- *          EACCES (Permission denied)
- *          ENOMEM (Not enough memory to create segment)
  */
 function shmget(key, size, shmflg) {
     debug('shmget', key, size, shmflg);
     return sys.syscall(defs.syscalls.shmget, key, size, shmflg);
 }
 exports.shmget = shmget;
+// ### shmat`
+//
+//     shmat(shmid: number, shmaddr: number = defs.NULL, shmflg: defs.SHM = 0): [number, number]
+//
+// Attaches the shared memory segment identified by shmid to the address space of the calling process.
+// 
+// In `libc`:
+// 
+//     void *shmat(int shmid, const void *shmaddr, int shmflg);
+// 
+// Reference:
+// 
+//  - http://linux.die.net/man/2/shmat
+//
+// Returns:
+//
+//  - On success shmat() returns the address of the attached shared memory segment; on error (void *) -1
+//  is returned, and errno is set to indicate the cause of the error.
 /**
- * Attaches the shared memory segment identified by shmid to the address space of the calling process.
- *
- * In `libc`:
- *
- *      void *shmat(int shmid, const void *shmaddr, int shmflg);
- *
- * Reference:
- *
- *  - http://linux.die.net/man/2/shmat
  *
  * @param shmid {number} ID returned by `shmget`.
  * @param shmaddr {number} Optional approximate address where to allocate memory, or NULL.
  * @param shmflg {SHM}
- * @returns {number} On success shmat() returns the address of the attached shared memory segment; on error (void *) -1
- *      is returned, and errno is set to indicate the cause of the error.
+ * @returns {number}
  */
 function shmat(shmid, shmaddr, shmflg) {
     if (shmaddr === void 0) { shmaddr = defs.NULL; }

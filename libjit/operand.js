@@ -4,6 +4,7 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
+var struct_1 = require('../libmem/struct');
 var Operand = (function () {
     function Operand() {
         this.id = Operand.counter++;
@@ -32,6 +33,32 @@ var OperandValue = (function (_super) {
     return OperandValue;
 }(Operand));
 exports.OperandValue = OperandValue;
+var OperandInt = (function (_super) {
+    __extends(OperandInt, _super);
+    function OperandInt() {
+        _super.apply(this, arguments);
+    }
+    return OperandInt;
+}(OperandValue));
+exports.OperandInt = OperandInt;
+var OperandInt8 = (function (_super) {
+    __extends(OperandInt8, _super);
+    function OperandInt8() {
+        _super.apply(this, arguments);
+        this.type = struct_1.t_i8;
+    }
+    return OperandInt8;
+}(OperandInt));
+exports.OperandInt8 = OperandInt8;
+var OperandInt32 = (function (_super) {
+    __extends(OperandInt32, _super);
+    function OperandInt32() {
+        _super.apply(this, arguments);
+        this.type = struct_1.t_i32;
+    }
+    return OperandInt32;
+}(OperandInt));
+exports.OperandInt32 = OperandInt32;
 // Label created by `instruction.InsLabel`.
 var OperandLabel = (function (_super) {
     __extends(OperandLabel, _super);
