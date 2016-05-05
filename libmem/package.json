@@ -18,7 +18,7 @@
     "system"
   ],
   "repository": {
-    "type": "http",
+    "type": "git",
     "url": "http://github.com/streamich/libmem"
   },
   "engines": {

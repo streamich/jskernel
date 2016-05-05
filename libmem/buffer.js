@@ -7,11 +7,11 @@ var SharedArrayBuffer = (function () {
 }());
 exports.SharedArrayBuffer = SharedArrayBuffer;
 // Similar to `ArrayBuffer`, but its contents can be run as machine code.
-var ExecutableArrayBuffer = (function () {
-    function ExecutableArrayBuffer() {
-    }
-    ExecutableArrayBuffer.prototype.exec = function () {
-    };
-    return ExecutableArrayBuffer;
-}());
+function ExecutableArrayBuffer() {
+}
 exports.ExecutableArrayBuffer = ExecutableArrayBuffer;
+ExecutableArrayBuffer.prototype = {
+    __proto__: ArrayBuffer.prototype,
+    call: function () {
+    }
+};
