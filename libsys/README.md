@@ -49,7 +49,7 @@ Returns a `Buffer` object of size `size` that is mapped to memory location
 specified in `addr` argument.
 
 ```ts
-function malloc(addr: number, size: number): Buffer;
+function malloc(addr: number, size: number): ArrayBuffer;
 ```
 
 ### `addr` and `addr64`
@@ -64,12 +64,13 @@ function addr64(buffer: Buffer): [number, number];
 `addr64` returns a tuple which represents 64-bit number, where first element contains the lower
 32 bits and second element has the high 32 bits.
 
-### `asm`  [NOT IMPLEMENTED]
+### `call` as `call64`
 
-Execute assembly code, `buffer` contains raw op-codes to run. 
+Execute machine code at specified memory address. 
 
 ```ts
-function asm(buffer: Buffer);
+export function call(addr: number);
+export function call64(addr_lo: number, addr_hi: number);
 ```
     
 ### `errno`

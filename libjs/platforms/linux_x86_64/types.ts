@@ -42,15 +42,14 @@ export const enum PROT {
 
 
 export const enum MAP {
-    WRITE = 2, // Pages may be written.
-    SHARED = 0,
-    PRIVATE = 0,
+    'FILE' = 0,
+    SHARED = 1,
+    PRIVATE = 2,
     '32BIT' = 64,
     ANON = 32,
     ANONYMOUS = 32,
     DENYWRITE = 2048,
     EXECUTABLE = 409,
-    'FILE' = 0,
     FIXED = 16,
     GROWSDOWN = 256,
     HUGETLB = 262144,

@@ -13,6 +13,3 @@ if(fd > -1) {
     console.log('Error: ', fd);
 }
 
-
-
-

@@ -90,6 +90,8 @@ namespace jskernel {
             int64_t res = syscall(cmd, arg1, arg2, arg3, arg4, arg5, arg6);
             return res == -1 ? -errno : res;
         }
+
+        return -1;
     }
 
     void MethodSyscall(const FunctionCallbackInfo<Value>& args) {
@@ -103,6 +105,8 @@ namespace jskernel {
         int32_t lo = number & 0xffffffff;
         int32_t hi = number >> 32;
 
+//        std::cout << "split: " << lo << ", " << hi << std::cout;
+
         Handle<Array> array = Array::New(isolate, 2);
         array->Set(0, Integer::New(isolate, lo));
         array->Set(1, Integer::New(isolate, hi));
@@ -115,7 +119,7 @@ namespace jskernel {
         if(len > 7) isolate->ThrowException(String::NewFromUtf8(isolate, "Syscall with over 6 arguments."));
         else {
             int64_t result = ExecSyscall(args);
-            std::cout << " sys64: " << result << std::endl;
+//            std::cout << "syscall: " << result << std::endl;
             args.GetReturnValue().Set(Int64ToArray(isolate, result));
         }
     }
@@ -135,10 +139,10 @@ namespace jskernel {
     void MethodMalloc(const FunctionCallbackInfo<Value>& args) {
         Isolate* isolate = args.GetIsolate();
 
-        char* addr = (char*) args[0]->Int32Value();
+        void* addr = (void*) args[0]->Int32Value();
         size_t size = (size_t) args[1]->Int32Value();
 
-        Local<ArrayBuffer> buf = ArrayBuffer::New(isolate, (void*) addr, size);
+        Local<ArrayBuffer> buf = ArrayBuffer::New(isolate, addr, size);
         args.GetReturnValue().Set(buf);
     }
 
@@ -147,9 +151,12 @@ namespace jskernel {
 
         int32_t lo = (int32_t) args[0]->Int32Value();
         int32_t hi = (int32_t) args[1]->Int32Value();
-        int64_t addr = (((int64_t) hi) << 32) | ((int64_t) lo);
+        int64_t addr = (((int64_t) hi) << 32) | ((int64_t) lo & 0xffffffff);
 
-        std::cout << " malloc addr: " << addr << std::endl;
+//        std::cout << "<<: " << (((int64_t) hi) << 32) << std::endl;
+//        std::cout << "lo: " << lo << std::endl;
+//        std::cout << "hi: " << hi << std::endl;
+//        std::cout << "malloc: " << addr << std::endl;
 
         size_t size = (size_t) args[2]->Int32Value();
 
@@ -161,6 +168,23 @@ namespace jskernel {
     void MethodErrno(const FunctionCallbackInfo<Value>& args) {
         Isolate* isolate = args.GetIsolate();
         args.GetReturnValue().Set(Integer::New(isolate, errno));
+    }
+
+    typedef long (*callback)();
+
+    void MethodCall(const FunctionCallbackInfo<Value>& args) {
+        int32_t addr = (int32_t) args[0]->Int32Value();
+        callback func = (callback) addr;
+        func();
+    }
+
+    void MethodCall64(const FunctionCallbackInfo<Value>& args) {
+        int32_t lo = (int32_t) args[0]->Int32Value();
+        int32_t hi = (int32_t) args[1]->Int32Value();
+        int64_t addr = (((int64_t) hi) << 32) | ((int64_t) lo & 0xffffffff);
+
+        callback func = (callback) addr;
+        func();
     }
 
 //    void MethodGen(const FunctionCallbackInfo<Value>& args) {
@@ -184,6 +208,9 @@ namespace jskernel {
         NODE_SET_METHOD(exports, "malloc",      MethodMalloc);
         NODE_SET_METHOD(exports, "malloc64",    MethodMalloc64);
         NODE_SET_METHOD(exports, "errno",       MethodErrno);
+//        NODE_SET_METHOD(exports, "jump",        MethodJump);
+        NODE_SET_METHOD(exports, "call",        MethodCall);
+        NODE_SET_METHOD(exports, "call64",      MethodCall64);
 //        NODE_SET_METHOD(exports, "gen",         MethodGen);
     }
 

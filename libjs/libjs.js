@@ -137,20 +137,6 @@ function lseek(fd, offset, whence) {
     return sys.syscall(defs.syscalls.lseek, fd, offset, whence);
 }
 exports.lseek = lseek;
-// Memory --------------------------------------------------------------------------------------------------------------
-// TODO: Could not make `mmap` work for some reason.
-// void *mmap(void *addr, size_t lengthint " prot ", int " flags, int fd, off_t offset);
-function mmap(addr, length, prot, flags, fd, offset) {
-    debug('mmap', addr, length, prot, flags, fd, offset);
-    return sys.syscall(defs.syscalls.mmap, length, prot, flags, fd, offset);
-}
-exports.mmap = mmap;
-// int munmap(void *addr, size_t length);
-function munmap(addr, length) {
-    debug('munmap');
-    return sys.syscall(defs.syscalls.munmap, addr, length);
-}
-exports.munmap = munmap;
 // Sockets -------------------------------------------------------------------------------------------------------------
 // http://www.skyfree.org/linux/kernel_network/socket.html
 // https://github.com/torvalds/linux/blob/master/net/socket.c
@@ -306,6 +292,32 @@ function epoll_ctl(epfd, op, fd, epoll_event) {
 }
 exports.epoll_ctl = epoll_ctl;
 // ## Memory
+// ### mmap
+//
+// Map files or devices into memory
+//
+//     mmap(addr: number, length: number, prot: defs.PROT, flags: defs.MAP, fd: number, offset: number): number
+//
+// In `libc`:
+//
+//     void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
+//
+function mmap(addr, length, prot, flags, fd, offset) {
+    debug('mmap', addr, length, prot, flags, fd, offset);
+    return sys.syscall64(defs.syscalls.mmap, addr, length, prot, flags, fd, offset);
+}
+exports.mmap = mmap;
+// ### munmap
+//
+// In `libc`:
+//
+//     int munmap(void *addr, size_t length);
+//
+function munmap(addr, length) {
+    debug('munmap', sys.addr64(addr), length);
+    return sys.syscall(defs.syscalls.munmap, addr, length);
+}
+exports.munmap = munmap;
 // ### shmget
 // 
 //     shmget(key: number, size: number, shmflg: defs.IPC|defs.FLAG): number
@@ -365,7 +377,6 @@ exports.shmget = shmget;
 //  - On success shmat() returns the address of the attached shared memory segment; on error (void *) -1
 //  is returned, and errno is set to indicate the cause of the error.
 /**
- *
  * @param shmid {number} ID returned by `shmget`.
  * @param shmaddr {number} Optional approximate address where to allocate memory, or NULL.
  * @param shmflg {SHM}

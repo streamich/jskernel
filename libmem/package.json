@@ -1,0 +1,32 @@
+{
+  "name": "libmem",
+  "description": "Low-level memory functions for Node.js, memory allocator, structs",
+  "version": "1.0.0",
+  "main": "libmem.js",
+  "keywords": [
+    "memory",
+    "malloc",
+    "alloc",
+    "struct",
+    "type",
+    "SharedArrayBuffer",
+    "ExecutableArrayBuffer",
+    "execute",
+    "exec",
+    "call",
+    "sys",
+    "system"
+  ],
+  "repository": {
+    "type": "http",
+    "url": "http://github.com/streamich/libmem"
+  },
+  "engines": {
+    "node": ">= 4.4.3"
+  },
+  "dependencies": {
+    "libsys": "*",
+    "libjs": "*",
+    "debug": "*"
+  }
+}

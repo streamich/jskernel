@@ -1,7 +1,7 @@
 {
   "name": "libjs",
   "description": "POSIX/libc functions implemented in JavaScript",
-  "version": "1.0.2",
+  "version": "1.0.12",
   "main": "libjs.js",
   "keywords": [
     "libc",

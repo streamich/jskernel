@@ -212,6 +212,24 @@ int main() {
     std::cout << "EXDEV = " << EXDEV << "," << endl;
     std::cout << "EXFULL = " << EXFULL << "," << endl;
 
+    std::cout << "MAP_SHARED = " << MAP_SHARED << "," << endl;
+    std::cout << "MAP_ANON = " << MAP_ANON << "," << endl;
+    std::cout << "MAP_32BIT = " << MAP_32BIT << "," << endl;
+    std::cout << "MAP_PRIVATE = " << MAP_PRIVATE << "," << endl;
+    std::cout << "MAP_ANONYMOUS = " << MAP_ANONYMOUS << "," << endl;
+    std::cout << "MAP_DENYWRITE = " << MAP_DENYWRITE << "," << endl;
+    std::cout << "MAP_EXECUTABLE = " << MAP_EXECUTABLE << "," << endl;
+    std::cout << "MAP_FILE = " << MAP_FILE << "," << endl;
+    std::cout << "MAP_FIXED = " << MAP_FIXED << "," << endl;
+    std::cout << "MAP_GROWSDOWN = " << MAP_GROWSDOWN << "," << endl;
+    std::cout << "MAP_HUGETLB = " << MAP_HUGETLB << "," << endl;
+    std::cout << "MAP_HUGE_SHIFT = " << MAP_HUGE_SHIFT << "," << endl;
+    std::cout << "MAP_LOCKED = " << MAP_LOCKED << "," << endl;
+    std::cout << "MAP_NONBLOCK = " << MAP_NONBLOCK << "," << endl;
+    std::cout << "MAP_NORESERVE = " << MAP_NORESERVE << "," << endl;
+    std::cout << "MAP_POPULATE = " << MAP_POPULATE << "," << endl;
+    std::cout << "MAP_STACK = " << MAP_STACK << "," << endl;
+
     std::cout << "sizeof(size_t) = " << sizeof(size_t) << "," << endl;
     std::cout << "sizeof(time_t) = " << sizeof(time_t) << "," << endl;
     std::cout << "sizeof(__time_t) = " << sizeof(__time_t) << "," << endl;

@@ -1,8 +1,8 @@
 {
   "targets": [
     {
-      "target_name": "jskernel-sys",
-      "sources": [ "jskernel-sys.cc" ]
+      "target_name": "libsys",
+      "sources": [ "libsys.cc" ]
     }
   ]
 }

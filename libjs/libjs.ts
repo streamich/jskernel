@@ -145,22 +145,6 @@ export function lseek(fd: number, offset: number, whence: number): number {
 }
 
 
-// Memory --------------------------------------------------------------------------------------------------------------
-
-// TODO: Could not make `mmap` work for some reason.
-// void *mmap(void *addr, size_t lengthint " prot ", int " flags, int fd, off_t offset);
-export function mmap(addr: number, length: number, prot: number, flags: number, fd: number, offset: number): number {
-    debug('mmap', addr, length, prot, flags, fd, offset);
-    return sys.syscall(defs.syscalls.mmap, length, prot, flags, fd, offset);
-}
-
-// int munmap(void *addr, size_t length);
-export function munmap(addr: Buffer, length: number): number {
-    debug('munmap');
-    return sys.syscall(defs.syscalls.munmap, addr, length);
-}
-
-
 // Sockets -------------------------------------------------------------------------------------------------------------
 
 // http://www.skyfree.org/linux/kernel_network/socket.html
@@ -233,32 +217,32 @@ export function send(fd: number, buf: Buffer, flags: defs.MSG = 0): number {
 
 // Process -------------------------------------------------------------------------------------------------------------
 
-export function getpid() {
+export function getpid(): number {
     debug('getpid');
     return sys.syscall(defs.syscalls.getpid);
 }
 
-export function getppid() {
+export function getppid(): number {
     debug('getppid');
     return sys.syscall(defs.syscalls.getppid);
 }
 
-export function getuid() {
+export function getuid(): number {
     debug('getuid');
     return sys.syscall(defs.syscalls.getuid);
 }
 
-export function geteuid() {
+export function geteuid(): number {
     debug('geteuid');
     return sys.syscall(defs.syscalls.geteuid);
 }
 
-export function getgid() {
+export function getgid(): number {
     debug('getgid');
     return sys.syscall(defs.syscalls.getgid);
 }
 
-export function getegid() {
+export function getegid(): number {
     debug('getegid');
     return sys.syscall(defs.syscalls.getegid);
 }
@@ -321,6 +305,31 @@ export function epoll_ctl(epfd: number, op: defs.EPOLL_CTL, fd: number, epoll_ev
 
 // ## Memory
 
+// ### mmap
+//
+// Map files or devices into memory
+//
+//     mmap(addr: number, length: number, prot: defs.PROT, flags: defs.MAP, fd: number, offset: number): number
+//
+// In `libc`:
+//
+//     void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
+//
+export function mmap(addr: number, length: number, prot: defs.PROT, flags: defs.MAP, fd: number, offset: number): [number, number] {
+    debug('mmap', addr, length, prot, flags, fd, offset);
+    return sys.syscall64(defs.syscalls.mmap, addr, length, prot, flags, fd, offset);
+}
+
+// ### munmap
+//
+// In `libc`:
+//
+//     int munmap(void *addr, size_t length);
+//
+export function munmap(addr: Buffer, length: number): number {
+    debug('munmap', sys.addr64(addr), length);
+    return sys.syscall(defs.syscalls.munmap, addr, length);
+}
 
 // ### shmget
 // 
@@ -385,7 +394,6 @@ export function shmget(key: number, size: number, shmflg: defs.IPC|defs.FLAG): n
 //  is returned, and errno is set to indicate the cause of the error.
 
 /**
- *
  * @param shmid {number} ID returned by `shmget`.
  * @param shmaddr {number} Optional approximate address where to allocate memory, or NULL.
  * @param shmflg {SHM}
