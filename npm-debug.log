@@ -1,0 +1,160 @@
+0 info it worked if it ends with ok
+1 verbose cli [ 'c:\\Program Files (x86)\\nodejs\\node.exe',
+1 verbose cli   'c:\\Program Files (x86)\\nodejs\\node_modules\\npm\\bin\\npm-cli.js',
+1 verbose cli   'i',
+1 verbose cli   'asm' ]
+2 info using npm@2.11.3
+3 info using node@v0.12.7
+4 verbose install initial load of c:\dev\jskernel\package.json
+5 verbose readDependencies loading dependencies from c:\dev\jskernel\package.json
+6 silly cache add args [ 'asm', null ]
+7 verbose cache add spec asm
+8 silly cache add parsed spec { raw: 'asm',
+8 silly cache add   scope: null,
+8 silly cache add   name: 'asm',
+8 silly cache add   rawSpec: '',
+8 silly cache add   spec: '*',
+8 silly cache add   type: 'range' }
+9 silly addNamed asm@*
+10 verbose addNamed "*" is a valid semver range for asm
+11 silly addNameRange { name: 'asm', range: '*', hasData: false }
+12 silly mapToRegistry name asm
+13 silly mapToRegistry using default registry
+14 silly mapToRegistry registry https://registry.npmjs.org/
+15 silly mapToRegistry uri https://registry.npmjs.org/asm
+16 verbose addNameRange registry:https://registry.npmjs.org/asm not in flight; fetching
+17 verbose request uri https://registry.npmjs.org/asm
+18 verbose request no auth needed
+19 info attempt registry request try #1 at 9:23:32 PM
+20 verbose request id aec42f4a2354f05f
+21 http request GET https://registry.npmjs.org/asm
+22 http 200 https://registry.npmjs.org/asm
+23 silly get cb [ 200,
+23 silly get   { server: 'CouchDB/1.5.0 (Erlang OTP/R16B03)',
+23 silly get     etag: '"ALGZCAGN7L7NKRGANKHD0VLB0"',
+23 silly get     'content-type': 'application/json',
+23 silly get     'cache-control': 'max-age=300',
+23 silly get     'content-length': '1205',
+23 silly get     'accept-ranges': 'bytes',
+23 silly get     date: 'Fri, 06 May 2016 20:23:13 GMT',
+23 silly get     via: '1.1 varnish',
+23 silly get     age: '0',
+23 silly get     connection: 'keep-alive',
+23 silly get     'x-served-by': 'cache-lhr6327-LHR',
+23 silly get     'x-cache': 'MISS',
+23 silly get     'x-cache-hits': '0',
+23 silly get     'x-timer': 'S1462566193.375854,VS0,VE353',
+23 silly get     vary: 'Accept-Encoding' } ]
+24 verbose get saving asm to C:\Users\vad\AppData\Roaming\npm-cache\registry.npmjs.org\asm\.cache.json
+25 silly addNameRange number 2 { name: 'asm', range: '*', hasData: true }
+26 silly addNameRange versions [ 'asm', [ '0.0.1' ] ]
+27 silly addNamed asm@0.0.1
+28 verbose addNamed "0.0.1" is a plain semver version for asm
+29 silly mapToRegistry name asm
+30 silly mapToRegistry using default registry
+31 silly mapToRegistry registry https://registry.npmjs.org/
+32 silly mapToRegistry uri https://registry.npmjs.org/asm
+33 verbose addRemoteTarball https://registry.npmjs.org/asm/-/asm-0.0.1.tgz not in flight; adding
+34 verbose addRemoteTarball [ 'https://registry.npmjs.org/asm/-/asm-0.0.1.tgz',
+34 verbose addRemoteTarball   '52620d8ba0ad86204596b811480ff911c41aadbf' ]
+35 info retry fetch attempt 1 at 9:23:33 PM
+36 info attempt registry request try #1 at 9:23:33 PM
+37 http fetch GET https://registry.npmjs.org/asm/-/asm-0.0.1.tgz
+38 http fetch 200 https://registry.npmjs.org/asm/-/asm-0.0.1.tgz
+39 silly fetchAndShaCheck shasum 52620d8ba0ad86204596b811480ff911c41aadbf
+40 verbose addTmpTarball C:\Users\vad\AppData\Local\Temp\npm-2744-1c444241\registry.npmjs.org\asm\-\asm-0.0.1.tgz not in flight; adding
+41 verbose addTmpTarball already have metadata; skipping unpack for asm@0.0.1
+42 silly cache afterAdd asm@0.0.1
+43 verbose afterAdd C:\Users\vad\AppData\Roaming\npm-cache\asm\0.0.1\package\package.json not in flight; writing
+44 verbose afterAdd C:\Users\vad\AppData\Roaming\npm-cache\asm\0.0.1\package\package.json written
+45 silly install resolved [ { name: 'asm',
+45 silly install resolved     version: '0.0.1',
+45 silly install resolved     description: 'Allocate and run chunks of executable code',
+45 silly install resolved     main: 'build/Release/asm',
+45 silly install resolved     scripts:
+45 silly install resolved      { install: 'make mac',
+45 silly install resolved        test: 'arch -i386 node example && arch -x86_64 node example' },
+45 silly install resolved     readme: '* `npm install` to build\n* `npm test` to run example\n* `arch -i386 node` for 32-bit node (OS X)\n* `arch -x86_64 node` for 64-bit node (OS X)\n',
+45 silly install resolved     _id: 'asm@0.0.1',
+45 silly install resolved     dist:
+45 silly install resolved      { shasum: '52620d8ba0ad86204596b811480ff911c41aadbf',
+45 silly install resolved        tarball: 'https://registry.npmjs.org/asm/-/asm-0.0.1.tgz' },
+45 silly install resolved     _npmVersion: '1.1.59',
+45 silly install resolved     _npmUser: { name: 'evanw', email: 'evan.exe@gmail.com' },
+45 silly install resolved     maintainers: [ [Object] ],
+45 silly install resolved     directories: {},
+45 silly install resolved     _shasum: '52620d8ba0ad86204596b811480ff911c41aadbf',
+45 silly install resolved     _resolved: 'https://registry.npmjs.org/asm/-/asm-0.0.1.tgz',
+45 silly install resolved     _from: 'asm@*' } ]
+46 info install asm@0.0.1 into c:\dev\jskernel
+47 info installOne asm@0.0.1
+48 verbose installOne of asm to c:\dev\jskernel not in flight; installing
+49 verbose lock using C:\Users\vad\AppData\Roaming\npm-cache\_locks\asm-a6161f6f82ad4cf7.lock for c:\dev\jskernel\node_modules\asm
+50 silly install write writing asm 0.0.1 to c:\dev\jskernel\node_modules\asm
+51 verbose unbuild node_modules\asm
+52 silly gentlyRm c:\dev\jskernel\node_modules\asm is being purged from base c:\dev\jskernel
+53 verbose gentlyRm don't care about contents; nuking c:\dev\jskernel\node_modules\asm
+54 verbose tar unpack C:\Users\vad\AppData\Roaming\npm-cache\asm\0.0.1\package.tgz
+55 verbose tar unpacking to c:\dev\jskernel\node_modules\asm
+56 silly gentlyRm c:\dev\jskernel\node_modules\asm is being purged
+57 verbose gentlyRm don't care about contents; nuking c:\dev\jskernel\node_modules\asm
+58 silly gunzTarPerm modes [ '777', '666' ]
+59 silly gunzTarPerm extractEntry package.json
+60 silly gunzTarPerm extractEntry .npmignore
+61 silly gunzTarPerm extractEntry README.md
+62 silly gunzTarPerm extractEntry example.js
+63 silly gunzTarPerm extractEntry asm.cc
+64 silly gunzTarPerm extractEntry binding.gyp
+65 silly gunzTarPerm extractEntry Makefile
+66 verbose write writing to c:\dev\jskernel\node_modules\asm\package.json
+67 info preinstall asm@0.0.1
+68 verbose readDependencies loading dependencies from c:\dev\jskernel\node_modules\asm\package.json
+69 verbose readDependencies loading dependencies from c:\dev\jskernel\node_modules\asm\package.json
+70 silly install resolved []
+71 verbose about to build c:\dev\jskernel\node_modules\asm
+72 info build c:\dev\jskernel\node_modules\asm
+73 info linkStuff asm@0.0.1
+74 silly linkStuff asm@0.0.1 has c:\dev\jskernel\node_modules as its parent node_modules
+75 verbose linkBins asm@0.0.1
+76 verbose linkMans asm@0.0.1
+77 verbose rebuildBundles asm@0.0.1
+78 info install asm@0.0.1
+79 verbose unsafe-perm in lifecycle true
+80 info asm@0.0.1 Failed to exec install script
+81 verbose unlock done using C:\Users\vad\AppData\Roaming\npm-cache\_locks\asm-a6161f6f82ad4cf7.lock for c:\dev\jskernel\node_modules\asm
+82 verbose stack Error: asm@0.0.1 install: `make mac`
+82 verbose stack Exit status 1
+82 verbose stack     at EventEmitter.<anonymous> (c:\Program Files (x86)\nodejs\node_modules\npm\lib\utils\lifecycle.js:213:16)
+82 verbose stack     at EventEmitter.emit (events.js:110:17)
+82 verbose stack     at ChildProcess.<anonymous> (c:\Program Files (x86)\nodejs\node_modules\npm\lib\utils\spawn.js:24:14)
+82 verbose stack     at ChildProcess.emit (events.js:110:17)
+82 verbose stack     at maybeClose (child_process.js:1015:16)
+82 verbose stack     at Process.ChildProcess._handle.onexit (child_process.js:1087:5)
+83 verbose pkgid asm@0.0.1
+84 verbose cwd c:\dev\jskernel
+85 error Windows_NT 6.3.9600
+86 error argv "c:\\Program Files (x86)\\nodejs\\node.exe" "c:\\Program Files (x86)\\nodejs\\node_modules\\npm\\bin\\npm-cli.js" "i" "asm"
+87 error node v0.12.7
+88 error npm  v2.11.3
+89 error code ELIFECYCLE
+90 error asm@0.0.1 install: `make mac`
+90 error Exit status 1
+91 error Failed at the asm@0.0.1 install script 'make mac'.
+91 error This is most likely a problem with the asm package,
+91 error not with npm itself.
+91 error Tell the author that this fails on your system:
+91 error     make mac
+91 error You can get their info via:
+91 error     npm owner ls asm
+91 error There is likely additional logging output above.
+92 verbose exit [ 1, true ]
+93 verbose unbuild node_modules\asm
+94 info preuninstall asm@0.0.1
+95 info uninstall asm@0.0.1
+96 verbose unbuild rmStuff asm@0.0.1 from c:\dev\jskernel\node_modules
+97 info postuninstall asm@0.0.1
+98 silly gentlyRm c:\dev\jskernel\node_modules\asm is being purged from base c:\dev\jskernel
+99 verbose gentlyRm don't care about contents; nuking c:\dev\jskernel\node_modules\asm
+100 silly vacuum-fs purging c:\dev\jskernel\node_modules\asm
+101 silly vacuum-fs removing c:\dev\jskernel\node_modules
+102 silly vacuum-fs finished vacuuming up to c:\dev\jskernel

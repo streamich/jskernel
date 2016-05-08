@@ -1,4 +1,4 @@
-FROM node:4.4.3-onbuild
+FROM node:4.4.3
 
 RUN apt-get update && apt-get upgrade -y
 

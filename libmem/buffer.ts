@@ -13,6 +13,6 @@ ExecutableArrayBuffer.prototype = {
     __proto__: ArrayBuffer.prototype,
 
     call: function() {
-        
+
     }
 };

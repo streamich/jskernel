@@ -17,13 +17,13 @@ var SocketTcp = (function () {
         if (waitres > 0) {
             var event = libjs.epoll_event.unpack(evbuf);
             if (!this.connected) {
-                if ((event.events & 4 /* EPOLLOUT */) > 0) {
+                if ((event.events & libjs.EPOLL_EVENTS.EPOLLOUT) > 0) {
                     // clearInterval(polli);
                     this.connected = true;
                     this.onconnect();
                 }
             }
-            if ((event.events & 1 /* EPOLLIN */) > 0) {
+            if ((event.events & libjs.EPOLL_EVENTS.EPOLLIN) > 0) {
                 var buf = new Buffer(1000);
                 var bytes = libjs.read(this.fd, buf);
                 if (bytes < -1) {
@@ -34,7 +34,7 @@ var SocketTcp = (function () {
                     this.ondata(data);
                 }
             }
-            if ((event.events & 8 /* EPOLLERR */) > 0) {
+            if ((event.events & libjs.EPOLL_EVENTS.EPOLLERR) > 0) {
             }
         }
         if (waitres < 0) {
@@ -44,28 +44,28 @@ var SocketTcp = (function () {
         process.nextTick(this.pollBound);
     };
     SocketTcp.prototype.create = function () {
-        this.fd = libjs.socket(2 /* INET */, 1 /* STREAM */, 0);
+        this.fd = libjs.socket(libjs.AF.INET, libjs.SOCK.STREAM, 0);
         if (this.fd < 0)
             throw Error("Could not create scoket: " + this.fd);
         // Socket is not a file, we just created the file descriptor for it, flags
         // for this file descriptor are set to 0 anyways, so we just overwrite 'em.
-        var fcntl = libjs.fcntl(this.fd, 4 /* SETFL */, 2048 /* O_NONBLOCK */);
+        var fcntl = libjs.fcntl(this.fd, libjs.FCNTL.SETFL, libjs.FLAG.O_NONBLOCK);
         if (fcntl < 0)
             throw Error("Could not make socket non-blocking: " + fcntl);
         this.epfd = libjs.epoll_create1(0);
         if (this.epfd < 0)
             throw Error("Could not start epoll: " + this.epfd);
         var event = {
-            events: 1 /* EPOLLIN */ | 4 /* EPOLLOUT */,
+            events: libjs.EPOLL_EVENTS.EPOLLIN | libjs.EPOLL_EVENTS.EPOLLOUT,
             data: [this.fd, 0]
         };
-        var ctl = libjs.epoll_ctl(this.epfd, 1 /* ADD */, this.fd, event);
+        var ctl = libjs.epoll_ctl(this.epfd, libjs.EPOLL_CTL.ADD, this.fd, event);
     };
     SocketTcp.prototype.connect = function (opts) {
         // on read check for:
         // EAGAINN and EWOULDBLOCK
         var addr_in = {
-            sin_family: 2 /* INET */,
+            sin_family: libjs.AF.INET,
             sin_port: libjs.hton16(opts.port),
             sin_addr: {
                 s_addr: new libjs.Ipv4(opts.host)
@@ -74,7 +74,7 @@ var SocketTcp = (function () {
         };
         var res = libjs.connect(this.fd, addr_in);
         // Everything is OK, we are connecting...
-        if (res == -115 /* EINPROGRESS */) {
+        if (res == -libjs.ERROR.EINPROGRESS) {
             this.poll(); // Start event loop.
             return;
         }

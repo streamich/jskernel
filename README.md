@@ -226,12 +226,13 @@ Start a Docker container:
     cd /share
     npm install -g npm@latest
     npm install -g node-gyp n typescript tsd mocha
-    tsd install node
     
 Next time just do:
 
     sudo docker start -i myjskernel
     
-    
+Typings:
+
+    tsd install node
     
     

@@ -1,0 +1,20 @@
+{
+  "name": "x64",
+  "description": "Generates x86_64 native code from assembly instructions",
+  "version": "1.0.0",
+  "keywords": [
+    "x64",
+    "x86_64",
+    "native",
+    "native-code",
+    "machine-code",
+    "asm",
+    "compiler",
+    "assembler"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/streamich/x64"
+  },
+  "main": "x64.js"
+}
