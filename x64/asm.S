@@ -3,6 +3,48 @@
 .global main
 main:
 
+mov_r_r:
+        movq %rbx, %rax
+        mov %eax, %ebx
+
+mov_imm_r:
+
+        movq %rax, %rax
+        movq $0x11, %rax
+        movl $0x11223344, %eax
+        movl $0x11223344, %ebx
+        movl $0x11223344, %esp
+        movl $0x11223344, %r12d
+        movq $0x11223344, %rax
+        movq $0x1122334455667788, %rax
+        movq $0x1122334455667788, %r15
+
+mov_m_r:
+
+        movq (%rbx), %rax
+        movq (%r9), %rax
+        movq (%rbx), %r8
+        movq (%r9), %r8
+        movq 0x11(%r9), %r8
+        movq 0x11(%r11, %r12, 8), %rbx
+
+test:
+        movq %rax, %rax
+        movq %rbx, %rax
+        movq (%rax), %rax
+        movq %rax, (%rax)
+        movq $11, (%rax)
+        movq 0x11(%rax), %rax
+        movq %rax, 0x11(%rax)
+        movq (%rbx, %rcx), %rax
+        movq %rax, (%rbx, %rcx)
+        movq (%rbx, %rcx, 2), %rax
+        movq %rax, (%rbx, %rcx, 2)
+        movq 0x11(%rbx, %rcx), %rax
+        movq %rax, 0x11(%rbx, %rcx)
+        movq 0x11(%rbx, %rcx, 4), %rax
+        movq %rax, 0x11(%rbx, %rcx, 4)
+
 mov_i32_r:
         movq $0x11223344, %rax
         movq $0x11223344, %rbx
