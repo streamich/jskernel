@@ -5,6 +5,7 @@ var __extends = (this && this.__extends) || function (d, b) {
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
 var reg = require('./regfile');
+exports.RM_NEEDS_SIB = 4;
 // Transpiler returns a machine code of every instruction.
 // It does not have any logic and does not do any optimizations or type
 // checking, it just returns the machine code for every ASM instruction.
@@ -47,7 +48,7 @@ var Encoder = (function () {
     };
     Encoder.prototype.rexMemToReg = function (src, dst) {
         var W = 0, R = 0, X = 0, B = 0;
-        if (src.base.size == 64)
+        if (src.base && src.base.size == 64)
             W = 1;
         else if (dst.size == 64)
             W = 1;
@@ -59,13 +60,39 @@ var Encoder = (function () {
             R = 1;
         return W || R || X || B ? this.rex(W, R, X, B) : null;
     };
-    Encoder.prototype.rexFromOperands = function (src, dst) {
+    Encoder.prototype.rexRegToMem = function (src, dst) {
+        var W = 0, R = 0, X = 0, B = 0;
+        if (dst.base && dst.base.size == 64)
+            W = 1;
+        else if (src.size == 64)
+            W = 1;
+        if (src.isExtended)
+            R = 1;
+        if (dst.base && dst.base.isExtended)
+            B = 1;
+        if (dst.index && dst.index.isExtended)
+            X = 1;
+        return W || R || X || B ? this.rex(W, R, X, B) : null;
+    };
+    Encoder.prototype.rexMem = function (r, ref) {
+        var W = 0, R = 0, X = 0, B = 0;
+        if (ref.base && ref.base.size == 64)
+            W = 1;
+        else if (r.size == 64)
+            W = 1;
+        if (r.isExtended)
+            R = 1;
+        if (ref.base && ref.base.isExtended)
+            B = 1;
+        if (ref.index && ref.index.isExtended)
+            X = 1;
+        return W || R || X || B ? this.rex(W, R, X, B) : null;
     };
     Encoder.prototype.getDisplacementSize = function (disp) {
         if ((disp <= 0x7f) && (disp >= -0x80))
             return 0 /* BYTE */;
         if ((disp <= 0x7fffffff) && (disp >= -0x80000000))
-            return 1 /* LONG */;
+            return 2 /* LONG */;
         throw Error("Displacement " + disp + " too big.");
     };
     // Creates a Mod-REG-R/M byte, `mod` is mode, `register` is ID of the first register,
@@ -75,39 +102,78 @@ var Encoder = (function () {
         // return (mod << 6) + (register << 3) + rm;
         return (mod << 6) | (register << 3) | rm;
     };
+    Encoder.prototype.modrmPack = function (modrm) {
+        return this.modrm(modrm.mod, modrm.reg, modrm.rm);
+    };
     Encoder.prototype.modrmOneOperand = function (dst, opreg) {
         if (opreg === void 0) { opreg = 0; }
-        return this.modrm(3 /* REG_TO_REG */, opreg, dst.id);
+        return {
+            mod: 3 /* REG_TO_REG */,
+            reg: opreg,
+            rm: dst.id
+        };
     };
     Encoder.prototype.modrmRegToReg = function (src, dst) {
-        return this.modrm(3 /* REG_TO_REG */, src.id, dst.id);
+        return {
+            mod: 3 /* REG_TO_REG */,
+            reg: src.id,
+            rm: dst.id
+        };
     };
     Encoder.prototype.modrmMemToReg = function (src, dst, mod) {
         if (mod === void 0) { mod = 0 /* INDIRECT */; }
         var rm = src.base.id;
+        // There will be a `SIB` byte, we have to set `R/M` to `0b100` = `RM_NEEDS_SIB`.
+        var need_sib = !!src.index;
+        if (need_sib)
+            rm = exports.RM_NEEDS_SIB;
+        return {
+            mod: mod,
+            reg: dst.id,
+            rm: rm
+        };
+    };
+    Encoder.prototype.modrmRegToMem = function (src, dst, mod) {
+        if (mod === void 0) { mod = 0 /* INDIRECT */; }
+        var rm = dst.base.id;
         // There will be a `SIB` byte, we have to set `R/M` to `0b100`.
-        var have_sib = !!src.index;
-        if (have_sib) {
-            rm = 4;
-        }
-        return this.modrm(mod, dst.id, rm);
+        var need_sib = !!dst.index;
+        if (need_sib)
+            rm = exports.RM_NEEDS_SIB;
+        return {
+            mod: mod,
+            reg: src.id,
+            rm: rm
+        };
     };
-    Encoder.prototype.modrmFromOperands = function (src, dst) {
-        if (src instanceof reg.Register) {
-            if (dst instanceof reg.Register) {
-                return this.modrm(3 /* REG_TO_REG */, src.id, dst.id);
-            }
-        }
-        throw Error('Unsupported Mod-R/M operands.');
+    Encoder.prototype.modrmMem = function (r, ref, mod) {
+        if (mod === void 0) { mod = 0 /* INDIRECT */; }
+        var rm = ref.base ? ref.base.id : 0;
+        // There will be a `SIB` byte, we have to set `R/M` to `0b100`.
+        var need_sib = !!ref.index;
+        if (need_sib)
+            rm = exports.RM_NEEDS_SIB;
+        return {
+            mod: mod,
+            reg: r.id,
+            rm: rm
+        };
     };
-    Encoder.prototype.needsSib = function (ref) {
-        return !!ref.index;
+    Encoder.prototype.isSibNeeded = function (modrm, ref) {
+        return !!ref.index || (modrm.rm == exports.RM_NEEDS_SIB) ? true : false;
     };
     Encoder.prototype.sib = function (scale, index, base) {
         return (scale << 6) | (index << 3) | base;
     };
+    Encoder.prototype.sibPack = function (sib) {
+        return this.sib(sib.scale, sib.index, sib.base);
+    };
     Encoder.prototype.sibFromRef = function (ref) {
-        return this.sib(ref.scale, ref.index.id, ref.base.id);
+        return {
+            scale: ref.scale,
+            index: ref.index ? ref.index.id : 0,
+            base: ref.base ? ref.base.id : 0
+        };
     };
     Encoder.prototype.insOneOperand = function (r, op, opreg, hasRex, reg_in_op, imm) {
         if (opreg === void 0) { opreg = 0; }
@@ -121,15 +187,18 @@ var Encoder = (function () {
             if (rex)
                 ins.push(rex);
         }
-        // 3 lower bits in Op-code are used to encode register.
+        // Op-code
         if (reg_in_op) {
             op |= r.id;
             ins.push(op);
         }
         else {
             ins.push(op);
-            ins.push(this.modrmOneOperand(r, opreg));
+            // Mod-R/M
+            var modrm = this.modrmOneOperand(r, opreg);
+            ins.push(this.modrmPack(modrm));
         }
+        // Immediate
         if (imm.length)
             for (var _i = 0, imm_1 = imm; _i < imm_1.length; _i++) {
                 var long = imm_1[_i];
@@ -146,13 +215,17 @@ var Encoder = (function () {
             if (rex)
                 ins.push(rex);
         }
+        // Op-code
+        op = (op & 253) | 0 /* REG_IS_SRC */;
         ins.push(op);
-        ins.push(this.modrmRegToReg(src, dst));
+        // Mod-R/M
+        var modrm = this.modrmRegToReg(src, dst);
+        ins.push(this.modrmPack(modrm));
         return ins;
     };
     Encoder.prototype.insMemToReg = function (src, dst, op, hasRex, op_size) {
         if (hasRex === void 0) { hasRex = true; }
-        if (op_size === void 0) { op_size = 0 /* BYTE */; }
+        if (op_size === void 0) { op_size = 1 /* WORD */; }
         var ins = [];
         if (hasRex) {
             var rex = this.rexMemToReg(src, dst);
@@ -160,43 +233,122 @@ var Encoder = (function () {
                 ins.push(rex);
         }
         // Set op-code's direction and size bits.
-        op |= 2 /* REG_IS_DST */;
-        op |= op_size;
+        // op |= OP_DIRECTION.REG_IS_DST;
+        op = (op & 253) | 2 /* REG_IS_DST */;
+        op = (op & 254) | op_size;
         ins.push(op);
+        var mod = 0 /* INDIRECT */;
         if (src.displacement) {
             var disp_size = this.getDisplacementSize(src.displacement);
-            if (disp_size == 0 /* BYTE */) {
-                ins.push(this.modrmMemToReg(src, dst, 1 /* DISP8 */));
-                if (src.index)
-                    ins.push(this.sibFromRef(src));
-                ins.push(src.displacement);
-            }
-            else {
-                ins.push(this.modrmMemToReg(src, dst, 2 /* DISP32 */));
-                if (src.index)
-                    ins.push(this.sibFromRef(src));
-                // Write octets in reverse order.
-                ins.push(src.displacement & 0xff);
-                ins.push((src.displacement >> 8) & 0xff);
-                ins.push((src.displacement >> 16) & 0xff);
-                ins.push((src.displacement >> 24) & 0xff);
-            }
+            if (disp_size == 0 /* BYTE */)
+                mod = 1 /* DISP8 */;
+            else
+                mod = 2 /* DISP32 */;
         }
-        else {
-            ins.push(this.modrmMemToReg(src, dst));
-            if (src.index)
-                ins.push(this.sibFromRef(src));
+        // Mod-R/M
+        var modrm = this.modrmMemToReg(src, dst, mod);
+        ins.push(this.modrmPack(modrm));
+        // SIB
+        if (this.isSibNeeded(modrm, src)) {
+            var sib = this.sibFromRef(src);
+            ins.push(this.sibPack(sib));
+        }
+        // Displacement
+        if (src.displacement) {
+            if (mod == 1 /* DISP8 */)
+                ins.push(src.displacement); // Only one byte.
+            else
+                this.pushConstant(ins, src.displacement);
         }
         return ins;
     };
-    Encoder.prototype.insRegToMem = function (src, dst, op, hasRex) {
+    Encoder.prototype.insRegToMem = function (src, dst, op, hasRex, op_size) {
         if (hasRex === void 0) { hasRex = true; }
+        if (op_size === void 0) { op_size = 1 /* WORD */; }
         var ins = [];
         if (hasRex) {
             var rex = this.rexRegToMem(src, dst);
             if (rex)
                 ins.push(rex);
         }
+        op = (op & 253) | 0 /* REG_IS_SRC */;
+        op = (op & 254) | op_size;
+        ins.push(op);
+        var mod = 0 /* INDIRECT */;
+        if (dst.displacement) {
+            var disp_size = this.getDisplacementSize(dst.displacement);
+            if (disp_size == 0 /* BYTE */)
+                mod = 1 /* DISP8 */;
+            else
+                mod = 2 /* DISP32 */;
+        }
+        // Mod-R/M
+        var modrm = this.modrmRegToMem(src, dst, mod);
+        ins.push(this.modrmPack(modrm));
+        // SIB
+        if (this.isSibNeeded(modrm, dst)) {
+            var sib = this.sibFromRef(dst);
+            ins.push(this.sibPack(sib));
+        }
+        // Displacement
+        if (dst.displacement) {
+            if (mod == 1 /* DISP8 */)
+                ins.push(dst.displacement); // Only one byte.
+            else
+                this.pushConstant(ins, dst.displacement);
+        }
+        return ins;
+    };
+    // Operation where one operand is a memory reference.
+    Encoder.prototype.insMem = function (src, dst, op, hasRex, op_size) {
+        if (hasRex === void 0) { hasRex = true; }
+        if (op_size === void 0) { op_size = 1 /* WORD */; }
+        var ins = [];
+        var r, ref;
+        if (src instanceof reg.Register) {
+            r = src;
+            ref = dst;
+        }
+        else {
+            r = dst;
+            ref = src;
+        }
+        // REX prefix
+        if (hasRex) {
+            var rex = this.rexMem(r, ref);
+            if (rex)
+                ins.push(rex);
+        }
+        // Set direction of the reg-to-mem or mem-to-reg.
+        op = (op & 253) | (r === src ? 0 /* REG_IS_SRC */ : 2 /* REG_IS_DST */);
+        // TODO: Size of the operands, make this actually useful.
+        op = (op & 254) | op_size;
+        // Op-code
+        ins.push(op);
+        var mod = 0 /* INDIRECT */;
+        if (ref.displacement) {
+            var disp_size = this.getDisplacementSize(ref.displacement);
+            if (disp_size == 0 /* BYTE */)
+                mod = 1 /* DISP8 */;
+            else
+                mod = 2 /* DISP32 */;
+        }
+        // Mod-R/M
+        var modrm = this.modrmMem(r, ref, mod);
+        ins.push(this.modrmPack(modrm));
+        // SIB
+        if (this.isSibNeeded(modrm, ref)) {
+            var sib = this.sibFromRef(ref);
+            ins.push(this.sibPack(sib));
+        }
+        // Displacement
+        if (ref.displacement) {
+            if (mod == 1 /* DISP8 */)
+                ins.push(ref.displacement); // Only one byte.
+            else
+                this.pushConstant(ins, ref.displacement); // Push bytes in reverse order.
+        }
+        return ins;
     };
     Encoder.prototype.pushConstant = function (arr, constant) {
         arr.push(constant & 0xff);
@@ -219,14 +371,25 @@ var Encoder = (function () {
             throw Error('`movq` is defined only on 64-bit registers.');
         return this.insRegToReg(src, dst, 137 /* MOV */);
     };
+    Encoder.prototype.mov_r_r = function (src, dst) {
+        return this.insRegToReg(src, dst, 137 /* MOV */);
+    };
     Encoder.prototype.movq_m_r = function (src, dst) {
-        return this.insMemToReg(src, dst, 137 /* MOV */);
+        return this.insMem(src, dst, 137 /* MOV */);
+        // return this.insMemToReg(src, dst, OP.MOV);
     };
     Encoder.prototype.movq_imm_r = function (imm, dst) {
         return this.insOneOperand(dst, 199 /* MOVQ */, 0, true, false, [imm]);
     };
     Encoder.prototype.movq_r_m = function (src, dst) {
-        this.insRegToMem(src, dst, 137 /* MOV */);
+        return this.insMem(src, dst, 137 /* MOV */);
+        // return this.insRegToMem(src, dst, OP.MOV);
+    };
+    Encoder.prototype.movq_rm = function (src, dst) {
+        return this.insRegToReg(src, dst, 137 /* MOV */);
+    };
+    Encoder.prototype.mov_rm = function (src, dst) {
+        return this.insRegToReg(src, dst, 137 /* MOV */);
     };
     Encoder.prototype.movabs = function (imm, dst) {
         if (!(dst instanceof reg.Register64))
@@ -234,6 +397,38 @@ var Encoder = (function () {
         return this.insOneOperand(dst, 184 /* MOVABS */, 0, true, true, imm);
     };
     Encoder.prototype.movq = function (src, dst) {
+        if (src instanceof reg.MemoryReference) {
+            if (dst instanceof reg.MemoryReference)
+                throw Error("Cannot do memory-to-memory operation: movq " + src.toString() + ", " + dst.toString());
+            else if (dst instanceof reg.Register)
+                return this.insMem(src, dst, 137 /* MOV */);
+            else
+                throw Error("Invalid operand type: movq " + src.toString() + ", " + dst);
+        }
+        else if (src instanceof reg.Register) {
+            if (dst instanceof reg.MemoryReference)
+                return this.insMem(src, dst, 137 /* MOV */);
+            else if (dst instanceof reg.Register)
+                return this.insRegToReg(src, dst, 137 /* MOV */);
+            else
+                throw Error("Invalid operand type: movq " + src.toString() + ", " + dst);
+        }
+        else if (typeof src == 'number') {
+            var imm = src;
+            if (dst instanceof reg.Register) {
+                this.insOneOperand(dst, 199 /* MOVQ */, 0, true, true, [imm]);
+            }
+            else
+                throw Error("Invalid operand type: movq $" + src + ", " + dst);
+        }
+        else if ((src instanceof Array) && (src.length == 2)) {
+            var imm64 = src;
+            if (dst instanceof reg.Register)
+                return this.movabs(imm64, dst);
+            else
+                throw Error("Invalid operand type: movq $, " + dst);
+        }
+        throw Error('Invalid operand types: movq');
     };
     Encoder.prototype.mov = function (src, dst) {
         if (src instanceof reg.Register64) {

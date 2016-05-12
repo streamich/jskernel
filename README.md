@@ -230,6 +230,7 @@ Start a Docker container:
 Next time just do:
 
     sudo docker start -i myjskernel
+    sudo docker exec -it myjskernel bash
     
 Typings:
 

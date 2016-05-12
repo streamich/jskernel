@@ -3,6 +3,16 @@
 .global main
 main:
 
+test2:
+        dec %r10d
+        mov %eax, %ebx
+        movq %rax, %rax
+        movq %rax, (%rax)
+        movq (%rbx), %rax
+        movq %r12, %r12
+        movq (%r12), %r12
+        movq %r12, (%r12)
+
 mov_r_r:
         movq %rbx, %rax
         mov %eax, %ebx
@@ -27,6 +37,40 @@ mov_m_r:
         movq (%r9), %r8
         movq 0x11(%r9), %r8
         movq 0x11(%r11, %r12, 8), %rbx
+
+mov_r_m:
+
+        movq %rax, (%rax)
+        movq %rbx, (%rax)
+        movq %rcx, (%rax)
+        movq %rdx, (%rax)
+        movq %rsi, (%rax)
+        movq %rdi, (%rax)
+        movq %rbp, (%rax)
+        movq %rsp, (%rax)
+        movq %r8, (%rax)
+        movq %r9, (%rax)
+        movq %rax, (%r8)
+        movq %rbx, (%r8)
+        movq %rcx, (%r8)
+        movq %rdx, (%r8)
+        movq %rsi, (%r8)
+        movq %rdi, (%r8)
+        movq %rbp, (%r8)
+        movq %rsp, (%r8)
+        movq %r8, (%r8)
+        movq %r9, (%r8)
+        movq %r10, (%r8)
+        movq %r11, (%r8)
+        movq %r12, (%r8)
+        movq %r13, (%r8)
+        movq %r14, (%r8)
+        movq %r15, (%r8)
+        movq %rbx, (%r11)
+        movq %rbx, (%r12)
+        movq %rbx, (%r13)
+        movq %rbx, (%r14)
+        movq %rbx, (%r15)
 
 test:
         movq %rax, %rax

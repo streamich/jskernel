@@ -12,6 +12,7 @@ export var int16   = Type.define(2, buf.readInt16LE,    buf.writeInt16LE);
 export var uint16  = Type.define(2, buf.readUInt16LE,   buf.writeUInt16LE);
 export var int32   = Type.define(4, buf.readInt32LE,    buf.writeInt32LE);
 export var uint32  = Type.define(4, buf.readUInt32LE,   buf.writeUInt32LE);
+export var int64   = Arr.define(int32, 2);
 export var uint64  = Arr.define(uint32, 2);
 export var size_t = uint64;
 export var time_t = uint64;
@@ -101,6 +102,15 @@ export const enum MODE {
     S_ISVTX = 512,
     S_ISGID = 1024,
     S_ISUID = 2048,
+}
+
+// Access mode, see:
+// http://man7.org/linux/man-pages/man2/faccessat.2.html
+export const enum AMODE {
+    F_OK = 0,
+    X_OK = 1,
+    W_OK = 2,
+    R_OK = 4,
 }
 
 /**
@@ -645,6 +655,35 @@ export const enum EPOLL_EVENTS {
     EPOLLWAKEUP = 536870912,
 }
 
+
+export const enum S {
+    IFMT = 61440,   // type of file
+    IFBLK = 24576,  // block special
+    IFCHR = 8192,   // character special
+    IFIFO = 4096,   // FIFO special
+    IFREG = 32768,  // regular
+    IFDIR = 16384,  // directory
+    IFLNK = 40960,  // symbolic link
+    IFSOCK = 49152, // socket
+
+    IRWXU = 448,    // read, write, execute/search by owner
+    IRUSR = 256,    // read permission, owner
+    IWUSR = 128,    // write permission, owner
+    IXUSR = 64,     // execute/search permission, owner
+    IRWXG = 56,     // read, write, execute/search by group
+    IRGRP = 32,     // read permission, group
+    IWGRP = 16,     // write permission, group
+    IXGRP = 8,      // execute/search permission, group
+    IRWXO = 7,      // read, write, execute/search by others
+    IROTH = 4,      // read permission, others
+    IWOTH = 2,      // write permission, others
+    IXOTH = 1,      // execute/search permission, others
+    ISUID = 2048,   // set-user-ID on execution
+    ISGID = 1024,   // set-group-ID on execution
+    ISVTX = 512,    // on directories, restricted deletion flag
+}
+
+
 export const enum EPOLL {
     CLOEXEC = 524288, // Set the close-on-exec (FD_CLOEXEC) flag on the new file descriptor.  See the description of the O_CLOEXEC flag in open(2) for reasons why this may be useful.
 }
@@ -817,4 +856,32 @@ export interface shmid_ds {
     shm_cpid: number;
     shm_lpid: number;
     shm_nattch: [number, number];
+}
+
+
+// Time
+//
+//     struct utimbuf {
+//         time_t actime;       /* access time */
+//         time_t modtime;      /* modification time */
+//     };
+
+export var utimbuf = Struct.define(16, [
+    [0, uint64, 'actime'], // access time
+    [8, uint64, 'modtime'], // modification time
+]);
+
+export interface utimbuf {
+    actime: [number, number],
+    modtime: [number, number],
+}
+
+export var timeval = Struct.define(16, [
+    [0, uint64, 'tv_sec'], // access time
+    [8, uint64, 'tv_nsec'], // modification time
+]);
+
+export interface timeval {
+    tv_sec: [number, number],
+    tv_nsec: [number, number],
 }

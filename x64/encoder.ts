@@ -44,7 +44,22 @@ export const enum OPREG {
 // Displacement.
 export const enum DISP {
     BYTE,
+    WORD,
     LONG,
+}
+
+export const RM_NEEDS_SIB = 0b100;
+
+export interface IModRM {
+    mod: number;
+    reg: number;
+    rm: number;
+}
+
+export interface ISib {
+    scale: number;
+    index: number;
+    base: number;
 }
 
 export type number64 = [number, number];
@@ -90,7 +105,7 @@ export class Encoder {
     protected rexMemToReg(src: reg.MemoryReference, dst: reg.Register) {
         var W = 0, R = 0, X = 0, B = 0;
         
-        if(src.base.size == 64) W = 1;
+        if(src.base && src.base.size == 64) W = 1;
         else if(dst.size == 64) W = 1;
         
         if(src.base && src.base.isExtended) B = 1;
@@ -100,8 +115,30 @@ export class Encoder {
         return W || R || X || B ? this.rex(W, R, X, B) : null;
     }
 
-    protected rexFromOperands(src: reg.Operand|number, dst: reg.Operand) {
+    protected rexRegToMem(src: reg.Register, dst: reg.MemoryReference) {
+        var W = 0, R = 0, X = 0, B = 0;
 
+        if(dst.base && dst.base.size == 64) W = 1;
+        else if(src.size == 64) W = 1;
+
+        if(src.isExtended) R = 1;
+        if(dst.base && dst.base.isExtended) B = 1;
+        if(dst.index && dst.index.isExtended) X = 1;
+
+        return W || R || X || B ? this.rex(W, R, X, B) : null;
+    }
+
+    protected rexMem(r: reg.Register, ref: reg.MemoryReference) {
+        var W = 0, R = 0, X = 0, B = 0;
+
+        if(ref.base && ref.base.size == 64) W = 1;
+        else if(r.size == 64) W = 1;
+
+        if(r.isExtended) R = 1;
+        if(ref.base && ref.base.isExtended) B = 1;
+        if(ref.index && ref.index.isExtended) X = 1;
+
+        return W || R || X || B ? this.rex(W, R, X, B) : null;
     }
 
     protected getDisplacementSize(disp) {
@@ -118,45 +155,86 @@ export class Encoder {
         return (mod << 6) | (register << 3) | rm;
     }
 
-    protected modrmOneOperand(dst: reg.Register, opreg: OPREG = 0) {
-        return this.modrm(MOD.REG_TO_REG, opreg, dst.id);
+    protected modrmPack(modrm: IModRM) {
+        return this.modrm(modrm.mod, modrm.reg, modrm.rm);
     }
 
-    protected modrmRegToReg(src: reg.Register, dst: reg.Register) {
-        return this.modrm(MOD.REG_TO_REG, src.id, dst.id);
+    protected modrmOneOperand(dst: reg.Register, opreg: OPREG = 0): IModRM {
+        return {
+            mod: MOD.REG_TO_REG,
+            reg: opreg,
+            rm: dst.id,
+        };
     }
 
-    protected modrmMemToReg(src: reg.MemoryReference, dst: reg.Register, mod = MOD.INDIRECT) {
+    protected modrmRegToReg(src: reg.Register, dst: reg.Register): IModRM {
+        return {
+            mod: MOD.REG_TO_REG,
+            reg: src.id,
+            rm: dst.id,
+        };
+    }
+
+    protected modrmMemToReg(src: reg.MemoryReference, dst: reg.Register, mod = MOD.INDIRECT): IModRM {
         var rm = src.base.id;
 
+        // There will be a `SIB` byte, we have to set `R/M` to `0b100` = `RM_NEEDS_SIB`.
+        var need_sib = !!src.index;
+        if(need_sib) rm = RM_NEEDS_SIB;
+
+        return {
+            mod: mod,
+            reg: dst.id,
+            rm: rm,
+        };
+    }
+
+    protected modrmRegToMem(src: reg.Register, dst: reg.MemoryReference, mod = MOD.INDIRECT): IModRM {
+        var rm = dst.base.id;
+
         // There will be a `SIB` byte, we have to set `R/M` to `0b100`.
-        var have_sib = !!src.index;
-        if(have_sib) {
-            rm = 0b100;
-        }
+        var need_sib = !!dst.index;
+        if(need_sib) rm = RM_NEEDS_SIB;
 
-        return this.modrm(mod, dst.id, rm);
+        return {
+            mod: mod,
+            reg: src.id,
+            rm: rm,
+        };
     }
 
-    protected modrmFromOperands(src: reg.Operand, dst: reg.Operand) {
-        if(src instanceof reg.Register) {
-            if(dst instanceof reg.Register) {
-                return this.modrm(MOD.REG_TO_REG, (src as reg.Register).id, (dst as reg.Register).id);
-            }
-        }
-        throw Error('Unsupported Mod-R/M operands.');
+    protected modrmMem(r: reg.Register, ref: reg.MemoryReference, mod = MOD.INDIRECT): IModRM {
+        var rm = ref.base ? ref.base.id : 0;
+
+        // There will be a `SIB` byte, we have to set `R/M` to `0b100`.
+        var need_sib = !!ref.index;
+        if(need_sib) rm = RM_NEEDS_SIB;
+
+        return {
+            mod: mod,
+            reg: r.id,
+            rm: rm,
+        };
     }
 
-    protected needsSib(ref: reg.MemoryReference) {
-        return !!ref.index;
+    protected isSibNeeded(modrm: IModRM, ref: reg.MemoryReference): boolean {
+         return !!ref.index || (modrm.rm == RM_NEEDS_SIB) ? true : false;
     }
 
-    protected sib(scale, index, base) {
+    protected sib(scale, index, base): number {
         return (scale << 6) | (index << 3) | base;
     }
 
-    protected sibFromRef(ref: reg.MemoryReference) {
-        return this.sib(ref.scale, ref.index.id, ref.base.id);
+    protected sibPack(sib: ISib): number {
+        return this.sib(sib.scale, sib.index, sib.base);
+    }
+
+    protected sibFromRef(ref: reg.MemoryReference): ISib {
+        return {
+            scale: ref.scale,
+            index: ref.index ? ref.index.id : 0,
+            base: ref.base ? ref.base.id : 0,
+        };
     }
 
     protected insOneOperand(r: reg.Register, op: OP, opreg: OPREG = 0, hasRex = true, reg_in_op = false, imm: number[] = []) {
@@ -168,15 +246,19 @@ export class Encoder {
             if(rex) ins.push(rex);
         }
 
-        // 3 lower bits in Op-code are used to encode register.
-        if(reg_in_op) {
+        // Op-code
+        if(reg_in_op) { // If 3 lower bits in Op-code are used to encode register.
             op |= r.id;
             ins.push(op);
         } else {
             ins.push(op);
-            ins.push(this.modrmOneOperand(r, opreg));
+
+            // Mod-R/M
+            var modrm = this.modrmOneOperand(r, opreg);
+            ins.push(this.modrmPack(modrm));
         }
 
+        // Immediate
         if(imm.length) for(var long of imm) this.pushConstant(ins, long);
 
         return ins;
@@ -191,12 +273,18 @@ export class Encoder {
             if(rex) ins.push(rex);
         }
 
+        // Op-code
+        op = (op & 0b11111101) | OP_DIRECTION.REG_IS_SRC;
         ins.push(op);
-        ins.push(this.modrmRegToReg(src, dst));
+
+        // Mod-R/M
+        var modrm = this.modrmRegToReg(src, dst);
+        ins.push(this.modrmPack(modrm));
+
         return ins;
     }
 
-    protected insMemToReg(src: reg.MemoryReference, dst: reg.Register, op: OP, hasRex = true, op_size: OP_SIZE = OP_SIZE.BYTE) {
+    protected insMemToReg(src: reg.MemoryReference, dst: reg.Register, op: OP, hasRex = true, op_size: OP_SIZE = OP_SIZE.WORD) {
         var ins = [];
 
         if(hasRex) {
@@ -205,41 +293,127 @@ export class Encoder {
         }
 
         // Set op-code's direction and size bits.
-        op |= OP_DIRECTION.REG_IS_DST;
-        op |= op_size;
+        // op |= OP_DIRECTION.REG_IS_DST;
+        op = (op & 0b11111101) | OP_DIRECTION.REG_IS_DST;
+        op = (op & 0b11111110) | op_size;
         ins.push(op);
 
+        var mod = MOD.INDIRECT;
         if(src.displacement) {
             var disp_size = this.getDisplacementSize(src.displacement);
+            if(disp_size == DISP.BYTE) mod = MOD.DISP8;
+            else mod = MOD.DISP32;
+        }
 
-            if(disp_size == DISP.BYTE) {
-                ins.push(this.modrmMemToReg(src, dst, MOD.DISP8));
-                if(src.index) ins.push(this.sibFromRef(src));
-                ins.push(src.displacement);
-            } else { // DISP.LONG
-                ins.push(this.modrmMemToReg(src, dst, MOD.DISP32));
-                if(src.index) ins.push(this.sibFromRef(src));
-                // Write octets in reverse order.
-                ins.push(src.displacement & 0xff);
-                ins.push((src.displacement >> 8) & 0xff);
-                ins.push((src.displacement >> 16) & 0xff);
-                ins.push((src.displacement >> 24) & 0xff);
-            }
-        } else {
-            ins.push(this.modrmMemToReg(src, dst));
-            if(src.index) ins.push(this.sibFromRef(src));
+        // Mod-R/M
+        var modrm = this.modrmMemToReg(src, dst, mod);
+        ins.push(this.modrmPack(modrm));
+
+        // SIB
+        if(this.isSibNeeded(modrm, src)) {
+            var sib = this.sibFromRef(src);
+            ins.push(this.sibPack(sib));
+        }
+
+        // Displacement
+        if(src.displacement) {
+            if(mod == MOD.DISP8) ins.push(src.displacement); // Only one byte.
+            else this.pushConstant(ins, src.displacement);
         }
 
         return ins;
     }
 
-    protected insRegToMem(src: reg.Register, dst: reg.MemoryReference, op: OP, hasRex = true) {
+    protected insRegToMem(src: reg.Register, dst: reg.MemoryReference, op: OP, hasRex = true, op_size: OP_SIZE = OP_SIZE.WORD) {
         var ins = [];
 
         if(hasRex) {
             var rex = this.rexRegToMem(src, dst);
             if(rex) ins.push(rex);
         }
+
+        op = (op & 0b11111101) | OP_DIRECTION.REG_IS_SRC;
+        op = (op & 0b11111110) | op_size;
+        ins.push(op);
+
+        var mod = MOD.INDIRECT;
+        if(dst.displacement) {
+            var disp_size = this.getDisplacementSize(dst.displacement);
+            if(disp_size == DISP.BYTE) mod = MOD.DISP8;
+            else mod = MOD.DISP32;
+        }
+
+        // Mod-R/M
+        var modrm = this.modrmRegToMem(src, dst, mod);
+        ins.push(this.modrmPack(modrm));
+
+        // SIB
+        if(this.isSibNeeded(modrm, dst)) {
+            var sib = this.sibFromRef(dst);
+            ins.push(this.sibPack(sib));
+        }
+
+        // Displacement
+        if(dst.displacement) {
+            if(mod == MOD.DISP8) ins.push(dst.displacement); // Only one byte.
+            else this.pushConstant(ins, dst.displacement);
+        }
+
+        return ins;
+    }
+
+    // Operation where one operand is a memory reference.
+    protected insMem(src: reg.Register|reg.MemoryReference, dst: reg.Register|reg.MemoryReference, op: OP, hasRex = true, op_size: OP_SIZE = OP_SIZE.WORD) {
+        var ins = [];
+
+        var r: reg.Register, ref: reg.MemoryReference;
+        if(src instanceof reg.Register) {
+            r = src as reg.Register;
+            ref = dst as reg.MemoryReference;
+        } else {
+            r = dst as reg.Register;
+            ref = src as reg.MemoryReference;
+        }
+
+        // REX prefix
+        if(hasRex) {
+            var rex = this.rexMem(r, ref);
+            if(rex) ins.push(rex);
+        }
+
+        // Set direction of the reg-to-mem or mem-to-reg.
+        op = (op & 0b11111101) | (r === src ? OP_DIRECTION.REG_IS_SRC : OP_DIRECTION.REG_IS_DST);
+
+        // TODO: Size of the operands, make this actually useful.
+        op = (op & 0b11111110) | op_size;
+
+        // Op-code
+        ins.push(op);
+
+        var mod = MOD.INDIRECT;
+        if(ref.displacement) {
+            var disp_size = this.getDisplacementSize(ref.displacement);
+            if(disp_size == DISP.BYTE) mod = MOD.DISP8;
+            else mod = MOD.DISP32;
+        }
+
+        // Mod-R/M
+        var modrm = this.modrmMem(r, ref, mod);
+        ins.push(this.modrmPack(modrm));
+
+        // SIB
+        if(this.isSibNeeded(modrm, ref)) {
+            var sib = this.sibFromRef(ref);
+            ins.push(this.sibPack(sib));
+        }
+
+        // Displacement
+        if(ref.displacement) {
+            if(mod == MOD.DISP8) ins.push(ref.displacement); // Only one byte.
+            else this.pushConstant(ins, ref.displacement); // Push bytes in reverse order.
+        }
+
+        return ins;
     }
 
     protected pushConstant(arr: number[], constant: number) {
@@ -268,8 +442,13 @@ export class Encoder {
         return this.insRegToReg(src, dst, OP.MOV);
     }
 
+    mov_r_r(src: reg.Register, dst: reg.Register) {
+        return this.insRegToReg(src, dst, OP.MOV);
+    }
+
     movq_m_r(src: reg.MemoryReference, dst: reg.Register64) {
-        return this.insMemToReg(src, dst, OP.MOV);
+        return this.insMem(src, dst, OP.MOV);
+        // return this.insMemToReg(src, dst, OP.MOV);
     }
 
     movq_imm_r(imm: number, dst: reg.Register64) {
@@ -277,9 +456,17 @@ export class Encoder {
     }
 
     movq_r_m(src: reg.Register64, dst: reg.MemoryReference) {
-        this.insRegToMem(src, dst, OP.MOV);
+        return this.insMem(src, dst, OP.MOV);
+        // return this.insRegToMem(src, dst, OP.MOV);
     }
 
+    movq_rm(src: reg.Register64|reg.MemoryReference, dst: reg.Register64|reg.MemoryReference) {
+        return this.insRegToReg(src, dst, OP.MOV);
+    }
+
+    mov_rm(src: reg.Register|reg.MemoryReference, dst: reg.Register|reg.MemoryReference) {
+        return this.insRegToReg(src, dst, OP.MOV);
+    }
 
     movabs(imm: [number, number], dst: reg.Register) {
         if(!(dst instanceof reg.Register64))
@@ -289,7 +476,26 @@ export class Encoder {
     }
 
     movq(src: reg.MemoryReference|reg.Register64|number|number64, dst: reg.MemoryReference|reg.Register64) {
-
+        if(src instanceof reg.MemoryReference) {
+            if(dst instanceof reg.MemoryReference)
+                throw Error(`Cannot do memory-to-memory operation: movq ${src.toString()}, ${dst.toString()}`);
+            else if(dst instanceof reg.Register) return this.insMem(src, dst, OP.MOV);
+            else throw Error(`Invalid operand type: movq ${src.toString()}, ${dst}`);
+        } else if(src instanceof reg.Register) {
+            if(dst instanceof reg.MemoryReference) return this.insMem(src, dst, OP.MOV);
+            else if(dst instanceof reg.Register) return this.insRegToReg(src, dst, OP.MOV);
+            else throw Error(`Invalid operand type: movq ${src.toString()}, ${dst}`);
+        } else if(typeof src == 'number') {
+            var imm = src as number;
+            if(dst instanceof reg.Register) {
+                this.insOneOperand(dst, OP.MOVQ, 0, true, true, [imm]);
+            } else throw Error(`Invalid operand type: movq $${src}, ${dst}`);
+        } else if((src instanceof Array) && (src.length == 2)) {
+            var imm64 = src as number64;
+            if(dst instanceof reg.Register) return this.movabs(imm64, dst);
+            else throw Error(`Invalid operand type: movq $, ${dst}`);
+        }
+        throw Error('Invalid operand types: movq');
     }
 
     mov(src: reg.MemoryReference|reg.Register|number|number64, dst: reg.MemoryReference|reg.Register) {

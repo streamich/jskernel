@@ -8,6 +8,7 @@ exports.int16 = typebase_1.Type.define(2, buf.readInt16LE, buf.writeInt16LE);
 exports.uint16 = typebase_1.Type.define(2, buf.readUInt16LE, buf.writeUInt16LE);
 exports.int32 = typebase_1.Type.define(4, buf.readInt32LE, buf.writeInt32LE);
 exports.uint32 = typebase_1.Type.define(4, buf.readUInt32LE, buf.writeUInt32LE);
+exports.int64 = typebase_1.Arr.define(exports.int32, 2);
 exports.uint64 = typebase_1.Arr.define(exports.uint32, 2);
 exports.size_t = exports.uint64;
 exports.time_t = exports.uint64;
@@ -221,4 +222,18 @@ exports.shmid_ds = typebase_1.Struct.define(112, [
     [80, exports.pid_t, 'shm_cpid'],
     [84, exports.pid_t, 'shm_lpid'],
     [88, exports.uint64, 'shm_nattch'],
+]);
+// Time
+//
+//     struct utimbuf {
+//         time_t actime;       /* access time */
+//         time_t modtime;      /* modification time */
+//     };
+exports.utimbuf = typebase_1.Struct.define(16, [
+    [0, exports.uint64, 'actime'],
+    [8, exports.uint64, 'modtime'],
+]);
+exports.timeval = typebase_1.Struct.define(16, [
+    [0, exports.uint64, 'tv_sec'],
+    [8, exports.uint64, 'tv_nsec'],
 ]);

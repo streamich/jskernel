@@ -35,7 +35,11 @@
 #include <arpa/inet.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
-
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <utime.h>
+#include <sys/time.h>
 
 using namespace std;
 
@@ -61,7 +65,34 @@ int main() {
     std::cout << "SYS_epoll_ctl = " << SYS_epoll_ctl << "," << endl;
     std::cout << "SYS_epoll_create1 = " << SYS_epoll_create1 << "," << endl;
 
+    std::cout << "F_OK = " << F_OK << "," << endl;
+    std::cout << "R_OK = " << R_OK << "," << endl;
+    std::cout << "W_OK = " << W_OK << "," << endl;
+    std::cout << "X_OK = " << X_OK << "," << endl;
 
+    std::cout << "S_IFMT = " << S_IFMT << "," << endl;
+    std::cout << "S_IFBLK = " << S_IFBLK << "," << endl;
+    std::cout << "S_IFCHR = " << S_IFCHR << "," << endl;
+    std::cout << "S_IFIFO = " << S_IFIFO << "," << endl;
+    std::cout << "S_IFREG = " << S_IFREG << "," << endl;
+    std::cout << "S_IFDIR = " << S_IFDIR << "," << endl;
+    std::cout << "S_IFLNK = " << S_IFLNK << "," << endl;
+    std::cout << "S_IRWXU = " << S_IRWXU << "," << endl;
+    std::cout << "S_IRUSR = " << S_IRUSR << "," << endl;
+    std::cout << "S_IWUSR = " << S_IWUSR << "," << endl;
+    std::cout << "S_IXUSR = " << S_IXUSR << "," << endl;
+    std::cout << "S_IRWXG = " << S_IRWXG << "," << endl;
+    std::cout << "S_IRGRP = " << S_IRGRP << "," << endl;
+    std::cout << "S_IWGRP = " << S_IWGRP << "," << endl;
+    std::cout << "S_IXGRP = " << S_IXGRP << "," << endl;
+    std::cout << "S_IRWXO = " << S_IRWXO << "," << endl;
+    std::cout << "S_IROTH = " << S_IROTH << "," << endl;
+    std::cout << "S_IWOTH = " << S_IWOTH << "," << endl;
+    std::cout << "S_IXOTH = " << S_IXOTH << "," << endl;
+    std::cout << "S_ISUID = " << S_ISUID << "," << endl;
+    std::cout << "S_ISGID = " << S_ISGID << "," << endl;
+    std::cout << "S_ISVTX = " << S_ISVTX << "," << endl;
+    std::cout << "S_IFSOCK  = " << S_IFSOCK  << "," << endl;
 
     std::cout << "IPC_CREAT = " << IPC_CREAT << "," << endl;
     std::cout << "IPC_EXCL = " << IPC_EXCL << "," << endl;
@@ -243,6 +274,10 @@ int main() {
     std::cout << "sizeof(unsigned short int) = " << sizeof(unsigned short int) << "," << endl;
     std::cout << "sizeof(ipc_perm) = " << sizeof(ipc_perm) << "," << endl;
     std::cout << "sizeof(shmid_ds) = " << sizeof(shmid_ds) << "," << endl;
+    std::cout << "sizeof(time_t) = " << sizeof(time_t) << "," << endl;
+    std::cout << "sizeof(utimbuf) = " << sizeof(utimbuf) << "," << endl;
+    std::cout << "sizeof(timespec) = " << sizeof(timespec) << "," << endl;
+    std::cout << "sizeof(long) = " << sizeof(long) << "," << endl;
 
 
 //    int64_t result = 140455768256512;

@@ -6,16 +6,19 @@
 // `libsys` library contains our only native dependency -- the `syscall` function.
 // 
 //     sys.syscall(cmd: number, ...args): number
-import * as util from './util';
+
 import * as sys from './sys';
+
 
 // `defs` provides platform specific constants and structs, the default one we use is `x86_64`.
 import * as defs from './definitions';
+
 
 // In development mode we use `debug` library to trace all our system calls. To see debug output,
 // set `DEBUG` environment variable to `libjs:*`, example:
 // 
 //     DEBUG=libjs:* node script.js
+
 var debug = require('debug')('libjs:syscall');
 
 // Export definitions and other modules all as part of the library.
@@ -47,6 +50,7 @@ export function read(fd: number, buf: Buffer): number {
     return sys.syscall(defs.syscalls.read, fd, buf, buf.length);
 }
 
+
 // ### write
 //
 //     write(fd: number, buf: string|Buffer): number
@@ -60,6 +64,7 @@ export function write(fd: number, buf: string|Buffer): number {
     if(!(buf instanceof Buffer)) buf = new Buffer((buf as string) + '\0');
     return sys.syscall(defs.syscalls.write, fd, buf, buf.length);
 }
+
 
 // ### open
 // 
@@ -80,10 +85,102 @@ export function open(pathname: string, flags: defs.FLAG, mode?: defs.MODE): numb
     return sys.syscall.apply(null, args);
 }
 
+
+// ### close
+//
+// Close file descriptor.
+
 export function close(fd: number): number {
     debug('close', fd);
     return sys.syscall(defs.syscalls.close, fd);
 }
+
+
+// ### access
+//
+// Check user's permissions for a file
+//
+// In `libc`:
+//
+//     int access(const char *pathname, int mode);
+
+export function access(pathname: string, mode: number): number {
+    debug('access', pathname, mode);
+    return sys.syscall(defs.syscalls.access, pathname, mode);
+}
+
+
+// ### chmod and fchmod
+//
+// Change permissions of a file. On success, zero is returned.  On error, -1 is returned,
+// and errno is set appropriately.
+//
+// In `libc`:
+//
+//     int chmod(const char *pathname, mode_t mode);
+//     int fchmod(int fd, mode_t mode);
+
+export function chmod(pathname: string, mode: number): number {
+    debug('chmod', pathname, mode);
+    return sys.syscall(defs.syscalls.chmod, pathname, mode);
+}
+
+export function fchmod(fd: number, mode: number): number {
+    debug('fchmod', fd, mode);
+    return sys.syscall(defs.syscalls.chmod, fd, mode);
+}
+
+
+// ### chown, fchown and lchown
+//
+// These system calls change the owner and group of a file.  The
+// `chown()`, `fchown()`, and `lchown()` system calls differ only in how the
+// file is specified:
+//
+//  - `chown()` changes the ownership of the file specified by pathname, which is dereferenced if it is a symbolic link.
+//  - `fchown()` changes the ownership of the file referred to by the open file descriptor fd.
+//  - `lchown()` is like chown(), but does not dereference symbolic links.
+//
+//     chown(pathname: string, owner: number, group: number): number
+//     fchown(fd: number, owner: number, group: number): number
+//     lchown(pathname: string, owner: number, group: number): number
+//
+// In `libc`:
+//
+//     int chown(const char *pathname, uid_t owner, gid_t group);
+//     int fchown(int fd, uid_t owner, gid_t group);
+//     int lchown(const char *pathname, uid_t owner, gid_t group);
+
+export function chown(pathname: string, owner: number, group: number): number {
+    debug('chown', pathname, owner, group);
+    return sys.syscall(defs.syscalls.chown, pathname, owner, group);
+}
+
+export function fchown(fd: number, owner: number, group: number): number {
+    debug('fchown', fd, owner, group);
+    return sys.syscall(defs.syscalls.fchown, fd, owner, group);
+}
+
+export function lchown(pathname: string, owner: number, group: number): number {
+    debug('lchown', pathname, owner, group);
+    return sys.syscall(defs.syscalls.lchown, pathname, owner, group);
+}
+
+
+// ## fsync and fdatasync
+//
+// Synchronize a file's in-core state with storage.
+
+export function fsync(fd: number): number {
+    debug('fsync', fd);
+    return sys.syscall(defs.syscalls.fsync, fd);
+}
+
+export function fdatasync(fd: number): number {
+    debug('fdatasync', fd);
+    return sys.syscall(defs.syscalls.fdatasync, fd);
+}
+
 
 // ### stat, lstat, fstat
 // 
@@ -113,7 +210,7 @@ export function close(fd: number): number {
 //         ctime: number;
 //         ctime_nsec: number;
 //     }
-//
+
 export function stat(filepath: string): defs.stat { // Throws number
     debug('stat', filepath);
     var buf = new Buffer(defs.stat.size);
@@ -139,25 +236,82 @@ export function fstat(fd: number): defs.stat {
 }
 
 
+// ### truncate and ftruncate
+//
+// Truncate a file to a specified length
+//
+//     truncate(path: string, length: number): number
+//     ftruncate(fd: number, length: number): number
+//
+// In `libc`:
+//
+//     int truncate(const char *path, off_t length);
+//     int ftruncate(int fd, off_t length);
+
+export function truncate(path: string, length: number): number {
+    debug('truncate', path, length);
+    return sys.syscall(defs.syscalls.truncate, path, length);
+}
+
+export function ftruncate(fd: number, length: number): number {
+    debug('ftruncate', fd, length);
+    return sys.syscall(defs.syscalls.ftruncate, fd, length);
+}
+
+
+// ### lseek
+//
+// Seek into position in a file.
 export function lseek(fd: number, offset: number, whence: number): number {
     debug('lseek', fd, offset, whence);
     return sys.syscall(defs.syscalls.lseek, fd, offset, whence);
 }
 
 
-// Sockets -------------------------------------------------------------------------------------------------------------
+// ## Time
+//
+//
+// ## utime, utimes, utimensat and futimens
+// 
+// In `libc`:
+//
+//     int utime(const char *filename, const struct utimbuf *times);
+//     int utimes(const char *filename, const struct timeval times[2]);
+//     int utimensat(int dirfd, const char *pathname, const struct timespec times[2], int flags);
+//     int futimens(int fd, const struct timespec times[2]);
 
-// http://www.skyfree.org/linux/kernel_network/socket.html
-// https://github.com/torvalds/linux/blob/master/net/socket.c
-// http://www.wangafu.net/~nickm/libevent-book/01_intro.html
-// https://banu.com/blog/2/how-to-use-epoll-a-complete-example-in-c/epoll-example.c
-// int socket(int domain, int type, int protocol);
+export function utime(filename: string, times: defs.utimbuf): number {
+    debug('utime', filename, times);
+    var timesbuf = defs.utimbuf.pack(times);
+    return sys.syscall(defs.syscalls.utime);
+}
+
+export function utimes(filename: string, times: defs.timev)
+
+
+// ## Sockets
+
+// ### socket
+//
+// In `libc`:
+//
+//     int socket(int domain, int type, int protocol);
+//
+// Useful references:
+//  - http://www.skyfree.org/linux/kernel_network/socket.html
+//  - https://github.com/torvalds/linux/blob/master/net/socket.c
+//  - http://www.wangafu.net/~nickm/libevent-book/01_intro.html
+//  - https://banu.com/blog/2/how-to-use-epoll-a-complete-example-in-c/epoll-example.c
 export function socket(domain: defs.AF, type: defs.SOCK, protocol: number): number {
     debug('socket', domain, type, protocol);
     return sys.syscall(defs.syscalls.socket, domain, type, protocol);
 }
 
-// connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr))
+// ### connect
+//
+// In `libc`:
+//
+//     int connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
 export function connect(fd: number, sockaddr: defs.sockaddr_in): number {
     debug('connect', fd, sockaddr.sin_addr.s_addr.toString(), require('./socket').hton16(sockaddr.sin_port));
     var buf = defs.sockaddr_in.pack(sockaddr);
@@ -215,41 +369,70 @@ export function send(fd: number, buf: Buffer, flags: defs.MSG = 0): number {
 }
 
 
-// Process -------------------------------------------------------------------------------------------------------------
+// ## Process
 
+// ### getpid
+//
+// Get process ID.
 export function getpid(): number {
     debug('getpid');
     return sys.syscall(defs.syscalls.getpid);
 }
 
+// ### getppid
+//
+// Get parent process ID.
+//
+//     getppid(): number
 export function getppid(): number {
     debug('getppid');
     return sys.syscall(defs.syscalls.getppid);
 }
 
+// ### getuid
+//
+// Get parent user ID.
+//
+//     getuid(): number
 export function getuid(): number {
     debug('getuid');
     return sys.syscall(defs.syscalls.getuid);
 }
 
+// ### geteuid
+//
+// Get parent real user ID.
+//
+//     geteuid(): number
 export function geteuid(): number {
     debug('geteuid');
     return sys.syscall(defs.syscalls.geteuid);
 }
 
+// ### getgid
+//
+// Get group ID.
+//
+//     getgid(): number
 export function getgid(): number {
     debug('getgid');
     return sys.syscall(defs.syscalls.getgid);
 }
 
+// ### getgid
+//
+// Get read group ID.
+//
+//     getegid(): number
 export function getegid(): number {
     debug('getegid');
     return sys.syscall(defs.syscalls.getegid);
 }
 
 
-// Events --------------------------------------------------------------------------------------------------------------
+// ## Events
 
+// ### fcntl
 export function fcntl(fd: number, cmd: defs.FCNTL, arg?: number): number {
     debug('fcntl', fd, cmd, arg);
     var params = [defs.syscalls.fcntl, fd, cmd];
@@ -257,11 +440,14 @@ export function fcntl(fd: number, cmd: defs.FCNTL, arg?: number): number {
     return sys.syscall.apply(null, params);
 }
 
-// getaddrinfo
-// freeaddrinfo
-// http://davmac.org/davpage/linux/async-io.html#epoll
-// int epoll_create(int size);
-// Size is ignored, but most be greater than 0.
+// ### epoll_create
+//
+// Size is ignored, but must be greater than 0.
+//
+// In `libc`:
+//
+//     int epoll_create(int size);
+//
 export function epoll_create(size: number): number {
     debug('epoll_create', size);
     return sys.syscall(defs.syscalls.epoll_create, size);
@@ -359,7 +545,6 @@ export function munmap(addr: Buffer, length: number): number {
 //    - `EACCES` -- Permission denied
 //    - `ENOMEM` -- Not enough memory to create segment
  
- 
 /**
  * @param key {number}
  * @param size {number}
@@ -405,19 +590,21 @@ export function shmat(shmid: number, shmaddr: number = defs.NULL, shmflg: defs.S
 }
 
 
+// ### shmdt
+//
+// Detaches the shared memory segment located at the address specified by shmaddr from the address space of the calling
+// process. The to-be-detached segment must be currently attached with shmaddr equal to the value returned by the
+// attaching shmat() call.
+//
+// In `libc`:
+//
+//      int shmdt(const void *shmaddr);
+//
+// Reference:
+//
+//  - http://linux.die.net/man/2/shmat
+
 /**
- * Detaches the shared memory segment located at the address specified by shmaddr from the address space of the calling
- * process. The to-be-detached segment must be currently attached with shmaddr equal to the value returned by the
- * attaching shmat() call.
- *
- * In `libc`:
- *
- *      int shmdt(const void *shmaddr);
- *
- * Reference:
- *
- *  - http://linux.die.net/man/2/shmat
- *
  * @param shmaddr {number}
  * @returns {number} On success shmdt() returns 0; on error -1 is returned, and errno is set to indicate the cause of the error.
  */
