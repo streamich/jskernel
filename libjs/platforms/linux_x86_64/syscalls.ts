@@ -119,6 +119,8 @@ export var syscalls: any = {
 
     utimes:         235,
 
+    mkdirat:        258,
+
     futimesat:      261,
 
     utimensat:      280,

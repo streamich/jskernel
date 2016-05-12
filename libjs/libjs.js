@@ -17,6 +17,7 @@ var defs = require('./definitions');
 //     DEBUG=libjs:* node script.js
 var debug = require('debug')('libjs:syscall');
 // Export definitions and other modules all as part of the library.
+__export(require('./ctypes'));
 __export(require('./definitions'));
 __export(require('./socket'));
 // ## Files
@@ -236,6 +237,18 @@ function ftruncate(fd, length) {
     return sys.syscall(defs.syscalls.ftruncate, fd, length);
 }
 exports.ftruncate = ftruncate;
+// ### link
+//
+// Make a new name for a file.
+//
+// In `libc`:
+//
+//     int link(const char *oldpath, const char *newpath);
+function link(oldpath, newpath) {
+    debug('link', oldpath, newpath);
+    return sys.syscall(defs.syscalls.link, oldpath, newpath);
+}
+exports.link = link;
 // ### lseek
 //
 // Seek into position in a file.
@@ -244,6 +257,84 @@ function lseek(fd, offset, whence) {
     return sys.syscall(defs.syscalls.lseek, fd, offset, whence);
 }
 exports.lseek = lseek;
+// ### mkdir, mkdirat and rmdir
+//
+// In `libc`:
+//
+//     int mkdir(const char *pathname, mode_t mode);
+//     int mkdirat(int dirfd, const char *pathname, mode_t mode);
+function mkdir(pathname, mode) {
+    debug('mkdir', pathname, mode);
+    return sys.syscall(defs.syscalls.mkdir, pathname, mode);
+}
+exports.mkdir = mkdir;
+function mkdirat(dirfd, pathname, mode) {
+    debug('mkdirat', dirfd, pathname, mode);
+    return sys.syscall(defs.syscalls.mkdirat, dirfd, pathname, mode);
+}
+exports.mkdirat = mkdirat;
+function rmdir(pathname) {
+    debug('rmdir', pathname);
+    return sys.syscall(defs.syscalls.rmdir, pathname);
+}
+exports.rmdir = rmdir;
+// #define open_not_cancel_2(name, flags) \
+// 0028    INLINE_SYSCALL (open, 2, (const char *) (name), (flags))
+// dirp->fd = fd;
+// #ifndef NOT_IN_libc
+// __libc_lock_init (dirp->lock);
+// #endif
+// dirp->allocation = allocation;
+// dirp->size = 0;
+// dirp->offset = 0;
+// dirp->filepos = 0;
+// struct __dirstream
+// 30   {
+//     31     void *__fd;         /* `struct hurd_fd' pointer for descriptor.  */
+//     32     char *__data;       /* Directory block.  */
+//     33     int __entry_data;       /* Entry number `__data' corresponds to.  */
+//     34     char *__ptr;        /* Current pointer into the block.  */
+//     35     int __entry_ptr;        /* Entry number `__ptr' corresponds to.  */
+//     36     size_t __allocation;    /* Space allocated for the block.  */
+//     37     size_t __size;      /* Total valid data in the block.  */
+//     38     __libc_lock_define (, __lock) /* Mutex lock for this structure.  */
+//     39   };
+// 8 + 8 + 4 + 8 + 4 + 8 + 8 + 4 + 8 + 8 + 8 + 4 = 80
+// https://fossies.org/dox/glibc-2.23/struct____dirstream.html
+// void * 	__fd
+// char * 	__data
+// int 	__entry_data
+// char * 	__ptr
+// int 	__entry_ptr
+// size_t 	__allocation
+// size_t 	__size
+// int 	fd
+// size_t 	size
+// size_t 	offset
+// off_t 	filepos
+// int 	errcode
+// `opendir` returns `Buffer` because we need to keep the reference to that `Buffer`
+// otherwise JavaScript garbage-collector will free that memory.
+function opendir(name) {
+    debug('opendir', name);
+    var flags = 0 /* O_RDONLY */ | 2048 /* O_NDELAY */ | 65536 /* O_DIRECTORY */ | 0 /* O_LARGEFILE */;
+    var dfd = open(name, flags);
+    if (dfd < 0)
+        throw dfd;
+    // > The opendir() function sets the close-on-exec flag for the file
+    // > descriptor underlying the DIR *.
+    // var res = fcntl(dfd, defs.FCNTL.SETFL, defs.FD.CLOEXEC) < 0);
+    // if(res < 0) throw res;
+    var dirp = {
+        __fd: [dfd, 0],
+        __data: [0x8000, 0]
+    };
+    return defs.DIR.pack(dirp);
+}
+exports.opendir = opendir;
+function readdir() {
+}
+exports.readdir = readdir;
 // ## Time
 //
 //
@@ -257,10 +348,22 @@ exports.lseek = lseek;
 //     int futimens(int fd, const struct timespec times[2]);
 function utime(filename, times) {
     debug('utime', filename, times);
-    var timesbuf = defs.utimbuf.pack(times);
-    return sys.syscall(defs.syscalls.utime);
+    var buf = defs.utimbuf.pack(times);
+    return sys.syscall(defs.syscalls.utime, filename, buf);
 }
 exports.utime = utime;
+function utimes(filename, times) {
+    debug('utimes', filename, times);
+    var buf = defs.timevalarr.pack(times);
+    return sys.syscall(defs.syscalls.utimes, buf);
+}
+exports.utimes = utimes;
+function utimensat(dirfd, pathname, timespecarr, flags) {
+}
+exports.utimensat = utimensat;
+function futimens(fd, times) {
+}
+exports.futimens = futimens;
 // ## Sockets
 // ### socket
 //

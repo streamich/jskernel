@@ -24,6 +24,7 @@ exports.ipv4 = typebase_1.Type.define(4, function (offset) {
     var buf = this;
     data.toBuffer().copy(buf, offset);
 });
+exports.pointer_t = exports.uint64;
 /**
  * See <asm/stat.h> line 82:
  *
@@ -237,3 +238,40 @@ exports.timeval = typebase_1.Struct.define(16, [
     [0, exports.uint64, 'tv_sec'],
     [8, exports.uint64, 'tv_nsec'],
 ]);
+exports.timevalarr = typebase_1.Arr.define(exports.timeval, 2);
+exports.timespec = exports.timeval;
+exports.timespecarr = exports.timevalarr;
+// #define open_not_cancel_2(name, flags) \
+// 0028    INLINE_SYSCALL (open, 2, (const char *) (name), (flags))
+// dirp->fd = fd;
+// #ifndef NOT_IN_libc
+// __libc_lock_init (dirp->lock);
+// #endif
+// dirp->allocation = allocation;
+// dirp->size = 0;
+// dirp->offset = 0;
+// dirp->filepos = 0;
+//
+// See: https://fossies.org/dox/glibc-2.23/struct____dirstream.html
+//
+//     void* __fd
+//     char* __data
+//     int __entry_data
+//     char* __ptr
+//     int __entry_ptr
+//     size_t __allocation
+//     size_t __size
+//     int fd
+//     size_t size
+//     size_t offset
+//     off_t filepos
+//     int errcode
+//
+// The actual size of the struct adds up to 80 bytes, we will use 160, just for good measure.
+//
+//     8 + 8 + 4 + 8 + 4 + 8 + 8 + 4 + 8 + 8 + 8 + 4 = 80
+exports.__dirstream = typebase_1.Struct.define(160, [
+    [0, exports.uint64, '__fd'],
+    [8, exports.uint64, '__data'],
+]);
+exports.DIR = exports.__dirstream;

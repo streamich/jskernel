@@ -1,5 +1,6 @@
 import {Type, Arr, Struct} from '../../typebase';
 import {Ipv4} from '../../socket';
+import {t_pointer} from "../../../libmem/struct";
 
 
 export const NULL = 0;
@@ -28,7 +29,10 @@ export var ipv4    = Type.define(4,
         data.toBuffer().copy(buf, offset);
     });
 
+export type uint64 = [number, number];
 
+export var pointer_t = uint64;
+export type pointer_t = uint64;
 
 
 // http://man7.org/linux/man-pages/man2/mmap.2.html
@@ -83,6 +87,8 @@ export const enum FLAG {
     O_NOFOLLOW      = 131072,
     O_NOATIME       = 262144,
     O_CLOEXEC       = 524288,
+    O_SYNC          = 1052672,
+    O_NDELAY        = 2048,
 }
 
 
@@ -111,6 +117,12 @@ export const enum AMODE {
     X_OK = 1,
     W_OK = 2,
     R_OK = 4,
+}
+
+export const enum SEEK {
+    CUR = 1,
+    END = 2,
+    SET = 0,
 }
 
 /**
@@ -748,6 +760,11 @@ export const enum SHM {
     NORESERVE = 4096,
 }
 
+
+export const enum FD {
+    CLOEXEC = 1,
+}
+
 /**
  * In `libc`, <bits/ipc.h> line 42:
  *
@@ -871,9 +888,12 @@ export var utimbuf = Struct.define(16, [
     [8, uint64, 'modtime'], // modification time
 ]);
 
+export type numberLo = number;
+export type numberHi = number;
+
 export interface utimbuf {
-    actime: [number, number],
-    modtime: [number, number],
+    actime:     [numberLo, numberHi],
+    modtime:    [numberLo, numberHi],
 }
 
 export var timeval = Struct.define(16, [
@@ -882,6 +902,70 @@ export var timeval = Struct.define(16, [
 ]);
 
 export interface timeval {
-    tv_sec: [number, number],
-    tv_nsec: [number, number],
+    tv_sec:     [numberLo, numberHi],
+    tv_nsec:    [numberLo, numberHi],
 }
+
+export var timevalarr = Arr.define(timeval, 2);
+
+export type timevalarr = [timeval, timeval];
+
+export var timespec = timeval;
+export var timespecarr = timevalarr;
+export interface timespec extends timeval {}
+export type timespecarr = [timespec, timespec];
+
+
+// #define open_not_cancel_2(name, flags) \
+// 0028    INLINE_SYSCALL (open, 2, (const char *) (name), (flags))
+
+// dirp->fd = fd;
+// #ifndef NOT_IN_libc
+// __libc_lock_init (dirp->lock);
+// #endif
+// dirp->allocation = allocation;
+// dirp->size = 0;
+// dirp->offset = 0;
+// dirp->filepos = 0;
+//
+// See: https://fossies.org/dox/glibc-2.23/struct____dirstream.html
+//
+//     void* __fd
+//     char* __data
+//     int __entry_data
+//     char* __ptr
+//     int __entry_ptr
+//     size_t __allocation
+//     size_t __size
+//     int fd
+//     size_t size
+//     size_t offset
+//     off_t filepos
+//     int errcode
+//
+// The actual size of the struct adds up to 80 bytes, we will use 160, just for good measure.
+//
+//     8 + 8 + 4 + 8 + 4 + 8 + 8 + 4 + 8 + 8 + 8 + 4 = 80
+export var __dirstream = Struct.define(160, [
+    [0, uint64, '__fd'],
+    [8, uint64, '__data'],
+    // [16, int32, '__entry_data'],
+    // [20, uint64, '__ptr'],
+    // [28, int32, '__entry_ptr'],
+    // [32, size_t, '__allocation'],
+    // [40, size_t, '__size'],
+    // [44, int32, 'fd'],
+    // [52, size_t, 'size'],
+    // [60, size_t, 'offset'],
+    // [68, uint64, 'filepos'],
+    // [76, int32, 'errcode'],
+]);
+
+export interface __dirstream {
+    __fd: [numberLo, numberHi],
+    __data: [numberLo, numberHi],
+}
+
+export var DIR = __dirstream;
+export interface DIR extends __dirstream {}
+

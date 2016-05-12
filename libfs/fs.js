@@ -1,14 +1,16 @@
 "use strict";
 var libjs = require('../libjs/libjs');
 function noop() { }
-function throwError(errno, func, path) {
+function throwError(errno, func, path, path2) {
     if (func === void 0) { func = ''; }
     if (path === void 0) { path = ''; }
+    if (path2 === void 0) { path2 = ''; }
     // console.log(-errno, libjs.ERROR.EBADF);
     switch (-errno) {
         case 2 /* ENOENT */: throw Error("ENOENT: no such file or directory, " + func + " '" + path + "'");
         case 9 /* EBADF */: throw Error("EBADF: bad file descriptor, " + func);
         case 22 /* EINVAL */: throw Error("EINVAL: invalid argument, " + func);
+        case 1 /* EPERM */: throw Error("EPERM: operation not permitted, " + func + " '" + path + "' -> '" + path2 + "'");
         default: throw Error("Error occurred in " + func + ": errno = " + errno);
     }
 }
@@ -25,20 +27,33 @@ function validateFd(fd) {
 }
 // List of file `flags` as defined by node.
 (function (flags) {
-    flags[flags["r"] = 'r'] = "r";
-    flags[flags["rw"] = 'r+'] = "rw";
-    flags[flags["rs"] = 'rs'] = "rs";
-    flags[flags["rsw"] = 'rs+'] = "rsw";
-    flags[flags["w"] = 'w'] = "w";
-    flags[flags["wx"] = 'wx'] = "wx";
-    flags[flags["ww"] = 'w+'] = "ww";
-    flags[flags["wxw"] = 'wx+'] = "wxw";
-    flags[flags["a"] = 'a'] = "a";
-    flags[flags["ax"] = 'ax'] = "ax";
-    flags[flags["aw"] = 'a+'] = "aw";
-    flags[flags["axw"] = 'ax+'] = "axw";
+    // Open file for reading. An exception occurs if the file does not exist.
+    flags[flags["r"] = 0] = "r";
+    // Open file for reading and writing. An exception occurs if the file does not exist.
+    flags[flags['r+'] = 2] = 'r+';
+    // Open file for reading in synchronous mode. Instructs the operating system to bypass the local file system cache.
+    flags[flags["rs"] = 1069056] = "rs";
+    // Open file for reading and writing, telling the OS to open it synchronously. See notes for 'rs' about using this with caution.
+    flags[flags['rs+'] = 1069058] = 'rs+';
+    // Open file for writing. The file is created (if it does not exist) or truncated (if it exists).
+    flags[flags["w"] = 577] = "w";
+    // Like 'w' but fails if path exists.
+    flags[flags["wx"] = 705] = "wx";
+    // Open file for reading and writing. The file is created (if it does not exist) or truncated (if it exists).
+    flags[flags['w+'] = 578] = 'w+';
+    // Like 'w+' but fails if path exists.
+    flags[flags['wx+'] = 706] = 'wx+';
+    // Open file for appending. The file is created if it does not exist.
+    flags[flags["a"] = 1089] = "a";
+    // Like 'a' but fails if path exists.
+    flags[flags["ax"] = 1217] = "ax";
+    // Open file for reading and appending. The file is created if it does not exist.
+    flags[flags['a+'] = 1090] = 'a+';
+    // Like 'a+' but fails if path exists.
+    flags[flags['ax+'] = 1218] = 'ax+';
 })(exports.flags || (exports.flags = {}));
 var flags = exports.flags;
+var MODE_DEFAULT = 438;
 exports.F_OK = 0 /* F_OK */;
 exports.R_OK = 4 /* R_OK */;
 exports.W_OK = 2 /* W_OK */;
@@ -52,7 +67,7 @@ function accessSync(path, mode) {
 exports.accessSync = accessSync;
 var appendFileDefaults = {
     encoding: 'utf8',
-    mode: 438,
+    mode: MODE_DEFAULT,
     flag: flags.a
 };
 function appendFileSync(file, data, options) {
@@ -70,8 +85,7 @@ function chmodSync(path, mode) {
 }
 exports.chmodSync = chmodSync;
 function fchmodSync(fd, mode) {
-    if (typeof fd !== 'number')
-        throw TypeError('fd must be a file descriptor');
+    validateFd(fd);
     if (typeof mode !== 'number')
         throw TypeError('mode must be an integer');
     var result = libjs.fchmod(fd, mode);
@@ -79,11 +93,10 @@ function fchmodSync(fd, mode) {
         throwError(result, 'chmod');
 }
 exports.fchmodSync = fchmodSync;
+// Mac OS only:
+//     export function lchmodSync(path: string|Buffer, mode: number) {}
 function chownSync(path, uid, gid) {
-    if (path instanceof Buffer)
-        path = path.toString();
-    if (typeof path !== 'string')
-        throw TypeError('path must be a string');
+    path = validPathOrThrow(path);
     if (typeof uid !== 'number')
         throw TypeError('uid must be an unsigned int');
     if (typeof gid !== 'number')
@@ -94,8 +107,7 @@ function chownSync(path, uid, gid) {
 }
 exports.chownSync = chownSync;
 function fchownSync(fd, uid, gid) {
-    if (typeof fd !== 'number')
-        throw TypeError('fd must be a file descriptor');
+    validateFd(fd);
     if (typeof uid !== 'number')
         throw TypeError('uid must be an unsigned int');
     if (typeof gid !== 'number')
@@ -105,6 +117,17 @@ function fchownSync(fd, uid, gid) {
         throwError(result, 'fchown');
 }
 exports.fchownSync = fchownSync;
+function lchownSync(path, uid, gid) {
+    path = validPathOrThrow(path);
+    if (typeof uid !== 'number')
+        throw TypeError('uid must be an unsigned int');
+    if (typeof gid !== 'number')
+        throw TypeError('gid must be an unsigned int');
+    var result = libjs.lchown(path, uid, gid);
+    if (result < 0)
+        throwError(result, 'lchown', path);
+}
+exports.lchownSync = lchownSync;
 function closeSync(fd) {
     if (typeof fd !== 'number')
         throw TypeError('fd must be a file descriptor');
@@ -117,7 +140,7 @@ var readStreamOptionsDefaults = {
     flags: 'r',
     encoding: null,
     fd: null,
-    mode: 438,
+    mode: MODE_DEFAULT,
     autoClose: true
 };
 function createReadStream(path, options) {
@@ -158,25 +181,25 @@ var Stats = (function () {
     function Stats() {
     }
     Stats.prototype.isFile = function () {
-        return this.mode & 32768 /* IFREG */;
+        return (this.mode & 32768 /* IFREG */) == 32768 /* IFREG */;
     };
     Stats.prototype.isDirectory = function () {
-        return this.mode & 16384 /* IFDIR */;
+        return (this.mode & 16384 /* IFDIR */) == 16384 /* IFDIR */;
     };
     Stats.prototype.isBlockDevice = function () {
-        return this.mode & 24576 /* IFBLK */;
+        return (this.mode & 24576 /* IFBLK */) == 24576 /* IFBLK */;
     };
     Stats.prototype.isCharacterDevice = function () {
-        return this.mode & 8192 /* IFCHR */;
+        return (this.mode & 8192 /* IFCHR */) == 8192 /* IFCHR */;
     };
     Stats.prototype.isSymbolicLink = function () {
-        return this.mode & 40960 /* IFLNK */;
+        return (this.mode & 40960 /* IFLNK */) == 40960 /* IFLNK */;
     };
     Stats.prototype.isFIFO = function () {
-        return this.mode & 4096 /* IFIFO */;
+        return (this.mode & 4096 /* IFIFO */) == 4096 /* IFIFO */;
     };
     Stats.prototype.isSocket = function () {
-        return this.mode & 49152 /* IFSOCK */;
+        return (this.mode & 49152 /* IFSOCK */) == 49152 /* IFSOCK */;
     };
     return Stats;
 }());
@@ -250,44 +273,183 @@ function ftruncateSync(fd, len) {
         throwError(res, 'ftruncate');
 }
 exports.ftruncateSync = ftruncateSync;
-function createFakeAsyncFunction(name) {
-    exports[name] = function () {
-        var args = [];
-        for (var _i = 0; _i < arguments.length; _i++) {
-            args[_i - 0] = arguments[_i];
-        }
-        var callback = noop();
-        if (args.length && (typeof args[args.length - 1] === 'function')) {
-            callback = args[args.length - 1];
-            args = args.splice(0, args.length - 1);
-        }
-        process.nextTick(function () {
-            try {
-                var result = exports[name + 'Sync'].apply(null, args);
-                callback(null, result);
-            }
-            catch (err) {
-                callback(err);
-            }
-        });
+//     TODO: Make this work with `utimes` instead of `utime`, also figure out a way
+//     TODO: how to set time using file descriptor, possibly use `utimensat` system call.
+function utimesSync(path, atime, mtime) {
+    path = validPathOrThrow(path);
+    if (typeof atime === 'string')
+        atime = parseInt(atime);
+    if (typeof mtime === 'string')
+        mtime = parseInt(mtime);
+    if (typeof atime !== 'number')
+        throw TypeError('atime must be an integer');
+    if (typeof mtime !== 'number')
+        throw TypeError('mtime must be an integer');
+    if (!Number.isFinite(atime))
+        atime = Date.now();
+    if (!Number.isFinite(mtime))
+        mtime = Date.now();
+    // `libjs.utime` works with 1 sec precision.
+    atime = Math.round(atime / 1000);
+    mtime = Math.round(mtime / 1000);
+    var times = {
+        actime: [libjs.UInt64.lo(atime), libjs.UInt64.hi(atime)],
+        modtime: [libjs.UInt64.lo(mtime), libjs.UInt64.hi(mtime)]
     };
+    var res = libjs.utime(path, times);
+    console.log(res);
+    if (res < 0)
+        throwError(res, 'utimes', path);
 }
-for (var _i = 0, _a = [
-    'appendFile',
-    'chmod',
-    'fchmod',
-    'chown',
-    'fchown',
-    'close',
-    'exists',
-    'fsync',
-    'fdatasync',
-    'stat',
-    'fstat',
-    'lstat',
-    'truncate',
-    'ftruncate',
-]; _i < _a.length; _i++) {
-    var func = _a[_i];
-    createFakeAsyncFunction(func);
+exports.utimesSync = utimesSync;
+// export function futimesSync(fd: number, atime: number|string, mtime: number|string) {}
+function linkSync(srcpath, dstpath) {
+    srcpath = validPathOrThrow(srcpath);
+    dstpath = validPathOrThrow(dstpath);
+    var res = libjs.link(srcpath, dstpath);
+    if (res < 0)
+        throwError(res, 'link', srcpath, dstpath);
 }
+exports.linkSync = linkSync;
+function mkdirSync(path, mode) {
+    if (mode === void 0) { mode = MODE_DEFAULT; }
+    path = validPathOrThrow(path);
+    if (typeof mode !== 'number')
+        throw TypeError('mode must be an integer');
+    var res = libjs.mkdir(path, mode);
+    if (res < 0)
+        throwError(res, 'mkdir', path);
+}
+exports.mkdirSync = mkdirSync;
+function randomString6() {
+    return (+new Date).toString(36).slice(-6);
+}
+function mkdtempSync(prefix, options) {
+    if (options === void 0) { options = {}; }
+    if (!prefix || typeof prefix !== 'string')
+        throw new TypeError('filename prefix is required');
+    var retries = 10;
+    var fullname;
+    var found_tmp_name = false;
+    for (var i = 0; i < retries; i++) {
+        fullname = prefix + randomString6();
+        try {
+            accessSync(fullname);
+        }
+        catch (e) {
+            found_tmp_name = true;
+            break;
+        }
+    }
+    if (found_tmp_name) {
+        mkdirSync(fullname);
+        return fullname;
+    }
+    else {
+        throw Error("Could not find a new name, mkdtemp");
+    }
+}
+exports.mkdtempSync = mkdtempSync;
+function flagsToFlagsValue(f) {
+    if (typeof f === 'number')
+        return flags;
+    if (typeof f !== 'string')
+        throw TypeError("flags must be string or number");
+    var flagsval = flags[f];
+    if (typeof flagsval !== 'number')
+        throw TypeError("Invalid flags string value '" + f + "'");
+    return flagsval;
+}
+function openSync(path, flags, mode) {
+    if (mode === void 0) { mode = MODE_DEFAULT; }
+    path = validPathOrThrow(path);
+    var flagsval = flagsToFlagsValue(flags);
+    if (typeof mode !== 'number')
+        throw TypeError('mode must be an integer');
+    var res = libjs.open(path, flagsval, mode);
+    if (res < 0)
+        throwError(res, 'open', path);
+    return res;
+}
+exports.openSync = openSync;
+function readSync(fd, buffer, offset, length, position) {
+    validateFd(fd);
+    if (!(buffer instanceof Buffer))
+        throw TypeError('buffer must be an instance of Buffer');
+    if (typeof offset !== 'number')
+        throw TypeError('offset must be an integer');
+    if (typeof length !== 'number')
+        throw TypeError('length must be an integer');
+    if (position !== null) {
+        if (typeof position !== 'number')
+            throw TypeError('position must be an integer');
+        var seekres = libjs.lseek(fd, position, 0 /* SET */);
+        if (seekres < 0)
+            throwError(seekres, 'read');
+    }
+    var buf = buffer.slice(offset, offset + length);
+    var res = libjs.read(fd, buf);
+    if (res < 0)
+        throwError(res, 'read');
+    return res;
+}
+exports.readSync = readSync;
+var readdirOptionsDefaults = {
+    encoding: 'utf8'
+};
+function readdirSync(path, options) {
+    if (options === void 0) { options = {}; }
+    path = validPathOrThrow(path);
+    options = Object.assign(options, readdirOptionsDefaults);
+}
+exports.readdirSync = readdirSync;
+function createFakeAsyncs() {
+    function createFakeAsyncFunction(name) {
+        exports[name] = function () {
+            var args = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                args[_i - 0] = arguments[_i];
+            }
+            var callback = noop();
+            if (args.length && (typeof args[args.length - 1] === 'function')) {
+                callback = args[args.length - 1];
+                args = args.splice(0, args.length - 1);
+            }
+            process.nextTick(function () {
+                try {
+                    var result = exports[name + 'Sync'].apply(null, args);
+                    callback(null, result);
+                }
+                catch (err) {
+                    callback(err);
+                }
+            });
+        };
+    }
+    for (var _i = 0, _a = [
+        'appendFile',
+        'chmod',
+        'fchmod',
+        'chown',
+        'fchown',
+        'close',
+        'exists',
+        'fsync',
+        'fdatasync',
+        'stat',
+        'fstat',
+        'lstat',
+        'truncate',
+        'ftruncate',
+        'utimes',
+        'link',
+        'mkdir',
+        'mkdtemp',
+        'open',
+        'read',
+    ]; _i < _a.length; _i++) {
+        var func = _a[_i];
+        createFakeAsyncFunction(func);
+    }
+}
+createFakeAsyncs();

@@ -106,6 +106,7 @@ exports.syscalls = {
     epoll_wait: 232,
     epoll_ctl: 233,
     utimes: 235,
+    mkdirat: 258,
     futimesat: 261,
     utimensat: 280,
     accept4: 288,

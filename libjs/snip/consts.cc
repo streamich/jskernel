@@ -40,6 +40,11 @@
 #include <sys/types.h>
 #include <utime.h>
 #include <sys/time.h>
+#include <dirent.h>
+#include <stdio.h>
+#include <features.h>
+#include <sys/dir.h>
+
 
 using namespace std;
 
@@ -261,6 +266,16 @@ int main() {
     std::cout << "MAP_POPULATE = " << MAP_POPULATE << "," << endl;
     std::cout << "MAP_STACK = " << MAP_STACK << "," << endl;
 
+    std::cout << "SEEK_CUR = " << SEEK_CUR << "," << endl;
+    std::cout << "SEEK_END = " << SEEK_END << "," << endl;
+    std::cout << "SEEK_SET = " << SEEK_SET << "," << endl;
+
+    std::cout << "O_SYNC = " << O_SYNC << "," << endl;
+    std::cout << "O_NDELAY = " << O_NDELAY << "," << endl;
+    std::cout << "O_LARGEFILE = " << O_LARGEFILE << "," << endl;
+
+    std::cout << "FD_CLOEXEC = " << FD_CLOEXEC << "," << endl;
+
     std::cout << "sizeof(size_t) = " << sizeof(size_t) << "," << endl;
     std::cout << "sizeof(time_t) = " << sizeof(time_t) << "," << endl;
     std::cout << "sizeof(__time_t) = " << sizeof(__time_t) << "," << endl;
@@ -278,6 +293,26 @@ int main() {
     std::cout << "sizeof(utimbuf) = " << sizeof(utimbuf) << "," << endl;
     std::cout << "sizeof(timespec) = " << sizeof(timespec) << "," << endl;
     std::cout << "sizeof(long) = " << sizeof(long) << "," << endl;
+    std::cout << "sizeof(off_t) = " << sizeof(off_t) << "," << endl;
+    std::cout << "sizeof(int) = " << sizeof(int) << "," << endl;
+//    std::cout << "DIR = " << sizeof(DIR) << "," << endl;
+//    std::cout << "__dirstream = " << sizeof(__dirstream) << "," << endl;
+
+    DIR* a = opendir("/share/libjs/examples");
+    DIR* b = opendir("/share/libjs");
+    b = opendir("/share/libjs");
+    unsigned char* p = (unsigned char*) b;
+//    printf("p: %d", p);
+//    printf("errno: %d", errno);
+//    std::cout << p << std::endl;
+    int i = 0;
+    for(i = 0; i < 80; i++) {
+        printf("%d\n", *(p + i));
+//        std::cout << *(p + i) << std::endl;
+    }
+    std::cout << "DONE" << std::endl;
+
+//    DIR a;
 
 
 //    int64_t result = 140455768256512;
