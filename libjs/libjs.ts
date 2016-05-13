@@ -1,25 +1,33 @@
 // # libjs
-// 
+//
+// Usage example, read 1024 bytes from a file and print to console:
+//
+//     var libjs = require('libjs');
+//     var fd = libjs.open('myfile.txt', 0);
+//     var buf = new Buffer(1024);
+//     var bytes = libjs.read(fd, buf);
+//     buf = buf.slice(0, bytes);
+//     libjs.write(1, buf);
+//     libjs.close(fd);
+
 // `libjs` creates wrappers around system calls, similar to what `libc` does for `C` language.
-
-
-// `libsys` library contains our only native dependency -- the `syscall` function.
-// 
-//     sys.syscall(cmd: number, ...args): number
-
 import * as sys from './sys';
 
+// [libsys](http://www.npmjs.com/package/libsys) library contains our only native dependency -- the `syscall` function:
+//
+//     sys.syscall(cmd: number, ...args): number
 
-// `defs` provides platform specific constants and structs, the default one we use is `x86_64`.
+
+// `defs` provides platform specific constants and structs, the default one we use is `x86_64_linux`.
 import * as defs from './definitions';
 
 
-// In development mode we use `debug` library to trace all our system calls. To see debug output,
-// set `DEBUG` environment variable to `libjs:*`, example:
-// 
-//     DEBUG=libjs:* node script.js
-
+// In development mode we use `debug` library to trace all our system calls.
 var debug = require('debug')('libjs:syscall');
+
+// To see the debug output, set `DEBUG` environment variable to `libjs:*`, example:
+//
+//     DEBUG=libjs:* node script.js
 
 // Export definitions and other modules all as part of the library.
 export * from './ctypes';
@@ -29,25 +37,21 @@ export * from './socket';
 
 // ## Files
 // 
-// Standard file operations.
+// Standard file operations, which operate on most of the Linux/Unix file descriptors.
 
 // ### read
 //
 //     read(fd: number, buf: Buffer): number
 // 
 // Read data from file associated with `fd` file descriptor into buffer `buf`.
-// Up to size of the `buf.length` will be read or less.
+// Up to size of the `buf.length` will be read, or less.
 //
 // Returns a `number` which is the actual bytes read into the buffer, if negative,
-// represents an error.
+// represents an error. If zero, represents *end-of-file*, but if `buf` is of length
+// zero than zero does not necessarily mean *end-of-file*.
 
-/**
- * @param fd {number}
- * @param buf {Buffer}
- * @returns {number}
- */
 export function read(fd: number, buf: Buffer): number {
-    debug('read', fd);
+    debug('read', fd, sys.addr64(buf), buf.length);
     return sys.syscall(defs.syscalls.read, fd, buf, buf.length);
 }
 
@@ -56,9 +60,7 @@ export function read(fd: number, buf: Buffer): number {
 //
 //     write(fd: number, buf: string|Buffer): number
 //
-// Write data to a file descriptor. Example, write to console (where `STDOUT` has value `1` as a file descriptor):
-//
-//     libjs.write(1, 'Hello console\n');
+// Write data to a file descriptor.
 
 export function write(fd: number, buf: string|Buffer): number {
     debug('write', fd);
@@ -66,30 +68,34 @@ export function write(fd: number, buf: string|Buffer): number {
     return sys.syscall(defs.syscalls.write, fd, buf, buf.length);
 }
 
+// Usage example, write to console (where `STDOUT` has value `1` as a file descriptor):
+//
+//     libjs.write(1, 'Hello console\n');
+
 
 // ### open
 // 
-//     open(pathname: string, flags: defs.FLAG, mode?: defs.MODE): number
+//     open(pathname: string, flags: defs.FLAG, mode?: defs.S): number
 // 
 // Opens a file, returns file descriptor on success or a negative number representing an error.
-// 
-// Read data from a file:
-// 
-//     var fd = libjs.open('/tmp/data.txt', libjs.FLAG...);
-//     var buf = new Buffer(1024);
-//     libjs.read(fd, buf);
 
-export function open(pathname: string, flags: defs.FLAG, mode?: defs.MODE): number {
-    debug('write', pathname, flags, mode);
+export function open(pathname: string, flags: defs.FLAG, mode?: defs.S): number {
+    debug('open', pathname, flags, mode);
     var args = [defs.syscalls.open, pathname, flags];
     if(typeof mode === 'number') args.push(mode);
     return sys.syscall.apply(null, args);
 }
 
+// Example, read data from a file:
+//
+//     var fd = libjs.open('/tmp/data.txt', libjs.FLAG.O_RDONLY);
+//     var buf = new Buffer(1024);
+//     libjs.read(fd, buf);
+
 
 // ### close
 //
-// Close file descriptor.
+// Close a file descriptor.
 
 export function close(fd: number): number {
     debug('close', fd);
@@ -99,11 +105,13 @@ export function close(fd: number): number {
 
 // ### access
 //
-// Check user's permissions for a file
+//     access(pathname: string, mode: number): number
 //
-// In `libc`:
+// In `libc`, see [access(2)](http://man7.org/linux/man-pages/man2/faccessat.2.html)::
 //
 //     int access(const char *pathname, int mode);
+//
+// Check user's permissions for a file.
 
 export function access(pathname: string, mode: number): number {
     debug('access', pathname, mode);
@@ -113,13 +121,16 @@ export function access(pathname: string, mode: number): number {
 
 // ### chmod and fchmod
 //
-// Change permissions of a file. On success, zero is returned.  On error, -1 is returned,
-// and errno is set appropriately.
+//     chmod(pathname: string, mode: number): number
+//     fchmod(fd: number, mode: number): number
 //
-// In `libc`:
+// In `libc`, see [chmod(2)](http://man7.org/linux/man-pages/man2/chmod.2.html):
 //
 //     int chmod(const char *pathname, mode_t mode);
 //     int fchmod(int fd, mode_t mode);
+//
+// Change permissions of a file. On success, zero is returned.  On error, -1 is returned,
+// and errno is set appropriately.
 
 export function chmod(pathname: string, mode: number): number {
     debug('chmod', pathname, mode);
@@ -134,6 +145,16 @@ export function fchmod(fd: number, mode: number): number {
 
 // ### chown, fchown and lchown
 //
+//     chown(pathname: string, owner: number, group: number): number
+//     fchown(fd: number, owner: number, group: number): number
+//     lchown(pathname: string, owner: number, group: number): number
+//
+// In `libc`, [chown(2)](http://man7.org/linux/man-pages/man2/lchown.2.html):
+//
+//     int chown(const char *pathname, uid_t owner, gid_t group);
+//     int fchown(int fd, uid_t owner, gid_t group);
+//     int lchown(const char *pathname, uid_t owner, gid_t group);
+//
 // These system calls change the owner and group of a file.  The
 // `chown()`, `fchown()`, and `lchown()` system calls differ only in how the
 // file is specified:
@@ -141,16 +162,6 @@ export function fchmod(fd: number, mode: number): number {
 //  - `chown()` changes the ownership of the file specified by pathname, which is dereferenced if it is a symbolic link.
 //  - `fchown()` changes the ownership of the file referred to by the open file descriptor fd.
 //  - `lchown()` is like chown(), but does not dereference symbolic links.
-//
-//     chown(pathname: string, owner: number, group: number): number
-//     fchown(fd: number, owner: number, group: number): number
-//     lchown(pathname: string, owner: number, group: number): number
-//
-// In `libc`:
-//
-//     int chown(const char *pathname, uid_t owner, gid_t group);
-//     int fchown(int fd, uid_t owner, gid_t group);
-//     int lchown(const char *pathname, uid_t owner, gid_t group);
 
 export function chown(pathname: string, owner: number, group: number): number {
     debug('chown', pathname, owner, group);
@@ -184,13 +195,17 @@ export function fdatasync(fd: number): number {
 
 
 // ### stat, lstat, fstat
-// 
-// Fetches and returns statistics about a file.
 //
 //     stat(filepath: string): defs.stat
 //     lstat(linkpath: string): defs.stat
 //     fstat(fd: number): defs.stat
 // 
+// In `libc`, see [stat(2)](http://man7.org/linux/man-pages/man2/stat.2.html):
+//
+//     int stat(const char *pathname, struct stat *buf);
+//     int fstat(int fd, struct stat *buf);
+//     int lstat(const char *pathname, struct stat *buf);
+//
 // Returns a `stat` object of the form:
 //
 //     interface stat {
@@ -211,6 +226,8 @@ export function fdatasync(fd: number): number {
 //         ctime: number;
 //         ctime_nsec: number;
 //     }
+//
+// Fetches and returns statistics about a file.
 
 export function stat(filepath: string): defs.stat { // Throws number
     debug('stat', filepath);
@@ -239,15 +256,15 @@ export function fstat(fd: number): defs.stat {
 
 // ### truncate and ftruncate
 //
-// Truncate a file to a specified length
-//
 //     truncate(path: string, length: number): number
 //     ftruncate(fd: number, length: number): number
 //
-// In `libc`:
+// In `libc`, see [truncate(2)](http://man7.org/linux/man-pages/man2/truncate.2.html):
 //
 //     int truncate(const char *path, off_t length);
 //     int ftruncate(int fd, off_t length);
+//
+// Truncate a file to a specified length
 
 export function truncate(path: string, length: number): number {
     debug('truncate', path, length);
@@ -260,35 +277,54 @@ export function ftruncate(fd: number, length: number): number {
 }
 
 
-// ### link
-//
-// Make a new name for a file.
-//
-// In `libc`:
-//
-//     int link(const char *oldpath, const char *newpath);
-
-export function link(oldpath: string, newpath: string): number {
-    debug('link', oldpath, newpath);
-    return sys.syscall(defs.syscalls.link, oldpath, newpath);
-}
-
-
 // ### lseek
 //
-// Seek into position in a file.
-export function lseek(fd: number, offset: number, whence: number): number {
+//     lseek(fd: number, offset: number, whence: defs.SEEK): number
+//
+// Seek into position in a file. In `libc`, see [lseek(2)](http://man7.org/linux/man-pages/man2/lseek.2.html):
+//
+//     off_t lseek(int fildes, off_t offset, int whence);
+//
+// Reposition read/write file offset.
+
+export function lseek(fd: number, offset: number, whence: defs.SEEK): number {
     debug('lseek', fd, offset, whence);
     return sys.syscall(defs.syscalls.lseek, fd, offset, whence);
 }
 
 
+// ### rename
+//
+//     rename(oldpath: string, newpath: string): number
+//
+// In `libc`, see [rename(2)](http://man7.org/linux/man-pages/man2/rename.2.html):
+//
+//     int rename(const char *oldpath, const char *newpath);
+//
+// change the name or location of a file
+export function rename(oldpath: string, newpath: string): number {
+    debug('rename', oldpath, newpath);
+    return sys.syscall(defs.syscalls.rename, oldpath, newpath);
+}
+
+
+// ## Directories
+//
+// Now we implement functions for working with directories.
+
 // ### mkdir, mkdirat and rmdir
 //
-// In `libc`:
+//     mkdir(pathname: string, mode: number): number
+//     mkdirat(dirfd: number, pathname: string, mode: number): number
+//     rmdir(pathname: string): number
+//
+// In `libc`, see [mkdir(2)](http://man7.org/linux/man-pages/man2/mkdir.2.html) and [rmdir(2)](http://man7.org/linux/man-pages/man2/rmdir.2.html):
 //
 //     int mkdir(const char *pathname, mode_t mode);
 //     int mkdirat(int dirfd, const char *pathname, mode_t mode);
+//     int rmdir(const char *dirname);
+//
+// Use `mkdir` to create a directory and `rmdir` to remove one.
 
 export function mkdir(pathname: string, mode: number): number {
     debug('mkdir', pathname, mode);
@@ -305,74 +341,233 @@ export function rmdir(pathname: string): number {
     return sys.syscall(defs.syscalls.rmdir, pathname);
 }
 
-// #define open_not_cancel_2(name, flags) \
-// 0028    INLINE_SYSCALL (open, 2, (const char *) (name), (flags))
 
-// dirp->fd = fd;
-// #ifndef NOT_IN_libc
-// __libc_lock_init (dirp->lock);
-// #endif
-// dirp->allocation = allocation;
-// dirp->size = 0;
-// dirp->offset = 0;
-// dirp->filepos = 0;
+// ### getcwd
+//
+//     getcwd(): string
+//
+// Returns a *current-working-directory* path `string`, on error, throws a negative `number`
+// representing `errno` global variable in `libc`.
+//
+// First we try to read path into a 64-byte buffer, if buffer is too small, we retry
+// using large enough buffer to fit maximum possible file path, `PATH_MAX` is 4096 in `libc`.
+//
+// > Linux has a maximum filename length of 255 characters for most filesystems (including EXT4), and a maximum path of 4096 characters.
 
-// struct __dirstream
-// 30   {
-//     31     void *__fd;         /* `struct hurd_fd' pointer for descriptor.  */
-//     32     char *__data;       /* Directory block.  */
-//     33     int __entry_data;       /* Entry number `__data' corresponds to.  */
-//     34     char *__ptr;        /* Current pointer into the block.  */
-//     35     int __entry_ptr;        /* Entry number `__ptr' corresponds to.  */
-//     36     size_t __allocation;    /* Space allocated for the block.  */
-//     37     size_t __size;      /* Total valid data in the block.  */
-//     38     __libc_lock_define (, __lock) /* Mutex lock for this structure.  */
-//     39   };
-// 8 + 8 + 4 + 8 + 4 + 8 + 8 + 4 + 8 + 8 + 8 + 4 = 80
-// https://fossies.org/dox/glibc-2.23/struct____dirstream.html
+export function getcwd(): string {
+    debug('getcwd');
 
-// void * 	__fd
-// char * 	__data
-// int 	__entry_data
-// char * 	__ptr
-// int 	__entry_ptr
-// size_t 	__allocation
-// size_t 	__size
-// int 	fd
-// size_t 	size
-// size_t 	offset
-// off_t 	filepos
-// int 	errcode
+    var buf = new Buffer(64);
+    var res = sys.syscall(defs.syscalls.getcwd, buf, buf.length);
 
-// `opendir` returns `Buffer` because we need to keep the reference to that `Buffer`
-// otherwise JavaScript garbage-collector will free that memory.
-export function opendir(name: string): Buffer {
-    debug('opendir', name);
-    
-    var flags = defs.FLAG.O_RDONLY | defs.FLAG.O_NDELAY | defs.FLAG.O_DIRECTORY | defs.FLAG.O_LARGEFILE;
-    var dfd = open(name, flags);
-    if(dfd < 0) throw dfd;
+    if(res < 0) {
+        if(res === -defs.ERROR.ERANGE) {
+            // > ERANGE error - The size argument is less than the length of the absolute
+            // > pathname of the working directory, including the terminating
+            // > null byte.  You need to allocate a bigger array and try again.
+            buf = new Buffer(4096);
+            res = sys.syscall(defs.syscalls.getcwd, buf, buf.length);
+            if(res < 0) throw res;
+        } else throw res;
+    }
 
-    // > The opendir() function sets the close-on-exec flag for the file
-    // > descriptor underlying the DIR *.
-    // var res = fcntl(dfd, defs.FCNTL.SETFL, defs.FD.CLOEXEC) < 0);
-    // if(res < 0) throw res;
-
-    var dirp: defs.DIR = {
-        __fd: [dfd, 0],         // Assuming file descriptors are up to 32-bits.
-        __data: [0x8000, 0],    // This is to what my `libc` sets this value to.
-    };
-    return defs.DIR.pack(dirp);
+    return buf.slice(0, res).toString();
 }
 
-export function readdir() {
-    
+
+// ### getdents64
+//
+//     getdents64(fd: number, dirp: Buffer): number
+//
+// In `C` it would be:
+//
+//     int getdents64(unsigned int fd, struct linux_dirent64 *dirp, unsigned int count);
+//
+// `libc` does not implement `getdents64` system call, however it uses it internally
+// to provide [readdir(3)](http://man7.org/linux/man-pages/man3/readdir.3.html) fucntion.
+// We will use this system call to implement our own `readdir` function below.
+//
+// On success, the number of bytes read is returned.  On end of
+// directory, 0 is returned.  On error, -1 is returned, and errno is set
+// appropriately.
+
+export function getdents64(fd: number, dirp: Buffer): number {
+    debug('getdents64', fd, dirp.length);
+    return sys.syscall(defs.syscalls.getdents64, fd, dirp, dirp.length);
 }
+
+
+// ### readdir
+//
+//     readdir(path: string, encoding = 'utf8'): IReaddirEntry[]
+//     readdirList(path: string, encoding = 'utf8'): string[]
+//
+// `readdir` and `readdirList` are `libjs`'s versions of [readdir(3)](http://man7.org/linux/man-pages/man3/readdir.3.html)
+// both functions are equivalent, they only differ in the type of result they return.
+//
+// `readdir` returns an `Array` of `IReaddirEntry`, which is defined like so:
+
+export interface IReaddirEntry {
+    ino: [number, number],
+    offset: number,
+    type: number,
+    name: string,
+}
+
+// The result of `readdir` could look like this:
+//
+//     [
+//         { ino: [ 48879, 0 ], offset: 1, type: 4, name: '.' },
+//         { ino: [ 48880, 0 ], offset: 2, type: 4, name: '..' },
+//         { ino: [ 48881, 0 ],
+//             offset: 3,
+//             type: 8,
+//             name: 'architecture.gif' },
+//     ]
+
+export function readdir(path: string, encoding = 'utf8'): IReaddirEntry[] {
+    debug('readdir', path, encoding);
+
+    /* Open directory. */
+    var fd = open(path, defs.FLAG.O_RDONLY | defs.FLAG.O_DIRECTORY);
+    if(fd < 0) throw fd;
+
+    /* Linux will write into our `buf` array of entries of type `linux_dirent64`. */
+    var buf = new Buffer(4096);
+    var struct = defs.linux_dirent64;
+
+    var list: IReaddirEntry[] = [];
+
+    var res = getdents64(fd, buf);
+    do {
+        var offset = 0;
+        while (offset + struct.size < res) { // res contains number of bytes read.
+            var unpacked = struct.unpack(buf, offset);
+            var name = buf.slice(offset + struct.size, offset + unpacked.d_reclen).toString(encoding);
+            name = name.substr(0, name.indexOf("\0"));
+            var entry = {
+                ino: unpacked.ino64_t,
+                offset: unpacked.off64_t[0],
+                type: unpacked.d_type,
+                name: name,
+            };
+            list.push(entry);
+            offset += unpacked.d_reclen;
+        }
+        res = getdents64(fd, buf);
+    } while(res > 0);
+
+    /* `res` should be `0` when we are done. */
+    if(res < 0) throw res;
+
+    close(fd);
+    return list;
+}
+
+// `readdirList` reurns a plain `Array` of `string`s of file names in directory,
+// excluding `.` and `..` directories, similar to what `fs.readdirSync` does for *Node.js*.
+
+export function readdirList(path: string, encoding = 'utf8'): string[] {
+    debug('readdirList', path, encoding);
+
+    var fd = open(path, defs.FLAG.O_RDONLY | defs.FLAG.O_DIRECTORY);
+    if(fd < 0) throw fd;
+
+    var buf = new Buffer(4096);
+    var struct = defs.linux_dirent64;
+
+    var list: string[] = [];
+
+    var res = getdents64(fd, buf);
+    do {
+        var offset = 0;
+        while (offset + struct.size < res) { // res contains number of bytes read.
+            var unpacked = struct.unpack(buf, offset);
+            var name = buf.slice(offset + struct.size, offset + unpacked.d_reclen).toString(encoding);
+            name = name.substr(0, name.indexOf("\0"));
+            if((name != '.') && (name != '..')) list.push(name);
+            offset += unpacked.d_reclen;
+        }
+        res = getdents64(fd, buf);
+    } while(res > 0);
+
+    if(res < 0) throw res;
+
+    close(fd);
+    return list;
+}
+
+
+
+// ## Links
+
+// ### symlink
+//
+//     symlink(target: string, linkpath: string): number
+//
+// In `libc`, see [symlink(2)](http://man7.org/linux/man-pages/man2/symlink.2.html):
+//
+//     int symlink(const char *target, const char *linkpath);
+//
+// Make a new name for a file.
+
+export function symlink(target: string, linkpath: string): number {
+    debug('symlink', target, linkpath);
+    return sys.syscall(defs.syscalls.symlink, target, linkpath);
+}
+
+
+// ### unlink
+//
+//     unlink(pathname: string): number
+//
+// In `libc`, see [unlink(2)](http://man7.org/linux/man-pages/man2/unlink.2.html):
+//
+//     int unlink(const char *pathname);
+//
+// Delete a name and possibly the file it refers to.
+
+export function unlink(pathname: string): number {
+    debug('unlink', pathname);
+    return sys.syscall(defs.syscalls.unlink, pathname);
+}
+
+
+// ### readlink
+//
+//     readlink(pathname: string, buf: Buffer): number
+//
+// In `libc`, see [readlink(2)](http://man7.org/linux/man-pages/man2/readlink.2.html):
+//
+//     ssize_t readlink(const char *pathname, char *buf, size_t bufsiz);
+//
+// read value of a symbolic link
+
+export function readlink(pathname: string, buf: Buffer): number {
+    debug('readlink', pathname, buf.length);
+    return sys.syscall(defs.syscalls.readlink, pathname, buf, buf.length);
+}
+
+
+// ### link
+//
+//     link(oldpath: string, newpath: string): number
+//
+// In `libc`, see [link(2)](http://man7.org/linux/man-pages/man2/link.2.html):
+//
+//     int link(const char *oldpath, const char *newpath);
+//
+// Make a new name for a file.
+
+export function link(oldpath: string, newpath: string): number {
+    debug('link', oldpath, newpath);
+    return sys.syscall(defs.syscalls.link, oldpath, newpath);
+}
+
 
 
 // ## Time
-//
-//
+
 // ## utime, utimes, utimensat and futimens
 // 
 // In `libc`:
@@ -426,6 +621,7 @@ export function socket(domain: defs.AF, type: defs.SOCK, protocol: number): numb
 // In `libc`:
 //
 //     int connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
+
 export function connect(fd: number, sockaddr: defs.sockaddr_in): number {
     debug('connect', fd, sockaddr.sin_addr.s_addr.toString(), require('./socket').hton16(sockaddr.sin_port));
     var buf = defs.sockaddr_in.pack(sockaddr);
@@ -487,7 +683,10 @@ export function send(fd: number, buf: Buffer, flags: defs.MSG = 0): number {
 
 // ### getpid
 //
+//     getpid(): number
+//
 // Get process ID.
+
 export function getpid(): number {
     debug('getpid');
     return sys.syscall(defs.syscalls.getpid);
@@ -495,9 +694,10 @@ export function getpid(): number {
 
 // ### getppid
 //
-// Get parent process ID.
-//
 //     getppid(): number
+//
+// Get parent process ID.
+
 export function getppid(): number {
     debug('getppid');
     return sys.syscall(defs.syscalls.getppid);
@@ -505,9 +705,10 @@ export function getppid(): number {
 
 // ### getuid
 //
-// Get parent user ID.
-//
 //     getuid(): number
+//
+// Get parent user ID.
+
 export function getuid(): number {
     debug('getuid');
     return sys.syscall(defs.syscalls.getuid);
@@ -515,9 +716,10 @@ export function getuid(): number {
 
 // ### geteuid
 //
-// Get parent real user ID.
-//
 //     geteuid(): number
+//
+// Get parent real user ID.
+
 export function geteuid(): number {
     debug('geteuid');
     return sys.syscall(defs.syscalls.geteuid);
@@ -525,9 +727,10 @@ export function geteuid(): number {
 
 // ### getgid
 //
-// Get group ID.
-//
 //     getgid(): number
+//
+// Get group ID.
+
 export function getgid(): number {
     debug('getgid');
     return sys.syscall(defs.syscalls.getgid);
@@ -535,9 +738,10 @@ export function getgid(): number {
 
 // ### getgid
 //
-// Get read group ID.
-//
 //     getegid(): number
+//
+// Get read group ID.
+
 export function getegid(): number {
     debug('getegid');
     return sys.syscall(defs.syscalls.getegid);
@@ -601,6 +805,47 @@ export function epoll_ctl(epfd: number, op: defs.EPOLL_CTL, fd: number, epoll_ev
     var buf = defs.epoll_event.pack(epoll_event);
     return sys.syscall(defs.syscalls.epoll_ctl, epfd, op, fd, buf);
 }
+
+
+// ### inotify_init, inotify_init1, inotify_add_watch and inotify_rm_watch
+//
+//     inotify_init(): number
+//     inotify_init1(flags: defs.IN): number
+//     inotify_add_watch(fd: number, pathname: string, mask: defs.IN): number
+//     inotify_rm_watch(fd: number, wd: number): number
+//
+// In `libc`:
+//
+//     int inotify_init(void);
+//     int inotify_init1(int flags);
+//     int inotify_add_watch(int fd, const char *pathname, uint32_t mask);
+//     int inotify_rm_watch(int fd, int wd);
+//
+// Monitoring filesystem events, [inotify(7)](http://man7.org/linux/man-pages/man7/inotify.7.html).
+//
+// See [`libaio`](http://www.npmjs.com/package/libaio) OOP wrapper `libaio.Notify` around `inotify(7)`
+// system calls.
+
+export function inotify_init(): number {
+    debug('inotify_init');
+    return sys.syscall(defs.syscalls.inotify_init);
+}
+
+export function inotify_init1(flags: defs.IN): number {
+    debug('inotify_init1', flags);
+    return sys.syscall(defs.syscalls.inotify_init1,  flags);
+}
+
+export function inotify_add_watch(fd: number, pathname: string, mask: defs.IN): number {
+    debug('inotify_add_watch', fd, pathname, mask);
+    return sys.syscall(defs.syscalls.inotify_add_watch, fd, pathname, mask);
+}
+
+export function inotify_rm_watch(fd: number, wd: number): number {
+    debug('inotify_rm_watch', fd, wd);
+    return sys.syscall(defs.syscalls.inotify_rm_watch, fd, wd);
+}
+
 
 
 // ## Memory

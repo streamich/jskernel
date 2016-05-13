@@ -1,11 +1,13 @@
+// # x86_64 Linux
+
 import {Type, Arr, Struct} from '../../typebase';
 import {Ipv4} from '../../socket';
 import {t_pointer} from "../../../libmem/struct";
 
-
+// The C `NULL` pointer:
 export const NULL = 0;
 
-
+// Basic types.
 var buf = Buffer.prototype;
 export var int8    = Type.define(1, buf.readInt8,       buf.writeInt8);
 export var uint8   = Type.define(1, buf.readUInt8,      buf.readUInt8);
@@ -30,21 +32,18 @@ export var ipv4    = Type.define(4,
     });
 
 export type uint64 = [number, number];
-
 export var pointer_t = uint64;
 export type pointer_t = uint64;
 
 
-// http://man7.org/linux/man-pages/man2/mmap.2.html
-// void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
-// "Everyone needs protection"
+// Constants used in `mmap` system calls, see [mmap(2)](http://man7.org/linux/man-pages/man2/mmap.2.html).
+
 export const enum PROT {
     NONE    = 0, // Pages may not be accessed.
     READ    = 1, // Pages may be read.
     WRITE   = 2, // Pages may be written.
     EXEC    = 4, // Pages may be executed.
 }
-
 
 export const enum MAP {
     'FILE' = 0,
@@ -67,7 +66,8 @@ export const enum MAP {
 }
 
 
-// http://lxr.free-electrons.com/source/include/uapi/asm-generic/fcntl.h#L19
+// Constants used in `open` system calls, see [open(2)](http://man7.org/linux/man-pages/man2/open.2.html).
+
 export const enum FLAG {
     O_RDONLY        = 0,
     O_WRONLY        = 1,
@@ -91,27 +91,36 @@ export const enum FLAG {
     O_NDELAY        = 2048,
 }
 
+export const enum S {
+    IFMT = 61440,   // type of file
+    IFBLK = 24576,  // block special
+    IFCHR = 8192,   // character special
+    IFIFO = 4096,   // FIFO special
+    IFREG = 32768,  // regular
+    IFDIR = 16384,  // directory
+    IFLNK = 40960,  // symbolic link
+    IFSOCK = 49152, // socket
 
-export const enum MODE {
-    S_IXOTH = 1,
-    S_IWOTH = 2,
-    S_IROTH = 4,
-    S_IRWXO = 7,
-    S_IXGRP = 8,
-    S_IWGRP = 16,
-    S_IRGRP = 32,
-    S_IRWXG = 56,
-    S_IXUSR = 64,
-    S_IWUSR = 128,
-    S_IRUSR = 256,
-    S_IRWXU = 448,
-    S_ISVTX = 512,
-    S_ISGID = 1024,
-    S_ISUID = 2048,
+    IRWXU = 448,    // read, write, execute/search by owner
+    IRUSR = 256,    // read permission, owner
+    IWUSR = 128,    // write permission, owner
+    IXUSR = 64,     // execute/search permission, owner
+    IRWXG = 56,     // read, write, execute/search by group
+    IRGRP = 32,     // read permission, group
+    IWGRP = 16,     // write permission, group
+    IXGRP = 8,      // execute/search permission, group
+    IRWXO = 7,      // read, write, execute/search by others
+    IROTH = 4,      // read permission, others
+    IWOTH = 2,      // write permission, others
+    IXOTH = 1,      // execute/search permission, others
+    ISUID = 2048,   // set-user-ID on execution
+    ISGID = 1024,   // set-group-ID on execution
+    ISVTX = 512,    // on directories, restricted deletion flag
 }
 
-// Access mode, see:
-// http://man7.org/linux/man-pages/man2/faccessat.2.html
+
+// Constants used in `access` system call, see [access(2)](http://man7.org/linux/man-pages/man2/faccessat.2.html).
+
 export const enum AMODE {
     F_OK = 0,
     X_OK = 1,
@@ -119,44 +128,45 @@ export const enum AMODE {
     R_OK = 4,
 }
 
+
+// Constants used in `lseek` system calls, see [lseek(2)](http://man7.org/linux/man-pages/man2/lseek.2.html).
+
 export const enum SEEK {
     CUR = 1,
     END = 2,
     SET = 0,
 }
 
-/**
- * See <asm/stat.h> line 82:
- *
- *      __kernel_ulong_t = unsigned long long // 64+ bits
- *      __kernel_long_t = long long // 64+ bits
- *      unsigned int // 32+ bits
- *
- * In `libc`:
- *
- *      struct stat {
- *          __kernel_ulong_t	st_dev;
- *          __kernel_ulong_t	st_ino;
- *          __kernel_ulong_t	st_nlink;
- *          unsigned int		st_mode;
- *          unsigned int		st_uid;
- *          unsigned int		st_gid;
- *          unsigned int		__pad0;
- *          __kernel_ulong_t	st_rdev;
- *          __kernel_long_t		st_size;
- *          __kernel_long_t		st_blksize;
- *          __kernel_long_t		st_blocks;	// Number 512-byte blocks allocated.
- *          __kernel_ulong_t	st_atime;
- *          __kernel_ulong_t	st_atime_nsec;
- *          __kernel_ulong_t	st_mtime;
- *          __kernel_ulong_t	st_mtime_nsec;
- *          __kernel_ulong_t	st_ctime;
- *          __kernel_ulong_t	st_ctime_nsec;
- *          __kernel_long_t		__unused[3];
- *      };
- *
- * @type {Struct}
- */
+
+// See <asm/stat.h> line 82:
+//
+//     __kernel_ulong_t = unsigned long long // 64+ bits
+//     __kernel_long_t = long long // 64+ bits
+//     unsigned int // 32+ bits
+//
+// In `libc`:
+//
+//     struct stat {
+//         __kernel_ulong_t	st_dev;
+//         __kernel_ulong_t	st_ino;
+//         __kernel_ulong_t	st_nlink;
+//         unsigned int		st_mode;
+//         unsigned int		st_uid;
+//         unsigned int		st_gid;
+//         unsigned int		__pad0;
+//         __kernel_ulong_t	st_rdev;
+//         __kernel_long_t		st_size;
+//         __kernel_long_t		st_blksize;
+//         __kernel_long_t		st_blocks;	// Number 512-byte blocks allocated.
+//         __kernel_ulong_t	st_atime;
+//         __kernel_ulong_t	st_atime_nsec;
+//         __kernel_ulong_t	st_mtime;
+//         __kernel_ulong_t	st_mtime_nsec;
+//         __kernel_ulong_t	st_ctime;
+//         __kernel_ulong_t	st_ctime_nsec;
+//         __kernel_long_t		__unused[3];
+//     };
+
 export var stat = Struct.define(31 * 4, [
     [0, uint32, 'dev'],
     // dev_hi:         [1 * 4,     buffer.int32],
@@ -213,9 +223,7 @@ export interface stat {
 }
 
 
-// http://beej.us/guide/bgnet/output/html/multipage/index.html
-
-/* Protocol families. */
+// Protocol families.
 export const enum PF {
     UNSPEC = 0,	/* Unspecified.  */
     LOCAL = 1,	/* Local to host (pipes and file-domain).  */
@@ -262,7 +270,7 @@ export const enum PF {
     MAX = 41,	/* For now..  */
 }
 
-/* Address families.  */
+// Address families.
 export const enum AF {
     UNSPEC = PF.UNSPEC,
     LOCAL = PF.LOCAL,
@@ -309,6 +317,7 @@ export const enum AF {
     MAX = PF.MAX
 }
 
+
 export const enum SOCK {
     STREAM = 1,
     DGRAM = 2,
@@ -322,17 +331,19 @@ export const enum SOCK {
     CLOEXEC = 524288,
 }
 
-// http://beej.us/guide/bgnet/output/html/multipage/sockaddr_inman.html
-// struct sockaddr_in {
-//     short            sin_family;   // e.g. AF_INET
-//     unsigned short   sin_port;     // e.g. htons(3490)
-//     struct in_addr   sin_addr;     // see struct in_addr, below
-//     char             sin_zero[8];  // zero this if you want to
-// };
+
+// From http://beej.us/guide/bgnet/output/html/multipage/sockaddr_inman.html
 //
+//     struct sockaddr_in {
+//         short            sin_family;   // e.g. AF_INET
+//         unsigned short   sin_port;     // e.g. htons(3490)
+//         struct in_addr   sin_addr;     // see struct in_addr, below
+//         char             sin_zero[8];  // zero this if you want to
+//     };
 //     struct in_addr {
-//     unsigned long s_addr;  // load with inet_aton()
-// };
+//         unsigned long s_addr;  // load with inet_aton()
+//     };
+
 export var in_addr = Struct.define(4, [
     [0, ipv4, 's_addr'], // load with inet_aton()
 ]);
@@ -354,22 +365,24 @@ export interface sockaddr_in {
     sin_addr: in_addr;
     sin_zero?: number[];
 }
-// IPv6 AF_INET6 sockets:
-// struct sockaddr_in6 {
-//     u_int16_t       sin6_family;   // address family, AF_INET6
-//     u_int16_t       sin6_port;     // port number, Network Byte Order
-//     u_int32_t       sin6_flowinfo; // IPv6 flow information
-//     struct in6_addr sin6_addr;     // IPv6 address
-//     u_int32_t       sin6_scope_id; // Scope ID
-// };
-// struct in6_addr {
-//     unsigned char   s6_addr[16];   // load with inet_pton()
-// };
 
-// struct sockaddr {
-//     sa_family_t sa_family;
-//     char        sa_data[14];
-// }
+// IPv6 AF_INET6 sockets:
+//
+//     struct sockaddr_in6 {
+//         u_int16_t       sin6_family;   // address family, AF_INET6
+//         u_int16_t       sin6_port;     // port number, Network Byte Order
+//         u_int32_t       sin6_flowinfo; // IPv6 flow information
+//         struct in6_addr sin6_addr;     // IPv6 address
+//         u_int32_t       sin6_scope_id; // Scope ID
+//     };
+//     struct in6_addr {
+//         unsigned char   s6_addr[16];   // load with inet_pton()
+//     };
+//     struct sockaddr {
+//         sa_family_t sa_family;
+//         char        sa_data[14];
+//     }
+
 export var sockaddr = Struct.define(1, [
     [0, 'sa_family', uint16],
     [2, 'sa_data', Arr.define(int8, 14)],
@@ -508,132 +521,6 @@ export const enum ERROR {
     EUSERS = 87,
     EXDEV = 18,
     EXFULL = 54,
-
-    // TODO: get error numbers for the below:
-    // EADDRINUSE, // Another socket is already listening on the same port.
-    // EBADF, // The argument sockfd is not a valid descriptor.
-    // ENOTSOCK, // The argument sockfd is not a socket.
-    // EOPNOTSUPP, // The socket is not of a type that supports the listen() operation.
-    // E2BIG = 0, //           Argument list too long (POSIX.1)
-    // EACCES = 0, //          Permission denied (POSIX.1)
-    // EADDRINUSE = 0, //      Address already in use (POSIX.1)
-    // EADDRNOTAVAIL = 0, //   Address not available (POSIX.1)
-    // EAFNOSUPPORT = 0, //    Address family not supported (POSIX.1)
-    // EAGAIN = 0, //          Resource temporarily unavailable (may be the same value as EWOULDBLOCK) (POSIX.1)
-    // EALREADY = 0, //        Connection already in progress (POSIX.1)
-    // EBADE = 0, //           Invalid exchange
-    // EBADF = 0, //           Bad file descriptor (POSIX.1)
-    // EBADFD = 0, //          File descriptor in bad state
-    // EBADMSG = 0, //         Bad message (POSIX.1)
-    // EBADR = 0, //           Invalid request descriptor
-    // EBADRQC = 0, //         Invalid request code
-    // EBADSLT = 0, //         Invalid slot
-    // EBUSY = 0, //           Device or resource busy (POSIX.1)
-    // ECANCELED = 0, //       Operation canceled (POSIX.1)
-    // ECHILD = 0, //          No child processes (POSIX.1)
-    // ECHRNG = 0, //          Channel number out of range
-    // ECOMM = 0, //           Communication error on send
-    // ECONNABORTED = 0, //    Connection aborted (POSIX.1)
-    // ECONNREFUSED = 0, //    Connection refused (POSIX.1)
-    // ECONNRESET = 0, //      Connection reset (POSIX.1)
-    // EDEADLK = 0, //         Resource deadlock avoided (POSIX.1)
-    // EDEADLOCK = 0, //       Synonym for EDEADLK
-    // EDESTADDRREQ = 0, //    Destination address required (POSIX.1)
-    // EDOM = 0, //            Mathematics argument out of domain of function (POSIX.1, C99)
-    // EDQUOT = 0, //          Disk quota exceeded (POSIX.1)
-    // EEXIST = 0, //          File exists (POSIX.1)
-    // EFAULT = 0, //          Bad address (POSIX.1)
-    // EFBIG = 0, //           File too large (POSIX.1)
-    // EHOSTDOWN = 0, //       Host is down
-    // EHOSTUNREACH = 0, //    Host is unreachable (POSIX.1)
-    // EIDRM = 0, //           Identifier removed (POSIX.1)
-    // EILSEQ = 0, //          Illegal byte sequence (POSIX.1, C99)
-    // EINPROGRESS = 0, //     Operation in progress (POSIX.1)
-    // EINTR = 0, //           Interrupted function call (POSIX.1); see signal(7).
-    // EINVAL = 0, //          Invalid argument (POSIX.1)
-    // EIO = 0, //             Input/output error (POSIX.1)
-    // EISCONN = 0, //         Socket is connected (POSIX.1)
-    // EISDIR = 0, //          Is a directory (POSIX.1)
-    // EISNAM = 0, //          Is a named type file
-    // EKEYEXPIRED = 0, //     Key has expired
-    // EKEYREJECTED = 0, //    Key was rejected by service
-    // EKEYREVOKED = 0, //     Key has been revoked
-    // EL2HLT = 0, //          Level 2 halted
-    // EL2NSYNC = 0, //        Level 2 not synchronized
-    // EL3HLT = 0, //          Level 3 halted
-    // EL3RST = 0, //          Level 3 halted
-    // ELIBACC = 0, //         Cannot access a needed shared library
-    // ELIBBAD = 0, //         Accessing a corrupted shared library
-    // ELIBMAX = 0, //         Attempting to link in too many shared libraries
-    // ELIBSCN = 0, //         lib section in a.out corrupted
-    // ELIBEXEC = 0, //        Cannot exec a shared library directly
-    // ELOOP = 0, //           Too many levels of symbolic links (POSIX.1)
-    // EMEDIUMTYPE = 0, //     Wrong medium type
-    // EMFILE = 0, //          Too many open files (POSIX.1); commonly caused by exceeding the RLIMIT_NOFILE resource limit described in getrlimit(2)
-    // EMLINK = 0, //          Too many links (POSIX.1)
-    // EMSGSIZE = 0, //        Message too long (POSIX.1)
-    // EMULTIHOP = 0, //       Multihop attempted (POSIX.1)
-    // ENAMETOOLONG = 0, //    Filename too long (POSIX.1)
-    // ENETDOWN = 0, //        Network is down (POSIX.1)
-    // ENETRESET = 0, //       Connection aborted by network (POSIX.1)
-    // ENETUNREACH = 0, //     Network unreachable (POSIX.1)
-    // ENFILE = 0, //          Too many open files in system (POSIX.1); on Linux, this is probably a result of encountering the /proc/sys/fs/file-max limit (see proc(5)).
-    // ENOBUFS = 0, //         No buffer space available (POSIX.1 (XSI STREAMS option))
-    // ENODATA = 0, //         No message is available on the STREAM head read queue (POSIX.1)
-    // ENODEV = 0, //          No such device (POSIX.1)
-    // ENOENT = 0, //          No such file or directory (POSIX.1) Typically, this error results when a specified pathname does not exist, or one of the components in the directory prefix of a pathname does not exist, or the specified pathname is a dangling symbolic link.
-    // ENOEXEC = 0, //         Exec format error (POSIX.1)
-    // ENOKEY = 0, //          Required key not available
-    // ENOLCK = 0, //          No locks available (POSIX.1)
-    // ENOLINK = 0, //         Link has been severed (POSIX.1)
-    // ENOMEDIUM = 0, //       No medium found
-    // ENOMEM = 0, //          Not enough space (POSIX.1)
-    // ENOMSG = 0, //          No message of the desired type (POSIX.1)
-    // ENONET = 0, //          Machine is not on the network
-    // ENOPKG = 0, //          Package not installed
-    // ENOPROTOOPT = 0, //     Protocol not available (POSIX.1)
-    // ENOSPC = 0, //          No space left on device (POSIX.1)
-    // ENOSR = 0, //           No STREAM resources (POSIX.1 (XSI STREAMS option))
-    // ENOSTR = 0, //          Not a STREAM (POSIX.1 (XSI STREAMS option))
-    // ENOSYS = 0, //          Function not implemented (POSIX.1)
-    // ENOTBLK = 0, //         Block device required
-    // ENOTCONN = 0, //        The socket is not connected (POSIX.1)
-    // ENOTDIR = 0, //         Not a directory (POSIX.1)
-    // ENOTEMPTY = 0, //       Directory not empty (POSIX.1)
-    // ENOTSOCK = 0, //        Not a socket (POSIX.1)
-    // ENOTSUP = 0, //         Operation not supported (POSIX.1)
-    // ENOTTY = 0, //          Inappropriate I/O control operation (POSIX.1)
-    // ENOTUNIQ = 0, //        Name not unique on network
-    // ENXIO = 0, //           No such device or address (POSIX.1)
-    // EOPNOTSUPP = 0, //      Operation not supported on socket (POSIX.1)
-    // EOVERFLOW = 0, //       Value too large to be stored in data type (POSIX.1)
-    // EPERM = 0, //           Operation not permitted (POSIX.1)
-    // EPFNOSUPPORT = 0, //    Protocol family not supported
-    // EPIPE = 0, //           Broken pipe (POSIX.1)
-    // EPROTO = 0, //          Protocol error (POSIX.1)
-    // EPROTONOSUPPORT = 0, // Protocol not supported (POSIX.1)
-    // EPROTOTYPE = 0, //      Protocol wrong type for socket (POSIX.1)
-    // ERANGE = 0, //          Result too large (POSIX.1, C99)
-    // EREMCHG = 0, //         Remote address changed
-    // EREMOTE = 0, //         Object is remote
-    // EREMOTEIO = 0, //       Remote I/O error
-    // ERESTART = 0, //        Interrupted system call should be restarted
-    // EROFS = 0, //           Read-only filesystem (POSIX.1)
-    // ESHUTDOWN = 0, //       Cannot send after transport endpoint shutdown
-    // ESPIPE = 0, //          Invalid seek (POSIX.1)
-    // ESOCKTNOSUPPORT = 0, // Socket type not supported
-    // ESRCH = 0, //           No such process (POSIX.1)
-    // ESTALE = 0, //          Stale file handle (POSIX.1) This error can occur for NFS and for other filesystems
-    // ESTRPIPE = 0, //        Streams pipe error
-    // ETIME = 0, //           Timer expired (POSIX.1 (XSI STREAMS option)) (POSIX.1 says "STREAM ioctl(2) timeout")
-    // ETIMEDOUT = 0, //       Connection timed out (POSIX.1)
-    // ETXTBSY = 0, //         Text file busy (POSIX.1)
-    // EUCLEAN = 0, //         Structure needs cleaning
-    // EUNATCH = 0, //         Protocol driver not attached
-    // EUSERS = 0, //          Too many users
-    // EWOULDBLOCK = 0, //     Operation would block (may be same value as EAGAIN) (POSIX.1)
-    // EXDEV = 0, //           Improper link (POSIX.1)
-    // EXFULL = 0, //          Exchange full
 }
 
 
@@ -668,32 +555,6 @@ export const enum EPOLL_EVENTS {
 }
 
 
-export const enum S {
-    IFMT = 61440,   // type of file
-    IFBLK = 24576,  // block special
-    IFCHR = 8192,   // character special
-    IFIFO = 4096,   // FIFO special
-    IFREG = 32768,  // regular
-    IFDIR = 16384,  // directory
-    IFLNK = 40960,  // symbolic link
-    IFSOCK = 49152, // socket
-
-    IRWXU = 448,    // read, write, execute/search by owner
-    IRUSR = 256,    // read permission, owner
-    IWUSR = 128,    // write permission, owner
-    IXUSR = 64,     // execute/search permission, owner
-    IRWXG = 56,     // read, write, execute/search by group
-    IRGRP = 32,     // read permission, group
-    IWGRP = 16,     // write permission, group
-    IXGRP = 8,      // execute/search permission, group
-    IRWXO = 7,      // read, write, execute/search by others
-    IROTH = 4,      // read permission, others
-    IWOTH = 2,      // write permission, others
-    IXOTH = 1,      // execute/search permission, others
-    ISUID = 2048,   // set-user-ID on execution
-    ISGID = 1024,   // set-group-ID on execution
-    ISVTX = 512,    // on directories, restricted deletion flag
-}
 
 
 export const enum EPOLL {
@@ -706,17 +567,18 @@ export const enum EPOLL_CTL {
     DEL = 2,
 }
 
-// typedef union epoll_data {
-//     void    *ptr;
-//     int      fd;
-//     uint32_t u32;
-//     uint64_t u64;
-// } epoll_data_t;
+//     typedef union epoll_data {
+//         void    *ptr;
+//         int      fd;
+//         uint32_t u32;
+//         uint64_t u64;
+//     } epoll_data_t;
 //
-// struct epoll_event {
-//     uint32_t     events;    /* Epoll events */
-//     epoll_data_t data;      /* User data variable */
-// };
+//     struct epoll_event {
+//         uint32_t     events;    /* Epoll events */
+//         epoll_data_t data;      /* User data variable */
+//     };
+
 export var epoll_event = Struct.define(4 + 8, [
     [0, uint32, 'events'],
     [4, uint64, 'data'],
@@ -765,27 +627,25 @@ export const enum FD {
     CLOEXEC = 1,
 }
 
-/**
- * In `libc`, <bits/ipc.h> line 42:
- *
- *      struct ipc_perm {
- *          __key_t __key;			// Key.
- *          __uid_t uid;			// Owner's user ID.
- *          __gid_t gid;			// Owner's group ID.
- *          __uid_t cuid;			// Creator's user ID.
- *          __gid_t cgid;			// Creator's group ID.
- *          unsigned short int mode;		// Read/write permission.
- *          unsigned short int __pad1;
- *          unsigned short int __seq;		// Sequence number.
- *          unsigned short int __pad2;
- *          __syscall_ulong_t __glibc_reserved1;
- *          __syscall_ulong_t __glibc_reserved2;
- *      };
- *
- * `__syscall_ulong_t` is `unsigned long long int`
- *
- * @type {Struct}
- */
+
+// In `libc`, <bits/ipc.h> line 42:
+//
+//     struct ipc_perm {
+//         __key_t __key;			// Key.
+//         __uid_t uid;			// Owner's user ID.
+//         __gid_t gid;			// Owner's group ID.
+//         __uid_t cuid;			// Creator's user ID.
+//         __gid_t cgid;			// Creator's group ID.
+//         unsigned short int mode;		// Read/write permission.
+//         unsigned short int __pad1;
+//         unsigned short int __seq;		// Sequence number.
+//         unsigned short int __pad2;
+//         __syscall_ulong_t __glibc_reserved1;
+//         __syscall_ulong_t __glibc_reserved2;
+//     };
+//
+// __syscall_ulong_t` is `unsigned long long int`
+
 export var ipc_perm = Struct.define(48, [ // It is 48 for some reason.
     [0, int32, '__key'],
     [4, uint32, 'uid'],
@@ -810,47 +670,44 @@ export interface ipc_perm {
     __seq: number;
 }
 
-/**
- * In `libc`, <bits/shm.h> line 49:
- *
- *      struct shmid_ds {
- *          struct ipc_perm shm_perm;		// operation permission struct
- *          size_t shm_segsz;			// size of segment in bytes
- *          __time_t shm_atime;			// time of last shmat()
- *      #ifndef __x86_64__
- *          unsigned long int __glibc_reserved1;
- *      #endif
- *          __time_t shm_dtime;			// time of last shmdt()
- *      #ifndef __x86_64__
- *          unsigned long int __glibc_reserved2;
- *      #endif
- *          __time_t shm_ctime;			// time of last change by shmctl()
- *      #ifndef __x86_64__
- *          unsigned long int __glibc_reserved3;
- *      #endif
- *          __pid_t shm_cpid;			// pid of creator
- *          __pid_t shm_lpid;			// pid of last shmop
- *          shmatt_t shm_nattch;		// number of current attaches
- *          __syscall_ulong_t __glibc_reserved4;
- *          __syscall_ulong_t __glibc_reserved5;
- *      };
- *
- * From internet:
- *
- *      struct shmid_ds {
- *          struct ipc_perm shm_perm;    // Ownership and permissions
- *          size_t          shm_segsz;   // Size of segment (bytes)
- *          time_t          shm_atime;   // Last attach time
- *          time_t          shm_dtime;   // Last detach time
- *          time_t          shm_ctime;   // Last change time
- *          pid_t           shm_cpid;    // PID of creator
- *          pid_t           shm_lpid;    // PID of last shmat(2)/shmdt(2)
- *          shmatt_t        shm_nattch;  // No. of current attaches
- *          // ...
- *      };
- *      
- * @type {Struct}
- */
+// In `libc`, <bits/shm.h> line 49:
+//
+//     struct shmid_ds {
+//         struct ipc_perm shm_perm;		// operation permission struct
+//         size_t shm_segsz;			// size of segment in bytes
+//         __time_t shm_atime;			// time of last shmat()
+//     #ifndef __x86_64__
+//         unsigned long int __glibc_reserved1;
+//     #endif
+//         __time_t shm_dtime;			// time of last shmdt()
+//     #ifndef __x86_64__
+//         unsigned long int __glibc_reserved2;
+//     #endif
+//         __time_t shm_ctime;			// time of last change by shmctl()
+//     #ifndef __x86_64__
+//         unsigned long int __glibc_reserved3;
+//     #endif
+//         __pid_t shm_cpid;			// pid of creator
+//         __pid_t shm_lpid;			// pid of last shmop
+//         shmatt_t shm_nattch;		// number of current attaches
+//         __syscall_ulong_t __glibc_reserved4;
+//         __syscall_ulong_t __glibc_reserved5;
+//     };
+//
+// From internet:
+//
+//     struct shmid_ds {
+//         struct ipc_perm shm_perm;    // Ownership and permissions
+//         size_t          shm_segsz;   // Size of segment (bytes)
+//         time_t          shm_atime;   // Last attach time
+//         time_t          shm_dtime;   // Last detach time
+//         time_t          shm_ctime;   // Last change time
+//         pid_t           shm_cpid;    // PID of creator
+//         pid_t           shm_lpid;    // PID of last shmat(2)/shmdt(2)
+//         shmatt_t        shm_nattch;  // No. of current attaches
+//         // ...
+//     };
+
 export var shmid_ds = Struct.define(112, [
     [0, ipc_perm, 'shm_perm'],  // 48
     [48, size_t, 'shm_segsz'],  // 8
@@ -876,7 +733,7 @@ export interface shmid_ds {
 }
 
 
-// Time
+// ## Time
 //
 //     struct utimbuf {
 //         time_t actime;       /* access time */
@@ -916,56 +773,109 @@ export interface timespec extends timeval {}
 export type timespecarr = [timespec, timespec];
 
 
-// #define open_not_cancel_2(name, flags) \
-// 0028    INLINE_SYSCALL (open, 2, (const char *) (name), (flags))
 
-// dirp->fd = fd;
-// #ifndef NOT_IN_libc
-// __libc_lock_init (dirp->lock);
-// #endif
-// dirp->allocation = allocation;
-// dirp->size = 0;
-// dirp->offset = 0;
-// dirp->filepos = 0;
-//
-// See: https://fossies.org/dox/glibc-2.23/struct____dirstream.html
-//
-//     void* __fd
-//     char* __data
-//     int __entry_data
-//     char* __ptr
-//     int __entry_ptr
-//     size_t __allocation
-//     size_t __size
-//     int fd
-//     size_t size
-//     size_t offset
-//     off_t filepos
-//     int errcode
-//
-// The actual size of the struct adds up to 80 bytes, we will use 160, just for good measure.
-//
-//     8 + 8 + 4 + 8 + 4 + 8 + 8 + 4 + 8 + 8 + 8 + 4 = 80
-export var __dirstream = Struct.define(160, [
-    [0, uint64, '__fd'],
-    [8, uint64, '__data'],
-    // [16, int32, '__entry_data'],
-    // [20, uint64, '__ptr'],
-    // [28, int32, '__entry_ptr'],
-    // [32, size_t, '__allocation'],
-    // [40, size_t, '__size'],
-    // [44, int32, 'fd'],
-    // [52, size_t, 'size'],
-    // [60, size_t, 'offset'],
-    // [68, uint64, 'filepos'],
-    // [76, int32, 'errcode'],
-]);
+// ## Directories
 
-export interface __dirstream {
-    __fd: [numberLo, numberHi],
-    __data: [numberLo, numberHi],
+export const enum DT {
+    BLK = 6,        // This is a block device.
+    CHR = 2,        // This is a character device.
+    DIR = 4,        // This is a directory.
+    FIFO = 1,       // This is a named pipe (FIFO).
+    LNK = 10,       // This is a symbolic link.
+    REG = 8,        // This is a regular file.
+    SOCK = 12,      // This is a UNIX domain socket.
+    UNKNOWN = 0,    // The file type is unknown.
 }
 
-export var DIR = __dirstream;
-export interface DIR extends __dirstream {}
+//     struct linux_dirent64 {
+//         ino64_t        d_ino;    /* 64-bit inode number */
+//         off64_t        d_off;    /* 64-bit offset to next structure */
+//         unsigned short d_reclen; /* Size of this dirent */
+//         unsigned char  d_type;   /* File type */
+//         char           d_name[]; /* Filename (null-terminated) */
+//     };
+
+export var linux_dirent64 = Struct.define(19, [ // 20+ bytes, 19 + null-terminated string.
+    [0, uint64, 'ino64_t'],
+    [8, uint64, 'off64_t'],
+    [16, uint16, 'd_reclen'],
+    [18, uint8, 'd_type'],
+]);
+
+
+
+// ## inotify
+
+// Supported events suitable for MASK parameter of `inotify_init1` and `inotify_add_watch`.
+export const enum IN {
+    /* Flags set in `inotify_init1`. */
+    CLOEXEC             = 524288,
+    NONBLOCK            = 2048,
+
+    /* Events set in `inotify_add_watch` */
+    ACCESS              = 0x00000001,       /* File was accessed. */
+    MODIFY              = 0x00000002,	    /* File was modified. */
+    ATTRIB              = 0x00000004,	    /* Metadata changed. */
+    CLOSE_WRITE	        = 0x00000008,	    /* Writtable file was closed. */
+    CLOSE_NOWRITE       = 0x00000010,	    /* Unwrittable file closed. */
+    OPEN                = 0x00000020,	    /* File was opened. */
+    MOVED_FROM	        = 0x00000040,	    /* File was moved from X. */
+    MOVED_TO            = 0x00000080,	    /* File was moved to Y. */
+    CREATE              = 0x00000100,	    /* Subfile was created. */
+    DELETE              = 0x00000200,       /* Subfile was deleted. */
+    DELETE_SELF         = 0x00000400,       /* Self was deleted. */
+    MOVE_SELF           = 0x00000800,       /* Self was moved. */
+
+    /* Events sent by the kernel. */
+    UNMOUNT             = 0x00002000,       /* Backing fs was unmounted. */
+    Q_OVERFLOW          = 0x00004000,       /* Event queued overflowed. */
+    IGNORED             = 0x00008000,       /* File was ignored. */
+
+    /* Helper events. */
+    CLOSE	            = IN.CLOSE_WRITE | IN.CLOSE_NOWRITE,    /* Close. */
+    MOVE                = IN.MOVED_FROM | IN.MOVED_TO,          /* Moves. */
+
+    /* Special flags. */
+    ONLYDIR             = 0x01000000,       /* Only watch path if it is dir. */
+    DONT_FOLLOW         = 0x02000000,       /* Do not follow a sym link. */
+    EXCL_UNLINK         = 0x04000000,       /* Exclude events on unlinked objects. */
+    MASK_ADD            = 0x20000000,       /* Add to mask of an existing watch. */
+    ISDIR               = 0x40000000,       /* Event occurred against dir. */
+    ONESHOT             = 0x80000000,       /* Only send event once. */
+
+    /* All events which a program can wait on. */
+    ALL_EVENTS = IN.ACCESS | IN.MODIFY | IN.ATTRIB | IN.CLOSE_WRITE |
+        IN.CLOSE_NOWRITE | IN.OPEN | IN.MOVED_FROM | IN.MOVED_TO |
+        IN.CREATE | IN.DELETE	| IN.DELETE_SELF | IN.MOVE_SELF,
+}
+
+// Stucture that `inotify` returns when reading from one of its descriptors, in `libc`:
+//
+//     struct inotify_event {
+//         int      wd;       /* Watch descriptor */
+//         uint32_t mask;     /* Mask describing event */
+//         uint32_t cookie;   /* Unique cookie associating related events (for rename(2)) */
+//         uint32_t len;      /* Size of name field */
+//         char     name[];   /* Optional null-terminated name */
+//     };
+//
+// We create a representation of this struct in JavaScript:
+
+export var inotify_event = Struct.define(16, [
+    [0, int32, 'wd'],
+    [4, uint32, 'mask'],
+    [8, uint32, 'cookie'],
+    [12, uint32, 'len'],
+    /* [16, Arr.define(int8, 0), 'name'], */
+]);
+
+// And *TypeScript* type definition:
+
+export interface inotify_event {
+    wd: number;
+    mask: number;
+    cookie: number;
+    len: number;
+    name?: string;
+}
 

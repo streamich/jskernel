@@ -44,6 +44,7 @@
 #include <stdio.h>
 #include <features.h>
 #include <sys/dir.h>
+#include <sys/inotify.h>
 
 
 using namespace std;
@@ -275,6 +276,21 @@ int main() {
     std::cout << "O_LARGEFILE = " << O_LARGEFILE << "," << endl;
 
     std::cout << "FD_CLOEXEC = " << FD_CLOEXEC << "," << endl;
+
+    std::cout << "DT_BLK = " << DT_BLK << "," << endl;
+    std::cout << "DT_CHR = " << DT_CHR << "," << endl;
+    std::cout << "DT_DIR = " << DT_DIR << "," << endl;
+    std::cout << "DT_FIFO = " << DT_FIFO << "," << endl;
+    std::cout << "DT_LNK = " << DT_LNK << "," << endl;
+    std::cout << "DT_REG = " << DT_REG << "," << endl;
+    std::cout << "DT_SOCK = " << DT_SOCK << "," << endl;
+    std::cout << "DT_UNKNOWN = " << DT_UNKNOWN << "," << endl;
+
+    std::cout << "PATH_MAX = " << PATH_MAX << "," << endl;
+
+    std::cout << "IN_CLOEXEC = " << IN_CLOEXEC << "," << endl;
+    std::cout << "IN_NONBLOCK = " << IN_NONBLOCK << "," << endl;
+    std::cout << "IN_CLOSE_NOWRITE = " << IN_CLOSE_NOWRITE << "," << endl;
 
     std::cout << "sizeof(size_t) = " << sizeof(size_t) << "," << endl;
     std::cout << "sizeof(time_t) = " << sizeof(time_t) << "," << endl;

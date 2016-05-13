@@ -114,10 +114,16 @@ export var syscalls: any = {
 
     epoll_create:   213,
 
+    getdents64:     217,
+
     epoll_wait:     232,
     epoll_ctl:      233,
 
     utimes:         235,
+
+    inotify_init:   253,
+    inotify_add_watch: 254,
+    inotify_rm_watch: 255,
 
     mkdirat:        258,
 
@@ -128,6 +134,8 @@ export var syscalls: any = {
     accept4:        288,
 
     epoll_create1:  291,
+
+    inotify_init1:  294,
 
 
 

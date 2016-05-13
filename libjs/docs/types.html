@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>x86_64 Linux</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <link rel="stylesheet" media="all" href="public/stylesheets/normalize.css" />
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="page">
+
+      <div class="header">
+        
+          
+          <h1 id="x86_64-linux">x86_64 Linux</h1>
+
+          
+            <div class='highlight'><pre>
+<span class="hljs-keyword">import</span> {Type, Arr, Struct} from <span class="hljs-string">'../../typebase'</span>;
+<span class="hljs-keyword">import</span> {Ipv4} from <span class="hljs-string">'../../socket'</span>;
+<span class="hljs-keyword">import</span> {t_pointer} from <span class="hljs-string">"../../../libmem/struct"</span>;</pre></div>
+          
+        
+
+        
+          <div class="toc">
+            <h3>Table of Contents</h3>
+            <ol>
+              
+                
+                <li>
+                  <a class="source" href="libjs.html">
+                    libjs.ts
+                  </a>
+                </li>
+              
+                
+                <li>
+                  <a class="source" href="types.html">
+                    types.ts
+                  </a>
+                </li>
+              
+            </ol>
+          </div>
+        
+      </div>
+
+      
+        
+        <p>The C <code>NULL</code> pointer:</p>
+
+        
+          <div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> NULL = <span class="hljs-number">0</span>;</pre></div>
+        
+      
+        
+        <p>Basic types.</p>
+
+        
+          <div class='highlight'><pre><span class="hljs-keyword">var</span> buf = Buffer.prototype;
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> int8    = Type.define(<span class="hljs-number">1</span>, buf.readInt8,       buf.writeInt8);
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> uint8   = Type.define(<span class="hljs-number">1</span>, buf.readUInt8,      buf.readUInt8);
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> int16   = Type.define(<span class="hljs-number">2</span>, buf.readInt16LE,    buf.writeInt16LE);
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> uint16  = Type.define(<span class="hljs-number">2</span>, buf.readUInt16LE,   buf.writeUInt16LE);
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> int32   = Type.define(<span class="hljs-number">4</span>, buf.readInt32LE,    buf.writeInt32LE);
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> uint32  = Type.define(<span class="hljs-number">4</span>, buf.readUInt32LE,   buf.writeUInt32LE);
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> int64   = Arr.define(int32, <span class="hljs-number">2</span>);
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> uint64  = Arr.define(uint32, <span class="hljs-number">2</span>);
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> size_t = uint64;
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> time_t = uint64;
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> pid_t = uint32;
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> ipv4    = Type.define(<span class="hljs-number">4</span>,
+    <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">offset: <span class="hljs-built_in">number</span> = 0</span>) </span>{
+        <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">this</span> as Buffer;
+        <span class="hljs-keyword">var</span> socket = <span class="hljs-built_in">require</span>(<span class="hljs-string">'../../socket'</span>);
+        <span class="hljs-keyword">var</span> octets = socket.Ipv4.type.unpack(buf, offset);
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> socket.Ipv4(octets);
+    }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">data: Ipv4, offset: <span class="hljs-built_in">number</span> = 0</span>) </span>{
+        <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">this</span> as Buffer;
+        data.toBuffer().copy(buf, offset);
+    });
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">type</span> uint64 = [<span class="hljs-built_in">number</span>, <span class="hljs-built_in">number</span>];
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> pointer_t = uint64;
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">type</span> pointer_t = uint64;</pre></div>
+        
+      
+        
+        <p>Constants used in <code>mmap</code> system calls, see <a href="http://man7.org/linux/man-pages/man2/mmap.2.html">mmap(2)</a>.</p>
+
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">enum</span> PROT {
+    NONE    = <span class="hljs-number">0</span>, <span class="hljs-comment">// Pages may not be accessed.</span>
+    READ    = <span class="hljs-number">1</span>, <span class="hljs-comment">// Pages may be read.</span>
+    WRITE   = <span class="hljs-number">2</span>, <span class="hljs-comment">// Pages may be written.</span>
+    EXEC    = <span class="hljs-number">4</span>, <span class="hljs-comment">// Pages may be executed.</span>
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">enum</span> MAP {
+    <span class="hljs-string">'FILE'</span> = <span class="hljs-number">0</span>,
+    SHARED = <span class="hljs-number">1</span>,
+    PRIVATE = <span class="hljs-number">2</span>,
+    <span class="hljs-string">'32BIT'</span> = <span class="hljs-number">64</span>,
+    ANON = <span class="hljs-number">32</span>,
+    ANONYMOUS = <span class="hljs-number">32</span>,
+    DENYWRITE = <span class="hljs-number">2048</span>,
+    EXECUTABLE = <span class="hljs-number">409</span>,
+    FIXED = <span class="hljs-number">16</span>,
+    GROWSDOWN = <span class="hljs-number">256</span>,
+    HUGETLB = <span class="hljs-number">262144</span>,
+    HUGE_SHIFT = <span class="hljs-number">26</span>,
+    LOCKED = <span class="hljs-number">8192</span>,
+    NONBLOCK = <span class="hljs-number">65536</span>,
+    NORESERVE = <span class="hljs-number">1638</span>,
+    POPULATE = <span class="hljs-number">32768</span>,
+    STACK = <span class="hljs-number">131072</span>,
+}</pre></div>
+        
+      
+        
+        <p>Constants used in <code>open</code> system calls, see <a href="http://man7.org/linux/man-pages/man2/open.2.html">open(2)</a>.</p>
+
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">enum</span> FLAG {
+    O_RDONLY        = <span class="hljs-number">0</span>,
+    O_WRONLY        = <span class="hljs-number">1</span>,
+    O_RDWR          = <span class="hljs-number">2</span>,
+    O_ACCMODE       = <span class="hljs-number">3</span>,
+    O_CREAT         = <span class="hljs-number">64</span>,
+    O_EXCL          = <span class="hljs-number">128</span>,
+    O_NOCTTY        = <span class="hljs-number">256</span>,
+    O_TRUNC         = <span class="hljs-number">512</span>,
+    O_APPEND        = <span class="hljs-number">1024</span>,
+    O_NONBLOCK      = <span class="hljs-number">2048</span>,
+    O_DSYNC         = <span class="hljs-number">4096</span>,
+    FASYNC          = <span class="hljs-number">8192</span>,
+    O_DIRECT        = <span class="hljs-number">16384</span>,
+    O_LARGEFILE     = <span class="hljs-number">0</span>,
+    O_DIRECTORY     = <span class="hljs-number">65536</span>,
+    O_NOFOLLOW      = <span class="hljs-number">131072</span>,
+    O_NOATIME       = <span class="hljs-number">262144</span>,
+    O_CLOEXEC       = <span class="hljs-number">524288</span>,
+    O_SYNC          = <span class="hljs-number">1052672</span>,
+    O_NDELAY        = <span class="hljs-number">2048</span>,
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">enum</span> S {
+    IFMT = <span class="hljs-number">61440</span>,   <span class="hljs-comment">// type of file</span>
+    IFBLK = <span class="hljs-number">24576</span>,  <span class="hljs-comment">// block special</span>
+    IFCHR = <span class="hljs-number">8192</span>,   <span class="hljs-comment">// character special</span>
+    IFIFO = <span class="hljs-number">4096</span>,   <span class="hljs-comment">// FIFO special</span>
+    IFREG = <span class="hljs-number">32768</span>,  <span class="hljs-comment">// regular</span>
+    IFDIR = <span class="hljs-number">16384</span>,  <span class="hljs-comment">// directory</span>
+    IFLNK = <span class="hljs-number">40960</span>,  <span class="hljs-comment">// symbolic link</span>
+    IFSOCK = <span class="hljs-number">49152</span>, <span class="hljs-comment">// socket</span>
+
+    IRWXU = <span class="hljs-number">448</span>,    <span class="hljs-comment">// read, write, execute/search by owner</span>
+    IRUSR = <span class="hljs-number">256</span>,    <span class="hljs-comment">// read permission, owner</span>
+    IWUSR = <span class="hljs-number">128</span>,    <span class="hljs-comment">// write permission, owner</span>
+    IXUSR = <span class="hljs-number">64</span>,     <span class="hljs-comment">// execute/search permission, owner</span>
+    IRWXG = <span class="hljs-number">56</span>,     <span class="hljs-comment">// read, write, execute/search by group</span>
+    IRGRP = <span class="hljs-number">32</span>,     <span class="hljs-comment">// read permission, group</span>
+    IWGRP = <span class="hljs-number">16</span>,     <span class="hljs-comment">// write permission, group</span>
+    IXGRP = <span class="hljs-number">8</span>,      <span class="hljs-comment">// execute/search permission, group</span>
+    IRWXO = <span class="hljs-number">7</span>,      <span class="hljs-comment">// read, write, execute/search by others</span>
+    IROTH = <span class="hljs-number">4</span>,      <span class="hljs-comment">// read permission, others</span>
+    IWOTH = <span class="hljs-number">2</span>,      <span class="hljs-comment">// write permission, others</span>
+    IXOTH = <span class="hljs-number">1</span>,      <span class="hljs-comment">// execute/search permission, others</span>
+    ISUID = <span class="hljs-number">2048</span>,   <span class="hljs-comment">// set-user-ID on execution</span>
+    ISGID = <span class="hljs-number">1024</span>,   <span class="hljs-comment">// set-group-ID on execution</span>
+    ISVTX = <span class="hljs-number">512</span>,    <span class="hljs-comment">// on directories, restricted deletion flag</span>
+}</pre></div>
+        
+      
+        
+        <p>Constants used in <code>access</code> system call, see <a href="http://man7.org/linux/man-pages/man2/faccessat.2.html">access(2)</a>.</p>
+
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">enum</span> AMODE {
+    F_OK = <span class="hljs-number">0</span>,
+    X_OK = <span class="hljs-number">1</span>,
+    W_OK = <span class="hljs-number">2</span>,
+    R_OK = <span class="hljs-number">4</span>,
+}</pre></div>
+        
+      
+        
+        <p>Constants used in <code>lseek</code> system calls, see <a href="http://man7.org/linux/man-pages/man2/lseek.2.html">lseek(2)</a>.</p>
+
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">enum</span> SEEK {
+    CUR = <span class="hljs-number">1</span>,
+    END = <span class="hljs-number">2</span>,
+    SET = <span class="hljs-number">0</span>,
+}</pre></div>
+        
+      
+        
+        <p>See <asm/stat.h> line 82:</p>
+<pre><code>__kernel_ulong_t = unsigned long long <span class="hljs-comment">// 64+ bits</span>
+__kernel_long_t = long long <span class="hljs-comment">// 64+ bits</span>
+unsigned int <span class="hljs-comment">// 32+ bits</span>
+</code></pre><p>In <code>libc</code>:</p>
+<pre><code>struct stat {
+    __kernel_ulong_t    st_dev;
+    __kernel_ulong_t    st_ino;
+    __kernel_ulong_t    st_nlink;
+    unsigned int        st_mode;
+    unsigned int        st_uid;
+    unsigned int        st_gid;
+    unsigned int        __pad0;
+    __kernel_ulong_t    st_rdev;
+    __kernel_long_t        st_size;
+    __kernel_long_t        st_blksize;
+    __kernel_long_t        st_blocks;    <span class="hljs-comment">// Number 512-byte blocks allocated.</span>
+    __kernel_ulong_t    st_atime;
+    __kernel_ulong_t    st_atime_nsec;
+    __kernel_ulong_t    st_mtime;
+    __kernel_ulong_t    st_mtime_nsec;
+    __kernel_ulong_t    st_ctime;
+    __kernel_ulong_t    st_ctime_nsec;
+    __kernel_long_t        __unused[<span class="hljs-number">3</span>];
+};
+</code></pre>
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> stat = Struct.define(<span class="hljs-number">31</span> * <span class="hljs-number">4</span>, [
+    [<span class="hljs-number">0</span>, uint32, <span class="hljs-string">'dev'</span>],</pre></div>
+        
+      
+        
+        <p>dev_hi:         [1 * 4,     buffer.int32],</p>
+
+        
+          <div class='highlight'><pre>    [<span class="hljs-number">2</span> * <span class="hljs-number">4</span>, uint32, <span class="hljs-string">'ino'</span>],</pre></div>
+        
+      
+        
+        <p>ino_hi:         [3 * 4,     buffer.int32],</p>
+
+        
+          <div class='highlight'><pre>    [<span class="hljs-number">4</span> * <span class="hljs-number">4</span>, uint32, <span class="hljs-string">'nlink'</span>],</pre></div>
+        
+      
+        
+        <p>nlink_hi:       [5 * 4,     buffer.int32],</p>
+
+        
+          <div class='highlight'><pre>
+    [<span class="hljs-number">6</span> * <span class="hljs-number">4</span>, int32, <span class="hljs-string">'mode'</span>],
+    [<span class="hljs-number">7</span> * <span class="hljs-number">4</span>, int32, <span class="hljs-string">'uid'</span>],
+    [<span class="hljs-number">8</span> * <span class="hljs-number">4</span>, int32, <span class="hljs-string">'gid'</span>],</pre></div>
+        
+      
+        
+        <p>__pad0:         [9 * 4,     buffer.int32],</p>
+
+        
+          <div class='highlight'><pre>
+    [<span class="hljs-number">10</span> * <span class="hljs-number">4</span>, uint32, <span class="hljs-string">'rdev'</span>],</pre></div>
+        
+      
+        
+        <p>rdev_hi:        [11 * 4,    buffer.int32],</p>
+
+        
+          <div class='highlight'><pre>    [<span class="hljs-number">12</span> * <span class="hljs-number">4</span>, uint32, <span class="hljs-string">'size'</span>],</pre></div>
+        
+      
+        
+        <p>size_hi:        [13 * 4,    buffer.int32],</p>
+
+        
+          <div class='highlight'><pre>    [<span class="hljs-number">14</span> * <span class="hljs-number">4</span>, uint32, <span class="hljs-string">'blksize'</span>],</pre></div>
+        
+      
+        
+        <p>blksize_hi:     [15 * 4,    buffer.int32],</p>
+
+        
+          <div class='highlight'><pre>    [<span class="hljs-number">16</span> * <span class="hljs-number">4</span>, uint32, <span class="hljs-string">'blocks'</span>],</pre></div>
+        
+      
+        
+        <p>blocks_hi:      [17 * 4,    buffer.int32],</p>
+
+        
+          <div class='highlight'><pre>    [<span class="hljs-number">18</span> * <span class="hljs-number">4</span>, uint32, <span class="hljs-string">'atime'</span>],</pre></div>
+        
+      
+        
+        <p>atime_hi:       [19 * 4,    buffer.int32],</p>
+
+        
+          <div class='highlight'><pre>    [<span class="hljs-number">20</span> * <span class="hljs-number">4</span>, uint32, <span class="hljs-string">'atime_nsec'</span>],</pre></div>
+        
+      
+        
+        <p>atime_nsec_hi:  [21 * 4,    buffer.int32],</p>
+
+        
+          <div class='highlight'><pre>    [<span class="hljs-number">22</span> * <span class="hljs-number">4</span>, uint32, <span class="hljs-string">'mtime'</span>],</pre></div>
+        
+      
+        
+        <p>mtime_hi:       [23 * 4,    buffer.int32],</p>
+
+        
+          <div class='highlight'><pre>    [<span class="hljs-number">24</span> * <span class="hljs-number">4</span>, uint32, <span class="hljs-string">'mtime_nsec'</span>],</pre></div>
+        
+      
+        
+        <p>mtime_nsec_hi:  [25 * 4,    buffer.int32],</p>
+
+        
+          <div class='highlight'><pre>    [<span class="hljs-number">26</span> * <span class="hljs-number">4</span>, uint32, <span class="hljs-string">'ctime'</span>],</pre></div>
+        
+      
+        
+        <p>ctime_hi:       [27 * 4,    buffer.int32],</p>
+
+        
+          <div class='highlight'><pre>    [<span class="hljs-number">28</span> * <span class="hljs-number">4</span>, uint32, <span class="hljs-string">'ctime_nsec'</span>],</pre></div>
+        
+      
+        
+        <p>ctime_nsec_hi:  [29 <em> 4,    buffer.int32],
+__unused:       [30 </em> 4,    buffer.int32],</p>
+
+        
+          <div class='highlight'><pre>]);
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> stat {
+    dev: <span class="hljs-built_in">number</span>;
+    ino: <span class="hljs-built_in">number</span>;
+    nlink: <span class="hljs-built_in">number</span>;
+    mode: <span class="hljs-built_in">number</span>;
+    uid: <span class="hljs-built_in">number</span>;
+    gid: <span class="hljs-built_in">number</span>;
+    rdev: <span class="hljs-built_in">number</span>;
+    size: <span class="hljs-built_in">number</span>;
+    blksize: <span class="hljs-built_in">number</span>;
+    blocks: <span class="hljs-built_in">number</span>;
+    atime: <span class="hljs-built_in">number</span>;
+    atime_nsec: <span class="hljs-built_in">number</span>;
+    mtime: <span class="hljs-built_in">number</span>;
+    mtime_nsec: <span class="hljs-built_in">number</span>;
+    ctime: <span class="hljs-built_in">number</span>;
+    ctime_nsec: <span class="hljs-built_in">number</span>;
+}</pre></div>
+        
+      
+        
+        <p>Protocol families.</p>
+
+        
+          <div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">enum</span> PF {
+    UNSPEC = <span class="hljs-number">0</span>,	<span class="hljs-comment">/* Unspecified.  */</span>
+    LOCAL = <span class="hljs-number">1</span>,	<span class="hljs-comment">/* Local to host (pipes and file-domain).  */</span>
+    UNIX = PF.LOCAL, <span class="hljs-comment">/* POSIX name for PF_LOCAL.  */</span>
+    FILE = PF.LOCAL, <span class="hljs-comment">/* Another non-standard name for PF_LOCAL.  */</span>
+    INET = <span class="hljs-number">2</span>,	<span class="hljs-comment">/* IP protocol family.  */</span>
+    AX25 = <span class="hljs-number">3</span>,	<span class="hljs-comment">/* Amateur Radio AX.25.  */</span>
+    IPX = <span class="hljs-number">4</span>,	<span class="hljs-comment">/* Novell Internet Protocol.  */</span>
+    APPLETALK = <span class="hljs-number">5</span>,	<span class="hljs-comment">/* Appletalk DDP.  */</span>
+    NETROM = <span class="hljs-number">6</span>,	<span class="hljs-comment">/* Amateur radio NetROM.  */</span>
+    BRIDGE = <span class="hljs-number">7</span>,	<span class="hljs-comment">/* Multiprotocol bridge.  */</span>
+    ATMPVC = <span class="hljs-number">8</span>,	<span class="hljs-comment">/* ATM PVCs.  */</span>
+    X25 = <span class="hljs-number">9</span>,	<span class="hljs-comment">/* Reserved for X.25 project.  */</span>
+    INET6 = <span class="hljs-number">10</span>,	<span class="hljs-comment">/* IP version 6.  */</span>
+    ROSE = <span class="hljs-number">11</span>,	<span class="hljs-comment">/* Amateur Radio X.25 PLP.  */</span>
+    DECnet = <span class="hljs-number">12</span>,	<span class="hljs-comment">/* Reserved for DECnet project.  */</span>
+    NETBEUI = <span class="hljs-number">13</span>,	<span class="hljs-comment">/* Reserved for 802.2LLC project.  */</span>
+    SECURITY = <span class="hljs-number">14</span>,	<span class="hljs-comment">/* Security callback pseudo AF.  */</span>
+    KEY = <span class="hljs-number">15</span>,	<span class="hljs-comment">/* PF_KEY key management API.  */</span>
+    NETLINK = <span class="hljs-number">16</span>,
+    ROUTE = PF.NETLINK, <span class="hljs-comment">/* Alias to emulate 4.4BSD.  */</span>
+    PACKET = <span class="hljs-number">17</span>,	<span class="hljs-comment">/* Packet family.  */</span>
+    ASH = <span class="hljs-number">18</span>,	<span class="hljs-comment">/* Ash.  */</span>
+    ECONET = <span class="hljs-number">19</span>,	<span class="hljs-comment">/* Acorn Econet.  */</span>
+    ATMSVC = <span class="hljs-number">20</span>,	<span class="hljs-comment">/* ATM SVCs.  */</span>
+    RDS = <span class="hljs-number">21</span>,	<span class="hljs-comment">/* RDS sockets.  */</span>
+    SNA = <span class="hljs-number">22</span>,	<span class="hljs-comment">/* Linux SNA Project */</span>
+    IRDA = <span class="hljs-number">23</span>,	<span class="hljs-comment">/* IRDA sockets.  */</span>
+    PPPOX = <span class="hljs-number">24</span>,	<span class="hljs-comment">/* PPPoX sockets.  */</span>
+    WANPIPE = <span class="hljs-number">25</span>,	<span class="hljs-comment">/* Wanpipe API sockets.  */</span>
+    LLC = <span class="hljs-number">26</span>,	<span class="hljs-comment">/* Linux LLC.  */</span>
+    CAN = <span class="hljs-number">29</span>,	<span class="hljs-comment">/* Controller Area Network.  */</span>
+    TIPC = <span class="hljs-number">30</span>,	<span class="hljs-comment">/* TIPC sockets.  */</span>
+    BLUETOOTH = <span class="hljs-number">31</span>,	<span class="hljs-comment">/* Bluetooth sockets.  */</span>
+    IUCV = <span class="hljs-number">32</span>,	<span class="hljs-comment">/* IUCV sockets.  */</span>
+    RXRPC = <span class="hljs-number">33</span>,	<span class="hljs-comment">/* RxRPC sockets.  */</span>
+    ISDN = <span class="hljs-number">34</span>,	<span class="hljs-comment">/* mISDN sockets.  */</span>
+    PHONET = <span class="hljs-number">35</span>,	<span class="hljs-comment">/* Phonet sockets.  */</span>
+    IEEE802154 = <span class="hljs-number">36</span>,	<span class="hljs-comment">/* IEEE 802.15.4 sockets.  */</span>
+    CAIF = <span class="hljs-number">37</span>,	<span class="hljs-comment">/* CAIF sockets.  */</span>
+    ALG = <span class="hljs-number">38</span>,	<span class="hljs-comment">/* Algorithm sockets.  */</span>
+    NFC = <span class="hljs-number">39</span>,	<span class="hljs-comment">/* NFC sockets.  */</span>
+    VSOCK = <span class="hljs-number">40</span>,	<span class="hljs-comment">/* vSockets.  */</span>
+    MAX = <span class="hljs-number">41</span>,	<span class="hljs-comment">/* For now..  */</span>
+}</pre></div>
+        
+      
+        
+        <p>Address families.</p>
+
+        
+          <div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">enum</span> AF {
+    UNSPEC = PF.UNSPEC,
+    LOCAL = PF.LOCAL,
+    UNIX = PF.UNIX,
+    FILE = PF.FILE,
+    INET = PF.INET,
+    AX25 = PF.AX25,
+    IPX = PF.IPX,
+    APPLETALK = PF.APPLETALK,
+    NETROM = PF.NETROM,
+    BRIDGE = PF.BRIDGE,
+    ATMPVC = PF.ATMPVC,
+    X25 = PF.X25,
+    INET6 = PF.INET6,
+    ROSE = PF.ROSE,
+    DECnet = PF.DECnet,
+    NETBEUI = PF.NETBEUI,
+    SECURITY = PF.SECURITY,
+    KEY = PF.KEY,
+    NETLINK = PF.NETLINK,
+    ROUTE = PF.ROUTE,
+    PACKET = PF.PACKET,
+    ASH = PF.ASH,
+    ECONET = PF.ECONET,
+    ATMSVC = PF.ATMSVC,
+    RDS = PF.RDS,
+    SNA = PF.SNA,
+    IRDA = PF.IRDA,
+    PPPOX = PF.PPPOX,
+    WANPIPE = PF.WANPIPE,
+    LLC = PF.LLC,
+    CAN = PF.CAN,
+    TIPC = PF.TIPC,
+    BLUETOOTH = PF.BLUETOOTH,
+    IUCV = PF.IUCV,
+    RXRPC = PF.RXRPC,
+    ISDN = PF.ISDN,
+    PHONET = PF.PHONET,
+    IEEE802154 = PF.IEEE802154,
+    CAIF = PF.CAIF,
+    ALG = PF.ALG,
+    NFC = PF.NFC,
+    VSOCK = PF.VSOCK,
+    MAX = PF.MAX
+}
+
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">enum</span> SOCK {
+    STREAM = <span class="hljs-number">1</span>,
+    DGRAM = <span class="hljs-number">2</span>,
+    SEQPACKET = <span class="hljs-number">5</span>,
+    RAW = <span class="hljs-number">3</span>,
+    RDM = <span class="hljs-number">4</span>,
+    PACKET = <span class="hljs-number">10</span>,</pre></div>
+        
+      
+        
+        <p>accept4</p>
+
+        
+          <div class='highlight'><pre>    NONBLOCK = <span class="hljs-number">2048</span>,
+    CLOEXEC = <span class="hljs-number">524288</span>,
+}</pre></div>
+        
+      
+        
+        <p>From <a href="http://beej.us/guide/bgnet/output/html/multipage/sockaddr_inman.html">http://beej.us/guide/bgnet/output/html/multipage/sockaddr_inman.html</a></p>
+<pre><code>struct sockaddr_in {
+    short            sin_family;   <span class="hljs-comment">// e.g. AF_INET</span>
+    unsigned short   sin_port;     <span class="hljs-comment">// e.g. htons(3490)</span>
+    struct in_addr   sin_addr;     <span class="hljs-comment">// see struct in_addr, below</span>
+    char             sin_zero[<span class="hljs-number">8</span>];  <span class="hljs-comment">// zero this if you want to</span>
+};
+struct in_addr {
+    unsigned long s_addr;  <span class="hljs-comment">// load with inet_aton()</span>
+};
+</code></pre>
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> in_addr = Struct.define(<span class="hljs-number">4</span>, [
+    [<span class="hljs-number">0</span>, ipv4, <span class="hljs-string">'s_addr'</span>], <span class="hljs-comment">// load with inet_aton()</span>
+]);
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> in_addr {
+    s_addr: Ipv4;
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> sockaddr_in = Struct.define(<span class="hljs-number">16</span>, [
+    [<span class="hljs-number">0</span>, int16, <span class="hljs-string">'sin_family'</span>], <span class="hljs-comment">// e.g. AF_INET</span>
+    [<span class="hljs-number">2</span>, uint16, <span class="hljs-string">'sin_port'</span>], <span class="hljs-comment">// htons(3490);</span>
+    [<span class="hljs-number">4</span>, in_addr, <span class="hljs-string">'sin_addr'</span>],
+    [<span class="hljs-number">8</span>, Arr.define(int8, <span class="hljs-number">8</span>), <span class="hljs-string">'sin_zero'</span>],
+]);
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> sockaddr_in {
+    sin_family: AF;
+    sin_port: <span class="hljs-built_in">number</span>;
+    sin_addr: in_addr;
+    sin_zero?: <span class="hljs-built_in">number</span>[];
+}</pre></div>
+        
+      
+        
+        <p>IPv6 AF_INET6 sockets:</p>
+<pre><code>struct sockaddr_in6 {
+    u_int16_t       sin6_family;   <span class="hljs-comment">// address family, AF_INET6</span>
+    u_int16_t       sin6_port;     <span class="hljs-comment">// port number, Network Byte Order</span>
+    u_int32_t       sin6_flowinfo; <span class="hljs-comment">// IPv6 flow information</span>
+    struct in6_addr sin6_addr;     <span class="hljs-comment">// IPv6 address</span>
+    u_int32_t       sin6_scope_id; <span class="hljs-comment">// Scope ID</span>
+};
+struct in6_addr {
+    unsigned char   s6_addr[<span class="hljs-number">16</span>];   <span class="hljs-comment">// load with inet_pton()</span>
+};
+struct sockaddr {
+    sa_family_t sa_family;
+    char        sa_data[<span class="hljs-number">14</span>];
+}
+</code></pre>
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> sockaddr = Struct.define(<span class="hljs-number">1</span>, [
+    [<span class="hljs-number">0</span>, <span class="hljs-string">'sa_family'</span>, uint16],
+    [<span class="hljs-number">2</span>, <span class="hljs-string">'sa_data'</span>, Arr.define(int8, <span class="hljs-number">14</span>)],
+]);
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> sockaddr {
+    sa_family: AF;      <span class="hljs-comment">// address family, AF_xxx</span>
+    sa_data: <span class="hljs-built_in">number</span>[];  <span class="hljs-comment">// 14 bytes of protocol address</span>
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">enum</span> ERROR {
+    EACCES = <span class="hljs-number">13</span>, <span class="hljs-comment">// The address is protected, and the user is not the superuser.</span>
+    EADDRINUSE = <span class="hljs-number">98</span>, <span class="hljs-comment">// The given address is already in use.</span>
+    EBADF = <span class="hljs-number">9</span>, <span class="hljs-comment">// sockfd is not a valid descriptor.</span>
+    EINVAL = <span class="hljs-number">22</span>, <span class="hljs-comment">// The socket is already bound to an address.</span>
+    ENOTSOCK = <span class="hljs-number">88</span>, <span class="hljs-comment">// `sockfd` is a descriptor for a file, not a socket.</span></pre></div>
+        
+      
+        
+        <p>The following errors are specific to UNIX domain (AF_UNIX) sockets:
+EACCES, // Search permission is denied on a component of the path prefix. (See also path_resolution(2).)</p>
+
+        
+          <div class='highlight'><pre>    EADDRNOTAVAIL = <span class="hljs-number">99</span>, <span class="hljs-comment">// A non-existent interface was requested or the requested address was not local.</span>
+    EFAULT = <span class="hljs-number">14</span>, <span class="hljs-comment">// `my_addr` points outside the user’s accessible address space.</span></pre></div>
+        
+      
+        
+        <p>EINVAL, // The addrlen is wrong, or the socket was not in the AF_UNIX family.</p>
+
+        
+          <div class='highlight'><pre>    ELOOP = <span class="hljs-number">40</span>, <span class="hljs-comment">// Too many symbolic links were encountered in resolving my_addr.</span>
+    ENAMETOOLONG = <span class="hljs-number">36</span>, <span class="hljs-comment">// `my_addr` is too long.</span>
+    ENOENT = <span class="hljs-number">2</span>, <span class="hljs-comment">// The file does not exist.</span>
+    ENOMEM = <span class="hljs-number">12</span>, <span class="hljs-comment">// Insufficient kernel memory was available.</span>
+    ENOTDIR = <span class="hljs-number">20</span>, <span class="hljs-comment">// A component of the path prefix is not a directory.</span>
+    EROFS = <span class="hljs-number">30</span>,</pre></div>
+        
+      
+        
+        <p>More socket errors:</p>
+
+        
+          <div class='highlight'><pre>    EAGAIN = <span class="hljs-number">11</span>,
+    EWOULDBLOCK = <span class="hljs-number">11</span>,
+    ECONNREFUSED = <span class="hljs-number">111</span>,
+    EINTR = <span class="hljs-number">4</span>,
+    ENOTCONN = <span class="hljs-number">107</span>,
+
+
+    E2BIG = <span class="hljs-number">7</span>,
+    EAFNOSUPPORT = <span class="hljs-number">97</span>,
+    EBADE = <span class="hljs-number">52</span>,
+    EBADFD = <span class="hljs-number">77</span>,
+    EBADMSG = <span class="hljs-number">74</span>,
+    EBADR = <span class="hljs-number">53</span>,
+    EBADRQC = <span class="hljs-number">56</span>,
+    EBADSLT = <span class="hljs-number">57</span>,
+    EBUSY = <span class="hljs-number">16</span>,
+    ECANCELED = <span class="hljs-number">125</span>,
+    ECHILD = <span class="hljs-number">10</span>,
+    ECHRNG = <span class="hljs-number">44</span>,
+    ECOMM = <span class="hljs-number">70</span>,
+    ECONNABORTED = <span class="hljs-number">103</span>,
+    ECONNRESET = <span class="hljs-number">104</span>,
+    EDEADLK = <span class="hljs-number">35</span>,
+    EDEADLOCK = <span class="hljs-number">35</span>,
+    EDESTADDRREQ = <span class="hljs-number">89</span>,
+    EDOM = <span class="hljs-number">33</span>,
+    EDQUOT = <span class="hljs-number">122</span>,
+    EEXIST = <span class="hljs-number">17</span>,
+    EFBIG = <span class="hljs-number">27</span>,
+    EHOSTDOWN = <span class="hljs-number">112</span>,
+    EHOSTUNREACH = <span class="hljs-number">113</span>,
+    EIDRM = <span class="hljs-number">43</span>,
+    EILSEQ = <span class="hljs-number">84</span>,
+    EINPROGRESS = <span class="hljs-number">115</span>,
+    EIO = <span class="hljs-number">5</span>,
+    EISCONN = <span class="hljs-number">106</span>,
+    EISDIR = <span class="hljs-number">21</span>,
+    EISNAM = <span class="hljs-number">120</span>,
+    EKEYEXPIRED = <span class="hljs-number">127</span>,
+    EKEYREJECTED = <span class="hljs-number">129</span>,
+    EKEYREVOKED = <span class="hljs-number">128</span>,
+    EL2HLT = <span class="hljs-number">51</span>,
+    EL2NSYNC = <span class="hljs-number">45</span>,
+    EL3HLT = <span class="hljs-number">46</span>,
+    EL3RST = <span class="hljs-number">47</span>,
+    ELIBACC = <span class="hljs-number">79</span>,
+    ELIBBAD = <span class="hljs-number">80</span>,
+    ELIBMAX = <span class="hljs-number">82</span>,
+    ELIBSCN = <span class="hljs-number">81</span>,
+    ELIBEXEC = <span class="hljs-number">83</span>,
+    EMEDIUMTYPE = <span class="hljs-number">124</span>,
+    EMFILE = <span class="hljs-number">24</span>,
+    EMLINK = <span class="hljs-number">31</span>,
+    EMSGSIZE = <span class="hljs-number">90</span>,
+    EMULTIHOP = <span class="hljs-number">72</span>,
+    ENETDOWN = <span class="hljs-number">100</span>,
+    ENETRESET = <span class="hljs-number">102</span>,
+    ENETUNREACH = <span class="hljs-number">101</span>,
+    ENFILE = <span class="hljs-number">23</span>,
+    ENOBUFS = <span class="hljs-number">105</span>,
+    ENODATA = <span class="hljs-number">61</span>,
+    ENODEV = <span class="hljs-number">19</span>,
+    ENOEXEC = <span class="hljs-number">8</span>,
+    ENOKEY = <span class="hljs-number">126</span>,
+    ENOLCK = <span class="hljs-number">37</span>,
+    ENOLINK = <span class="hljs-number">67</span>,
+    ENOMEDIUM = <span class="hljs-number">123</span>,
+    ENOMSG = <span class="hljs-number">42</span>,
+    ENONET = <span class="hljs-number">64</span>,
+    ENOPKG = <span class="hljs-number">65</span>,
+    ENOPROTOOPT = <span class="hljs-number">92</span>,
+    ENOSPC = <span class="hljs-number">28</span>,
+    ENOSR = <span class="hljs-number">63</span>,
+    ENOSTR = <span class="hljs-number">60</span>,
+    ENOSYS = <span class="hljs-number">38</span>,
+    ENOTBLK = <span class="hljs-number">15</span>,
+    ENOTEMPTY = <span class="hljs-number">39</span>,
+    ENOTSUP = <span class="hljs-number">95</span>,
+    ENOTTY = <span class="hljs-number">25</span>,
+    ENOTUNIQ = <span class="hljs-number">76</span>,
+    ENXIO = <span class="hljs-number">6</span>,
+    EOPNOTSUPP = <span class="hljs-number">95</span>,
+    EOVERFLOW = <span class="hljs-number">75</span>,
+    EPERM = <span class="hljs-number">1</span>,
+    EPFNOSUPPORT = <span class="hljs-number">96</span>,
+    EPIPE = <span class="hljs-number">32</span>,
+    EPROTO = <span class="hljs-number">71</span>,
+    EPROTONOSUPPORT = <span class="hljs-number">93</span>,
+    EPROTOTYPE = <span class="hljs-number">91</span>,
+    ERANGE = <span class="hljs-number">34</span>,
+    EREMCHG = <span class="hljs-number">78</span>,
+    EREMOTE = <span class="hljs-number">66</span>,
+    EREMOTEIO = <span class="hljs-number">121</span>,
+    ERESTART = <span class="hljs-number">85</span>,
+    ESHUTDOWN = <span class="hljs-number">108</span>,
+    ESPIPE = <span class="hljs-number">29</span>,
+    ESOCKTNOSUPPORT = <span class="hljs-number">94</span>,
+    ESRCH = <span class="hljs-number">3</span>,
+    ESTALE = <span class="hljs-number">116</span>,
+    ESTRPIPE = <span class="hljs-number">86</span>,
+    ETIME = <span class="hljs-number">62</span>,
+    ETIMEDOUT = <span class="hljs-number">110</span>,
+    ETXTBSY = <span class="hljs-number">26</span>,
+    EUCLEAN = <span class="hljs-number">117</span>,
+    EUNATCH = <span class="hljs-number">49</span>,
+    EUSERS = <span class="hljs-number">87</span>,
+    EXDEV = <span class="hljs-number">18</span>,
+    EXFULL = <span class="hljs-number">54</span>,
+}</pre></div>
+        
+      
+        
+        <p>See: man recv</p>
+
+        
+          <div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">enum</span> MSG {
+    CMSG_CLOEXEC = <span class="hljs-number">1073741824</span>,
+    DONTWAIT = <span class="hljs-number">64</span>,
+    ERRQUEUE = <span class="hljs-number">8192</span>,
+    OOB = <span class="hljs-number">1</span>,
+    PEEK = <span class="hljs-number">2</span>,
+    TRUNC = <span class="hljs-number">32</span>,
+    WAITALL = <span class="hljs-number">256</span>,
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">enum</span> SHUT {
+    RD = <span class="hljs-number">0</span>,		<span class="hljs-comment">/* No more receptions.  */</span>
+    WR,		<span class="hljs-comment">/* No more transmissions.  */</span>
+    RDWR,		<span class="hljs-comment">/* No more receptions or transmissions.  */</span>
+}
+
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">enum</span> EPOLL_EVENTS {
+    EPOLLIN = <span class="hljs-number">1</span>,
+    EPOLLOUT = <span class="hljs-number">4</span>,
+    EPOLLRDHUP = <span class="hljs-number">8192</span>,
+    EPOLLPRI = <span class="hljs-number">2</span>,
+    EPOLLERR = <span class="hljs-number">8</span>,
+    EPOLLHUP = <span class="hljs-number">16</span>,
+    EPOLLET = <span class="hljs-number">2147483648</span>,
+    EPOLLONESHOT = <span class="hljs-number">1073741824</span>,
+    EPOLLWAKEUP = <span class="hljs-number">536870912</span>,
+}
+
+
+
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">enum</span> EPOLL {
+    CLOEXEC = <span class="hljs-number">524288</span>, <span class="hljs-comment">// Set the close-on-exec (FD_CLOEXEC) flag on the new file descriptor.  See the description of the O_CLOEXEC flag in open(2) for reasons why this may be useful.</span>
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">enum</span> EPOLL_CTL {
+    ADD = <span class="hljs-number">1</span>,
+    MOD = <span class="hljs-number">3</span>,
+    DEL = <span class="hljs-number">2</span>,
+}</pre></div>
+        
+      
+        
+        <pre><code>typedef union epoll_data {
+    <span class="hljs-built_in">void</span>    *ptr;
+    int      fd;
+    uint32_t u32;
+    uint64_t u64;
+} epoll_data_t;
+
+struct epoll_event {
+    uint32_t     events;    <span class="hljs-comment">/* Epoll events */</span>
+    epoll_data_t data;      <span class="hljs-comment">/* User data variable */</span>
+};
+</code></pre>
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> epoll_event = Struct.define(<span class="hljs-number">4</span> + <span class="hljs-number">8</span>, [
+    [<span class="hljs-number">0</span>, uint32, <span class="hljs-string">'events'</span>],
+    [<span class="hljs-number">4</span>, uint64, <span class="hljs-string">'data'</span>],
+]);
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> epoll_event {
+    events: EPOLL_EVENTS;
+    data: [<span class="hljs-built_in">number</span>, <span class="hljs-built_in">number</span>];
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">enum</span> FCNTL {
+    GETFL = <span class="hljs-number">3</span>,
+    SETFL = <span class="hljs-number">4</span>,
+}</pre></div>
+        
+      
+        
+        <p>Used in shmget, can be bitwise orred with file flags.</p>
+
+        
+          <div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">enum</span> IPC {
+    RMID = <span class="hljs-number">0</span>,
+    SET = <span class="hljs-number">1</span>,
+    STAT = <span class="hljs-number">2</span>,
+    INFO = <span class="hljs-number">3</span>,
+    CREAT = <span class="hljs-number">512</span>,
+    EXCL = <span class="hljs-number">1024</span>,
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">enum</span> SHM {
+    INFO = <span class="hljs-number">14</span>,
+    STAT = <span class="hljs-number">13</span>,
+    LOCK = <span class="hljs-number">11</span>,
+    UNLOCK = <span class="hljs-number">12</span>,
+    R = <span class="hljs-number">256</span>,
+    W = <span class="hljs-number">128</span>,
+    RDONLY = <span class="hljs-number">4096</span>,
+    RND = <span class="hljs-number">8192</span>,
+    REMAP = <span class="hljs-number">16384</span>,
+    EXEC = <span class="hljs-number">32768</span>,
+    DEST = <span class="hljs-number">512</span>,
+    LOCKED = <span class="hljs-number">1024</span>,
+    HUGETLB = <span class="hljs-number">2048</span>,
+    NORESERVE = <span class="hljs-number">4096</span>,
+}
+
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">enum</span> FD {
+    CLOEXEC = <span class="hljs-number">1</span>,
+}</pre></div>
+        
+      
+        
+        <p>In <code>libc</code>, <bits/ipc.h> line 42:</p>
+<pre><code>struct ipc_perm {
+    __key_t __key;            <span class="hljs-comment">// Key.</span>
+    __uid_t uid;            <span class="hljs-comment">// Owner's user ID.</span>
+    __gid_t gid;            <span class="hljs-comment">// Owner's group ID.</span>
+    __uid_t cuid;            <span class="hljs-comment">// Creator's user ID.</span>
+    __gid_t cgid;            <span class="hljs-comment">// Creator's group ID.</span>
+    unsigned short int mode;        <span class="hljs-comment">// Read/write permission.</span>
+    unsigned short int __pad1;
+    unsigned short int __seq;        <span class="hljs-comment">// Sequence number.</span>
+    unsigned short int __pad2;
+    __syscall_ulong_t __glibc_reserved1;
+    __syscall_ulong_t __glibc_reserved2;
+};
+</code></pre><p>__syscall_ulong_t<code>is</code>unsigned long long int`</p>
+
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> ipc_perm = Struct.define(<span class="hljs-number">48</span>, [ <span class="hljs-comment">// It is 48 for some reason.</span>
+    [<span class="hljs-number">0</span>, int32, <span class="hljs-string">'__key'</span>],
+    [<span class="hljs-number">4</span>, uint32, <span class="hljs-string">'uid'</span>],
+    [<span class="hljs-number">8</span>, uint32, <span class="hljs-string">'gid'</span>],
+    [<span class="hljs-number">12</span>, uint32, <span class="hljs-string">'cuid'</span>],
+    [<span class="hljs-number">16</span>, uint32, <span class="hljs-string">'cgid'</span>],
+    [<span class="hljs-number">20</span>, uint16, <span class="hljs-string">'mode'</span>],</pre></div>
+        
+      
+        
+        <p>[22, uint16, ‘__pad1’],</p>
+
+        
+          <div class='highlight'><pre>    [<span class="hljs-number">24</span>, uint16, <span class="hljs-string">'__seq'</span>],</pre></div>
+        
+      
+        
+        <p>[26, uint16, ‘<strong>pad2’],
+[28, uint64, ‘</strong>glibc_reserved1’],
+[36, uint64, ‘__glibc_reserved2’],</p>
+
+        
+          <div class='highlight'><pre>]);
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> ipc_perm {
+    __key: <span class="hljs-built_in">number</span>;
+    uid: <span class="hljs-built_in">number</span>;
+    gid: <span class="hljs-built_in">number</span>;
+    cuid: <span class="hljs-built_in">number</span>;
+    cgid: <span class="hljs-built_in">number</span>;
+    mode: <span class="hljs-built_in">number</span>;
+    __seq: <span class="hljs-built_in">number</span>;
+}</pre></div>
+        
+      
+        
+        <p>In <code>libc</code>, <bits/shm.h> line 49:</p>
+<pre><code>struct shmid_ds {
+    struct ipc_perm shm_perm;        <span class="hljs-comment">// operation permission struct</span>
+    size_t shm_segsz;            <span class="hljs-comment">// size of segment in bytes</span>
+    __time_t shm_atime;            <span class="hljs-comment">// time of last shmat()</span>
+#ifndef __x86_64__
+    unsigned long int __glibc_reserved1;
+#endif
+    __time_t shm_dtime;            <span class="hljs-comment">// time of last shmdt()</span>
+#ifndef __x86_64__
+    unsigned long int __glibc_reserved2;
+#endif
+    __time_t shm_ctime;            <span class="hljs-comment">// time of last change by shmctl()</span>
+#ifndef __x86_64__
+    unsigned long int __glibc_reserved3;
+#endif
+    __pid_t shm_cpid;            <span class="hljs-comment">// pid of creator</span>
+    __pid_t shm_lpid;            <span class="hljs-comment">// pid of last shmop</span>
+    shmatt_t shm_nattch;        <span class="hljs-comment">// number of current attaches</span>
+    __syscall_ulong_t __glibc_reserved4;
+    __syscall_ulong_t __glibc_reserved5;
+};
+</code></pre><p>From internet:</p>
+<pre><code>struct shmid_ds {
+    struct ipc_perm shm_perm;    <span class="hljs-comment">// Ownership and permissions</span>
+    size_t          shm_segsz;   <span class="hljs-comment">// Size of segment (bytes)</span>
+    time_t          shm_atime;   <span class="hljs-comment">// Last attach time</span>
+    time_t          shm_dtime;   <span class="hljs-comment">// Last detach time</span>
+    time_t          shm_ctime;   <span class="hljs-comment">// Last change time</span>
+    pid_t           shm_cpid;    <span class="hljs-comment">// PID of creator</span>
+    pid_t           shm_lpid;    <span class="hljs-comment">// PID of last shmat(2)/shmdt(2)</span>
+    shmatt_t        shm_nattch;  <span class="hljs-comment">// No. of current attaches</span>
+    <span class="hljs-comment">// ...</span>
+};
+</code></pre>
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> shmid_ds = Struct.define(<span class="hljs-number">112</span>, [
+    [<span class="hljs-number">0</span>, ipc_perm, <span class="hljs-string">'shm_perm'</span>],  <span class="hljs-comment">// 48</span>
+    [<span class="hljs-number">48</span>, size_t, <span class="hljs-string">'shm_segsz'</span>],  <span class="hljs-comment">// 8</span>
+    [<span class="hljs-number">56</span>, time_t, <span class="hljs-string">'shm_atime'</span>],  <span class="hljs-comment">// 8</span>
+    [<span class="hljs-number">64</span>, time_t, <span class="hljs-string">'shm_dtime'</span>], <span class="hljs-comment">// 8</span>
+    [<span class="hljs-number">72</span>, time_t, <span class="hljs-string">'shm_ctime'</span>], <span class="hljs-comment">// 8</span>
+    [<span class="hljs-number">80</span>, pid_t, <span class="hljs-string">'shm_cpid'</span>], <span class="hljs-comment">// 4</span>
+    [<span class="hljs-number">84</span>, pid_t, <span class="hljs-string">'shm_lpid'</span>], <span class="hljs-comment">// 4</span>
+    [<span class="hljs-number">88</span>, uint64, <span class="hljs-string">'shm_nattch'</span>], <span class="hljs-comment">// 8</span></pre></div>
+        
+      
+        
+        <p>[96, uint64, ‘<strong>glibc_reserved4’], // 8
+[104, uint64, ‘</strong>glibc_reserved5’], // 8 //// 112</p>
+
+        
+          <div class='highlight'><pre>]);
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> shmid_ds {
+    shm_perm: ipc_perm;
+    shm_segsz: [<span class="hljs-built_in">number</span>, <span class="hljs-built_in">number</span>];
+    shm_atime: [<span class="hljs-built_in">number</span>, <span class="hljs-built_in">number</span>];
+    shm_dtime: [<span class="hljs-built_in">number</span>, <span class="hljs-built_in">number</span>];
+    shm_ctime: [<span class="hljs-built_in">number</span>, <span class="hljs-built_in">number</span>];
+    shm_cpid: <span class="hljs-built_in">number</span>;
+    shm_lpid: <span class="hljs-built_in">number</span>;
+    shm_nattch: [<span class="hljs-built_in">number</span>, <span class="hljs-built_in">number</span>];
+}</pre></div>
+        
+      
+        
+        <h2 id="time">Time</h2>
+<pre><code>struct utimbuf {
+    time_t actime;       <span class="hljs-comment">/* access time */</span>
+    time_t modtime;      <span class="hljs-comment">/* modification time */</span>
+};
+</code></pre>
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> utimbuf = Struct.define(<span class="hljs-number">16</span>, [
+    [<span class="hljs-number">0</span>, uint64, <span class="hljs-string">'actime'</span>], <span class="hljs-comment">// access time</span>
+    [<span class="hljs-number">8</span>, uint64, <span class="hljs-string">'modtime'</span>], <span class="hljs-comment">// modification time</span>
+]);
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">type</span> numberLo = <span class="hljs-built_in">number</span>;
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">type</span> numberHi = <span class="hljs-built_in">number</span>;
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> utimbuf {
+    actime:     [numberLo, numberHi],
+    modtime:    [numberLo, numberHi],
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> timeval = Struct.define(<span class="hljs-number">16</span>, [
+    [<span class="hljs-number">0</span>, uint64, <span class="hljs-string">'tv_sec'</span>], <span class="hljs-comment">// access time</span>
+    [<span class="hljs-number">8</span>, uint64, <span class="hljs-string">'tv_nsec'</span>], <span class="hljs-comment">// modification time</span>
+]);
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> timeval {
+    tv_sec:     [numberLo, numberHi],
+    tv_nsec:    [numberLo, numberHi],
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> timevalarr = Arr.define(timeval, <span class="hljs-number">2</span>);
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">type</span> timevalarr = [timeval, timeval];
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> timespec = timeval;
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> timespecarr = timevalarr;
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> timespec <span class="hljs-keyword">extends</span> timeval {}
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">type</span> timespecarr = [timespec, timespec];</pre></div>
+        
+      
+        
+        <h2 id="directories">Directories</h2>
+
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">enum</span> DT {
+    BLK = <span class="hljs-number">6</span>,        <span class="hljs-comment">// This is a block device.</span>
+    CHR = <span class="hljs-number">2</span>,        <span class="hljs-comment">// This is a character device.</span>
+    DIR = <span class="hljs-number">4</span>,        <span class="hljs-comment">// This is a directory.</span>
+    FIFO = <span class="hljs-number">1</span>,       <span class="hljs-comment">// This is a named pipe (FIFO).</span>
+    LNK = <span class="hljs-number">10</span>,       <span class="hljs-comment">// This is a symbolic link.</span>
+    REG = <span class="hljs-number">8</span>,        <span class="hljs-comment">// This is a regular file.</span>
+    SOCK = <span class="hljs-number">12</span>,      <span class="hljs-comment">// This is a UNIX domain socket.</span>
+    UNKNOWN = <span class="hljs-number">0</span>,    <span class="hljs-comment">// The file type is unknown.</span>
+}</pre></div>
+        
+      
+        
+        <pre><code>struct linux_dirent64 {
+    ino64_t        d_ino;    <span class="hljs-comment">/* 64-bit inode number */</span>
+    off64_t        d_off;    <span class="hljs-comment">/* 64-bit offset to next structure */</span>
+    unsigned short d_reclen; <span class="hljs-comment">/* Size of this dirent */</span>
+    unsigned char  d_type;   <span class="hljs-comment">/* File type */</span>
+    char           d_name[]; <span class="hljs-comment">/* Filename (null-terminated) */</span>
+};
+</code></pre>
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> linux_dirent64 = Struct.define(<span class="hljs-number">19</span>, [ <span class="hljs-comment">// 20+ bytes, 19 + null-terminated string.</span>
+    [<span class="hljs-number">0</span>, uint64, <span class="hljs-string">'ino64_t'</span>],
+    [<span class="hljs-number">8</span>, uint64, <span class="hljs-string">'off64_t'</span>],
+    [<span class="hljs-number">16</span>, uint16, <span class="hljs-string">'d_reclen'</span>],
+    [<span class="hljs-number">18</span>, uint8, <span class="hljs-string">'d_type'</span>],
+]);</pre></div>
+        
+      
+        
+        <h2 id="inotify">inotify</h2>
+
+        
+      
+        
+        <p>Supported events suitable for MASK parameter of <code>inotify_init1</code> and <code>inotify_add_watch</code>.</p>
+
+        
+          <div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">enum</span> IN {
+    <span class="hljs-comment">/* Flags set in `inotify_init1`. */</span>
+    CLOEXEC             = <span class="hljs-number">524288</span>,
+    NONBLOCK            = <span class="hljs-number">2048</span>,
+
+    <span class="hljs-comment">/* Events set in `inotify_add_watch` */</span>
+    ACCESS              = <span class="hljs-number">0x00000001</span>,       <span class="hljs-comment">/* File was accessed. */</span>
+    MODIFY              = <span class="hljs-number">0x00000002</span>,	    <span class="hljs-comment">/* File was modified. */</span>
+    ATTRIB              = <span class="hljs-number">0x00000004</span>,	    <span class="hljs-comment">/* Metadata changed. */</span>
+    CLOSE_WRITE	        = <span class="hljs-number">0x00000008</span>,	    <span class="hljs-comment">/* Writtable file was closed. */</span>
+    CLOSE_NOWRITE       = <span class="hljs-number">0x00000010</span>,	    <span class="hljs-comment">/* Unwrittable file closed. */</span>
+    OPEN                = <span class="hljs-number">0x00000020</span>,	    <span class="hljs-comment">/* File was opened. */</span>
+    MOVED_FROM	        = <span class="hljs-number">0x00000040</span>,	    <span class="hljs-comment">/* File was moved from X. */</span>
+    MOVED_TO            = <span class="hljs-number">0x00000080</span>,	    <span class="hljs-comment">/* File was moved to Y. */</span>
+    CREATE              = <span class="hljs-number">0x00000100</span>,	    <span class="hljs-comment">/* Subfile was created. */</span>
+    DELETE              = <span class="hljs-number">0x00000200</span>,       <span class="hljs-comment">/* Subfile was deleted. */</span>
+    DELETE_SELF         = <span class="hljs-number">0x00000400</span>,       <span class="hljs-comment">/* Self was deleted. */</span>
+    MOVE_SELF           = <span class="hljs-number">0x00000800</span>,       <span class="hljs-comment">/* Self was moved. */</span>
+
+    <span class="hljs-comment">/* Events sent by the kernel. */</span>
+    UNMOUNT             = <span class="hljs-number">0x00002000</span>,       <span class="hljs-comment">/* Backing fs was unmounted. */</span>
+    Q_OVERFLOW          = <span class="hljs-number">0x00004000</span>,       <span class="hljs-comment">/* Event queued overflowed. */</span>
+    IGNORED             = <span class="hljs-number">0x00008000</span>,       <span class="hljs-comment">/* File was ignored. */</span>
+
+    <span class="hljs-comment">/* Helper events. */</span>
+    CLOSE	            = IN.CLOSE_WRITE | IN.CLOSE_NOWRITE,    <span class="hljs-comment">/* Close. */</span>
+    MOVE                = IN.MOVED_FROM | IN.MOVED_TO,          <span class="hljs-comment">/* Moves. */</span>
+
+    <span class="hljs-comment">/* Special flags. */</span>
+    ONLYDIR             = <span class="hljs-number">0x01000000</span>,       <span class="hljs-comment">/* Only watch path if it is dir. */</span>
+    DONT_FOLLOW         = <span class="hljs-number">0x02000000</span>,       <span class="hljs-comment">/* Do not follow a sym link. */</span>
+    EXCL_UNLINK         = <span class="hljs-number">0x04000000</span>,       <span class="hljs-comment">/* Exclude events on unlinked objects. */</span>
+    MASK_ADD            = <span class="hljs-number">0x20000000</span>,       <span class="hljs-comment">/* Add to mask of an existing watch. */</span>
+    ISDIR               = <span class="hljs-number">0x40000000</span>,       <span class="hljs-comment">/* Event occurred against dir. */</span>
+    ONESHOT             = <span class="hljs-number">0x80000000</span>,       <span class="hljs-comment">/* Only send event once. */</span>
+
+    <span class="hljs-comment">/* All events which a program can wait on. */</span>
+    ALL_EVENTS = IN.ACCESS | IN.MODIFY | IN.ATTRIB | IN.CLOSE_WRITE |
+        IN.CLOSE_NOWRITE | IN.OPEN | IN.MOVED_FROM | IN.MOVED_TO |
+        IN.CREATE | IN.DELETE	| IN.DELETE_SELF | IN.MOVE_SELF,
+}</pre></div>
+        
+      
+        
+        <p>Stucture that <code>inotify</code> returns when reading from one of its descriptors, in <code>libc</code>:</p>
+<pre><code>struct inotify_event {
+    int      wd;       <span class="hljs-comment">/* Watch descriptor */</span>
+    uint32_t mask;     <span class="hljs-comment">/* Mask describing event */</span>
+    uint32_t cookie;   <span class="hljs-comment">/* Unique cookie associating related events (for rename(2)) */</span>
+    uint32_t len;      <span class="hljs-comment">/* Size of name field */</span>
+    char     name[];   <span class="hljs-comment">/* Optional null-terminated name */</span>
+};
+</code></pre><p>We create a representation of this struct in JavaScript:</p>
+
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> inotify_event = Struct.define(<span class="hljs-number">16</span>, [
+    [<span class="hljs-number">0</span>, int32, <span class="hljs-string">'wd'</span>],
+    [<span class="hljs-number">4</span>, uint32, <span class="hljs-string">'mask'</span>],
+    [<span class="hljs-number">8</span>, uint32, <span class="hljs-string">'cookie'</span>],
+    [<span class="hljs-number">12</span>, uint32, <span class="hljs-string">'len'</span>],
+    <span class="hljs-comment">/* [16, Arr.define(int8, 0), 'name'], */</span>
+]);</pre></div>
+        
+      
+        
+        <p>And <em>TypeScript</em> type definition:</p>
+
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> inotify_event {
+    wd: <span class="hljs-built_in">number</span>;
+    mask: <span class="hljs-built_in">number</span>;
+    cookie: <span class="hljs-built_in">number</span>;
+    len: <span class="hljs-built_in">number</span>;
+}</pre></div>
+        
+      
+      <div class="fleur">h</div>
+    </div>
+  </div>
+</body>
+</html>

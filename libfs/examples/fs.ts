@@ -3,6 +3,10 @@ import * as fs from 'fs';
 
 var path = __dirname + '/test.txt';
 
+var fd = libfs.openSync(path + '.new', 'w+');
+libfs.writeSync(fd, 'test');
+
+
 // fs.accessSync(__dirname + '/data.txt');
 // libfs.accessSync(__dirname + '/data.txt');
 
@@ -27,12 +31,27 @@ var path = __dirname + '/test.txt';
 // console.log(name);
 
 
-var buf = new Buffer(10);
-var fd = libfs.openSync(path, 'r');
-var bytes = libfs.readSync(fd, buf, 0, 10, null);
-console.log(buf);
-console.log(bytes, buf.toString());
+// console.log(fs.readdirSync('.'));
+// console.log(libfs.readdirSync('.'));
 
 
+// console.log(fs.readFileSync(path));
+// libfs.readFile(path, (err, data) => {
+//     console.log(data);
+// });
 
+
+// console.log(fs.readlinkSync(path));
+// console.log(libfs.readlinkSync(path));
+
+// libfs.renameSync(path, path + '2');
+
+// libfs.rmdirSync(__dirname + '/test.txt.dir');
+
+// fs.symlinkSync(path, '/mytmp/file.link22');
+// libfs.symlinkSync(path, '/mytmp/file.link33');
+
+// libfs.unlinkSync(__dirname + '/tbd.txt');
+
+// console.log(libfs.statSync(path));
 

@@ -1,5 +1,15 @@
 "use strict";
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
 var libjs = require('../libjs/libjs');
+var libaio = require('../libaio/libaio');
+var pathModule = require('path');
+var events_1 = require('events');
+var buffer_1 = require('buffer');
+var fs = exports;
 function noop() { }
 function throwError(errno, func, path, path2) {
     if (func === void 0) { func = ''; }
@@ -11,11 +21,13 @@ function throwError(errno, func, path, path2) {
         case 9 /* EBADF */: throw Error("EBADF: bad file descriptor, " + func);
         case 22 /* EINVAL */: throw Error("EINVAL: invalid argument, " + func);
         case 1 /* EPERM */: throw Error("EPERM: operation not permitted, " + func + " '" + path + "' -> '" + path2 + "'");
+        case 71 /* EPROTO */: throw Error("EPROTO: protocol error, " + func + " '" + path + "' -> '" + path2 + "'");
+        case 17 /* EEXIST */: throw Error("EEXIST: file already exists, " + func + " '" + path + "' -> '" + path2 + "'");
         default: throw Error("Error occurred in " + func + ": errno = " + errno);
     }
 }
 function validPathOrThrow(path) {
-    if (path instanceof Buffer)
+    if (path instanceof buffer_1.Buffer)
         path = path.toString();
     if (typeof path !== 'string')
         throw TypeError('path must be a string');
@@ -374,7 +386,7 @@ function openSync(path, flags, mode) {
 exports.openSync = openSync;
 function readSync(fd, buffer, offset, length, position) {
     validateFd(fd);
-    if (!(buffer instanceof Buffer))
+    if (!(buffer instanceof buffer_1.Buffer))
         throw TypeError('buffer must be an instance of Buffer');
     if (typeof offset !== 'number')
         throw TypeError('offset must be an integer');
@@ -394,15 +406,304 @@ function readSync(fd, buffer, offset, length, position) {
     return res;
 }
 exports.readSync = readSync;
-var readdirOptionsDefaults = {
+var optionsDefaults = {
     encoding: 'utf8'
 };
 function readdirSync(path, options) {
     if (options === void 0) { options = {}; }
     path = validPathOrThrow(path);
-    options = Object.assign(options, readdirOptionsDefaults);
+    options = Object.assign(options, optionsDefaults);
+    return libjs.readdirList(path, options.encoding);
 }
 exports.readdirSync = readdirSync;
+var readFileOptionsDefaults = {
+    flag: 'r'
+};
+function readFileSync(file, options) {
+    if (options === void 0) { options = {}; }
+    var opts;
+    if (typeof options === 'string')
+        opts = { encoding: options };
+    else if (typeof options !== 'object')
+        throw TypeError('Invalid options');
+    else
+        opts = Object.assign(options, readFileOptionsDefaults);
+    if (opts.encoding && (typeof opts.encoding != 'string'))
+        throw TypeError('Invalid encoding');
+    var fd;
+    if (typeof file === 'number')
+        fd = file;
+    else {
+        file = validPathOrThrow(file);
+        var flag = flags[options.flag];
+        fd = libjs.open(file, flag, MODE_DEFAULT);
+        if (fd < 0)
+            throwError(fd, 'readFile', file);
+    }
+    var CHUNK = 4096;
+    var list = [];
+    do {
+        var buf = new buffer_1.Buffer(CHUNK);
+        var res = libjs.read(fd, buf);
+        if (res < CHUNK)
+            buf = buf.slice(0, res);
+        list.push(buf);
+        if (res < 0)
+            throwError(res, 'readFile');
+    } while (res > 0);
+    libjs.close(fd);
+    var buffer = buffer_1.Buffer.concat(list);
+    if (opts.encoding)
+        return buffer.toString(opts.encoding);
+    else
+        return buffer;
+}
+exports.readFileSync = readFileSync;
+function readlinkSync(path, options) {
+    if (options === void 0) { options = null; }
+    path = validPathOrThrow(path);
+    var buf = new buffer_1.Buffer(64);
+    var res = libjs.readlink(path, buf);
+    if (res < 0)
+        throwError(res, 'readlink', path);
+    var encoding = 'buffer';
+    if (options) {
+        if (typeof options === 'string')
+            encoding = options;
+        else if (typeof options === 'object') {
+            if (typeof options.encoding != 'string')
+                throw TypeError('Encoding must be string.');
+            else
+                encoding = options.encoding;
+        }
+        else
+            throw TypeError('Invalid options.');
+    }
+    buf = buf.slice(0, res);
+    return encoding == 'buffer' ? buf : buf.toString(encoding);
+}
+exports.readlinkSync = readlinkSync;
+function renameSync(oldPath, newPath) {
+    oldPath = validPathOrThrow(oldPath);
+    newPath = validPathOrThrow(newPath);
+    var res = libjs.rename(oldPath, newPath);
+    if (res < 0)
+        throwError(res, 'rename', oldPath, newPath);
+}
+exports.renameSync = renameSync;
+function rmdirSync(path) {
+    path = validPathOrThrow(path);
+    var res = libjs.rmdir(path);
+    if (res < 0)
+        throwError(res, 'rmdir', path);
+}
+exports.rmdirSync = rmdirSync;
+function symlinkSync(target, path /*, type?: string*/) {
+    target = validPathOrThrow(target);
+    path = validPathOrThrow(path);
+    // > The type argument [..] is only available on Windows (ignored on other platforms)
+    /* type = typeof type === 'string' ? type : null; */
+    var res = libjs.symlink(target, path);
+    if (res < 0)
+        throwError(res, 'symlink', target, path);
+}
+exports.symlinkSync = symlinkSync;
+function unlinkSync(path) {
+    path = validPathOrThrow(path);
+    var res = libjs.unlink(path);
+    if (res < 0)
+        throwError(res, 'unlink', path);
+}
+exports.unlinkSync = unlinkSync;
+var FSWatcher = (function (_super) {
+    __extends(FSWatcher, _super);
+    function FSWatcher() {
+        _super.apply(this, arguments);
+        this.inotify = new libaio.Inotify;
+    }
+    FSWatcher.prototype.start = function (filename, persistent, recursive, encoding) {
+        var _this = this;
+        this.inotify.encoding = encoding;
+        this.inotify.onerror = noop;
+        this.inotify.onevent = function (event) {
+            if (event.mask & 192 /* MOVE */) {
+                _this.emit('change', 'rename', event.name);
+            }
+            else {
+                _this.emit('change', 'change', event.name);
+            }
+        };
+        this.inotify.start();
+        this.inotify.addPath(filename);
+    };
+    FSWatcher.prototype.close = function () {
+        this.inotify.stop();
+        this.inotify = null;
+    };
+    return FSWatcher;
+}(events_1.EventEmitter));
+var watchOptionsDefaults = {
+    encoding: 'utf8',
+    persistent: true,
+    recursive: false
+};
+function watch(filename, options, listener) {
+    filename = validPathOrThrow(filename);
+    filename = pathModule.resolve(filename);
+    if (options) {
+        if (typeof options === 'function') {
+            listener = options;
+            options = watchOptionsDefaults;
+        }
+        else if (typeof options === 'string') {
+            options = Object.assign({ encoding: options }, watchOptionsDefaults);
+        }
+        else if (typeof options === 'object') {
+            options = Object.assign(options, watchOptionsDefaults);
+        }
+        else
+            throw TypeError('"options" must be a string or an object');
+    }
+    else
+        options = watchOptionsDefaults;
+    var watcher = new FSWatcher;
+    watcher.start(filename, options.persistent, options.recursive, options.encoding);
+    if (listener) {
+        if (typeof listener !== 'function')
+            throw TypeError('"listener" must be a callback');
+        watcher.on('change', listener);
+    }
+    return watcher;
+}
+exports.watch = watch;
+var StatWatcher = (function (_super) {
+    __extends(StatWatcher, _super);
+    function StatWatcher() {
+        _super.apply(this, arguments);
+        this.last = null;
+    }
+    StatWatcher.prototype.loop = function () {
+        var _this = this;
+        fs.stat(this.filename, function (err, stats) {
+            if (err)
+                return _this.emit('error', err);
+            if (_this.last instanceof Stats) {
+                // > The callback listener will be called each time the file is accessed.
+                if (_this.last.atime.getTime() != stats.atime.getTime()) {
+                    _this.emit('change', stats, _this.last);
+                }
+            }
+            _this.last = stats;
+        });
+    };
+    StatWatcher.prototype.start = function (filename, persistent, interval) {
+        var _this = this;
+        this.filename = filename;
+        fs.stat(filename, function (err, stats) {
+            if (err)
+                return _this.emit('error', err);
+            _this.last = stats;
+            _this.interval = setInterval(_this.loop.bind(_this), interval);
+        });
+    };
+    StatWatcher.prototype.stop = function () {
+        clearInterval(this.interval);
+        this.last = null;
+    };
+    StatWatcher.map = new Map();
+    return StatWatcher;
+}(events_1.EventEmitter));
+var watchFileOptionDefaults = {
+    persistent: true,
+    interval: 5007
+};
+function watchFile(filename, options, listener) {
+    if (options === void 0) { options = {}; }
+    filename = validPathOrThrow(filename);
+    filename = pathModule.resolve(filename);
+    if (typeof options !== 'object') {
+        listener = options;
+        options = watchFileOptionDefaults;
+    }
+    else
+        options = Object.assign(options, watchFileOptionDefaults);
+    if (typeof listener !== 'function')
+        throw new Error('"watchFile()" requires a listener function');
+    var watcher = StatWatcher.map.get(filename);
+    if (!watcher) {
+        watcher = new StatWatcher;
+        watcher.start(filename, options.persistent, options.interval);
+        StatWatcher.map.set(filename, watcher);
+    }
+    watcher.on('change', listener);
+    return watcher;
+}
+exports.watchFile = watchFile;
+function unwatchFile(filename, listener) {
+    filename = validPathOrThrow(filename);
+    filename = pathModule.resolve(filename);
+    var watcher = StatWatcher.map.get(filename);
+    if (!watcher)
+        return;
+    if (typeof listener === 'function')
+        watcher.removeListener('change', listener);
+    else
+        watcher.removeAllListeners('change');
+    if (watcher.listenerCount('change') === 0) {
+        watcher.stop();
+        StatWatcher.map.delete(filename);
+    }
+}
+exports.unwatchFile = unwatchFile;
+// Phew, lucky us:
+//
+// > The recursive option is only supported on OS X and Windows.
+function watch() {
+}
+exports.watch = watch;
+function writeSync(fd, data, a, b, c) {
+    validateFd(fd);
+    var buf;
+    var position;
+    // Check which function definition we are working with.
+    if (typeof b === 'number') {
+        //     writeSync(fd: number, buffer: Buffer, offset: number, length: number, position?: number);
+        if (!(buffer instanceof buffer_1.Buffer))
+            throw TypeError('buffer must be instance of Buffer.');
+        var offset = a;
+        if (typeof offset !== 'number')
+            throw TypeError('offset must be an integer');
+        var length = b;
+        buf = data.slice(offset, offset + length);
+        position = c;
+    }
+    else {
+        //     writeSync(fd: number, data: string|Buffer, position?: number, encoding: string = 'utf8');
+        var encoding = 'utf8';
+        if (b) {
+            if (typeof b !== 'string')
+                throw TypeError('encoding must be a string');
+            encoding = b;
+        }
+        if (data instanceof buffer_1.Buffer)
+            buf = data;
+        else if (typeof data === 'string') {
+            buf = new buffer_1.Buffer(data, encoding);
+        }
+        else
+            throw TypeError('data must be a Buffer or a string.');
+        position = a;
+    }
+    if (typeof position === 'number') {
+        var sres = libjs.lseek(fd, position, 0 /* SET */);
+        if (sres < 0)
+            throwError(sres, 'write:lseek');
+    }
+    var res = libjs.write(fd, buf);
+    if (res < 0)
+        throwError(res, 'write');
+}
+exports.writeSync = writeSync;
 function createFakeAsyncs() {
     function createFakeAsyncFunction(name) {
         exports[name] = function () {
@@ -447,6 +748,14 @@ function createFakeAsyncs() {
         'mkdtemp',
         'open',
         'read',
+        'readdir',
+        'readFile',
+        'readlink',
+        'rename',
+        'rmdir',
+        'symlink',
+        'unlink',
+        'write',
     ]; _i < _a.length; _i++) {
         var func = _a[_i];
         createFakeAsyncFunction(func);

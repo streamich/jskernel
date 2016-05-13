@@ -103,12 +103,17 @@ exports.syscalls = {
     getppid: 110,
     utime: 132,
     epoll_create: 213,
+    getdents64: 217,
     epoll_wait: 232,
     epoll_ctl: 233,
     utimes: 235,
+    inotify_init: 253,
+    inotify_add_watch: 254,
+    inotify_rm_watch: 255,
     mkdirat: 258,
     futimesat: 261,
     utimensat: 280,
     accept4: 288,
-    epoll_create1: 291
+    epoll_create1: 291,
+    inotify_init1: 294
 };

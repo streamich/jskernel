@@ -4,205 +4,274 @@
 <head>
   <title>libjs</title>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
-  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="public/stylesheets/normalize.css" />
   <link rel="stylesheet" media="all" href="docco.css" />
 </head>
 <body>
-  <div id="container">
-    <div id="background"></div>
-    
-    <ul class="sections">
-        
-        
-        
-        <li id="section-1">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-1">&#182;</a>
-              </div>
-              <h1 id="libjs">libjs</h1>
-<p><code>libjs</code> creates wrappers around system calls, similar to what <code>libc</code> does for <code>C</code> language.</p>
+  <div class="container">
+    <div class="page">
 
-            </div>
-            
-        </li>
+      <div class="header">
         
+          
+          <h1 id="libjs">libjs</h1>
+<p>Usage example, read 1024 bytes from a file and print to console:</p>
+<pre><code><span class="hljs-keyword">var</span> libjs = <span class="hljs-built_in">require</span>(<span class="hljs-string">'libjs'</span>);
+<span class="hljs-keyword">var</span> fd = libjs.open(<span class="hljs-string">'myfile.txt'</span>, <span class="hljs-number">0</span>);
+<span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">1024</span>);
+<span class="hljs-keyword">var</span> bytes = libjs.read(fd, buf);
+buf = buf.slice(<span class="hljs-number">0</span>, bytes);
+libjs.write(<span class="hljs-number">1</span>, buf);
+libjs.close(fd);
+</code></pre>
+          
         
-        <li id="section-2">
-            <div class="annotation">
+
+        
+          <div class="toc">
+            <h3>Table of Contents</h3>
+            <ol>
               
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-2">&#182;</a>
-              </div>
-              <p><code>libsys</code> library contains our only native dependency – the <code>syscall</code> function.</p>
+                
+                <li>
+                  <a class="source" href="libjs.html">
+                    libjs.ts
+                  </a>
+                </li>
+              
+                
+                <li>
+                  <a class="source" href="types.html">
+                    types.ts
+                  </a>
+                </li>
+              
+            </ol>
+          </div>
+        
+      </div>
+
+      
+        
+        <p><code>libjs</code> creates wrappers around system calls, similar to what <code>libc</code> does for <code>C</code> language.</p>
+
+        
+          <div class='highlight'><pre><span class="hljs-keyword">import</span> * as sys from <span class="hljs-string">'./sys'</span>;</pre></div>
+        
+      
+        
+        <p><a href="http://www.npmjs.com/package/libsys">libsys</a> library contains our only native dependency – the <code>syscall</code> function:</p>
 <pre><code>sys.syscall(cmd: <span class="hljs-built_in">number</span>, ...args): <span class="hljs-built_in">number</span>
 </code></pre>
-            </div>
-            
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">import</span> * as util from <span class="hljs-string">'./util'</span>;
-<span class="hljs-keyword">import</span> * as sys from <span class="hljs-string">'./sys'</span>;</pre></div></div>
-            
-        </li>
         
+      
         
-        <li id="section-3">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-3">&#182;</a>
-              </div>
-              <p><code>defs</code> provides platform specific constants and structs, the default one we use is <code>x86_64</code>.</p>
+        <p><code>defs</code> provides platform specific constants and structs, the default one we use is <code>x86_64_linux</code>.</p>
 
-            </div>
-            
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">import</span> * as defs from <span class="hljs-string">'./definitions'</span>;</pre></div></div>
-            
-        </li>
         
+          <div class='highlight'><pre><span class="hljs-keyword">import</span> * as defs from <span class="hljs-string">'./definitions'</span>;</pre></div>
         
-        <li id="section-4">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-4">&#182;</a>
-              </div>
-              <p>In development mode we use <code>debug</code> library to trace all our system calls. To see debug output,
-set <code>DEBUG</code> environment variable to <code>libjs:*</code>, example:</p>
+      
+        
+        <p>In development mode we use <code>debug</code> library to trace all our system calls.</p>
+
+        
+          <div class='highlight'><pre><span class="hljs-keyword">var</span> debug = <span class="hljs-built_in">require</span>(<span class="hljs-string">'debug'</span>)(<span class="hljs-string">'libjs:syscall'</span>);</pre></div>
+        
+      
+        
+        <p>To see the debug output, set <code>DEBUG</code> environment variable to <code>libjs:*</code>, example:</p>
 <pre><code>DEBUG=libjs:* node script.js
 </code></pre>
-            </div>
-            
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> debug = <span class="hljs-built_in">require</span>(<span class="hljs-string">'debug'</span>)(<span class="hljs-string">'libjs:syscall'</span>);</pre></div></div>
-            
-        </li>
         
+      
         
-        <li id="section-5">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-5">&#182;</a>
-              </div>
-              <p>Export definitions and other modules all as part of the library.</p>
+        <p>Export definitions and other modules all as part of the library.</p>
 
-            </div>
-            
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">export</span> * from <span class="hljs-string">'./definitions'</span>;
-<span class="hljs-keyword">export</span> * from <span class="hljs-string">'./socket'</span>;</pre></div></div>
-            
-        </li>
         
+          <div class='highlight'><pre><span class="hljs-keyword">export</span> * from <span class="hljs-string">'./ctypes'</span>;
+<span class="hljs-keyword">export</span> * from <span class="hljs-string">'./definitions'</span>;
+<span class="hljs-keyword">export</span> * from <span class="hljs-string">'./socket'</span>;</pre></div>
         
-        <li id="section-6">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-6">&#182;</a>
-              </div>
-              <h2 id="files">Files</h2>
-<p>Standard file operations.</p>
+      
+        
+        <h2 id="files">Files</h2>
+<p>Standard file operations, which operate on most of the Linux/Unix file descriptors.</p>
 
-            </div>
-            
-        </li>
         
+      
         
-        <li id="section-7">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-7">&#182;</a>
-              </div>
-              <h3 id="read">read</h3>
+        <h3 id="read">read</h3>
 <pre><code>read(fd: <span class="hljs-built_in">number</span>, buf: Buffer): <span class="hljs-built_in">number</span>
 </code></pre><p>Read data from file associated with <code>fd</code> file descriptor into buffer <code>buf</code>.
-Up to size of the <code>buf.length</code> will be read or less.</p>
+Up to size of the <code>buf.length</code> will be read, or less.</p>
 <p>Returns a <code>number</code> which is the actual bytes read into the buffer, if negative,
-represents an error.</p>
+represents an error. If zero, represents <em>end-of-file</em>, but if <code>buf</code> is of length
+zero than zero does not necessarily mean <em>end-of-file</em>.</p>
 
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>
-<span class="hljs-comment">/**
- * @param fd {number}
- * @param buf {Buffer}
- * @returns {number}
- */</span>
+        
+          <div class='highlight'><pre>
 <span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">read</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, buf: Buffer</span>): <span class="hljs-title">number</span> </span>{
-    debug(<span class="hljs-string">'read'</span>, fd);
+    debug(<span class="hljs-string">'read'</span>, fd, sys.addr64(buf), buf.length);
     <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.read, fd, buf, buf.length);
-}</pre></div></div>
-            
-        </li>
+}</pre></div>
         
+      
         
-        <li id="section-8">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-8">&#182;</a>
-              </div>
-              <h3 id="write">write</h3>
+        <h3 id="write">write</h3>
 <pre><code>write(fd: <span class="hljs-built_in">number</span>, buf: <span class="hljs-built_in">string</span>|Buffer): <span class="hljs-built_in">number</span>
-</code></pre><p>Write data to a file descriptor. Example, write to console (where <code>STDOUT</code> has value <code>1</code> as a file descriptor):</p>
-<pre><code>libjs.write(<span class="hljs-number">1</span>, <span class="hljs-string">'Hello console\n'</span>);
-</code></pre>
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>
+</code></pre><p>Write data to a file descriptor.</p>
+
+        
+          <div class='highlight'><pre>
 <span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">write</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, buf: <span class="hljs-built_in">string</span>|Buffer</span>): <span class="hljs-title">number</span> </span>{
     debug(<span class="hljs-string">'write'</span>, fd);
     <span class="hljs-keyword">if</span>(!(buf <span class="hljs-keyword">instanceof</span> Buffer)) buf = <span class="hljs-keyword">new</span> Buffer((buf as <span class="hljs-built_in">string</span>) + <span class="hljs-string">'\0'</span>);
     <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.write, fd, buf, buf.length);
-}</pre></div></div>
-            
-        </li>
+}</pre></div>
         
+      
         
-        <li id="section-9">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-9">&#182;</a>
-              </div>
-              <h3 id="open">open</h3>
-<pre><code>open(pathname: <span class="hljs-built_in">string</span>, flags: defs.FLAG, mode?: defs.MODE): <span class="hljs-built_in">number</span>
-</code></pre><p>Opens a file, returns file descriptor on success or a negative number representing an error.</p>
-<p>Read data from a file:</p>
-<pre><code><span class="hljs-keyword">var</span> fd = libjs.open(<span class="hljs-string">'/tmp/data.txt'</span>, libjs.FLAG...);
-<span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">1024</span>);
-libjs.read(fd, buf);
+        <p>Usage example, write to console (where <code>STDOUT</code> has value <code>1</code> as a file descriptor):</p>
+<pre><code>libjs.write(<span class="hljs-number">1</span>, <span class="hljs-string">'Hello console\n'</span>);
 </code></pre>
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>
-<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">open</span>(<span class="hljs-params">pathname: <span class="hljs-built_in">string</span>, flags: defs.FLAG, mode?: defs.MODE</span>): <span class="hljs-title">number</span> </span>{
-    debug(<span class="hljs-string">'write'</span>, pathname, flags, mode);
+        
+      
+        
+        <h3 id="open">open</h3>
+<pre><code>open(pathname: <span class="hljs-built_in">string</span>, flags: defs.FLAG, mode?: defs.S): <span class="hljs-built_in">number</span>
+</code></pre><p>Opens a file, returns file descriptor on success or a negative number representing an error.</p>
+
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">open</span>(<span class="hljs-params">pathname: <span class="hljs-built_in">string</span>, flags: defs.FLAG, mode?: defs.S</span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'open'</span>, pathname, flags, mode);
     <span class="hljs-keyword">var</span> args = [defs.syscalls.open, pathname, flags];
     <span class="hljs-keyword">if</span>(<span class="hljs-keyword">typeof</span> mode === <span class="hljs-string">'number'</span>) args.push(mode);
     <span class="hljs-keyword">return</span> sys.syscall.apply(<span class="hljs-literal">null</span>, args);
-}
+}</pre></div>
+        
+      
+        
+        <p>Example, read data from a file:</p>
+<pre><code><span class="hljs-keyword">var</span> fd = libjs.open(<span class="hljs-string">'/tmp/data.txt'</span>, libjs.FLAG.O_RDONLY);
+<span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">1024</span>);
+libjs.read(fd, buf);
+</code></pre>
+        
+      
+        
+        <h3 id="close">close</h3>
+<p>Close a file descriptor.</p>
 
+        
+          <div class='highlight'><pre>
 <span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">close</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
     debug(<span class="hljs-string">'close'</span>, fd);
     <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.close, fd);
-}</pre></div></div>
-            
-        </li>
+}</pre></div>
         
+      
         
-        <li id="section-10">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-10">&#182;</a>
-              </div>
-              <h3 id="stat-lstat-fstat">stat, lstat, fstat</h3>
-<p>Fetches and returns statistics about a file.</p>
+        <h3 id="access">access</h3>
+<pre><code>access(pathname: <span class="hljs-built_in">string</span>, mode: <span class="hljs-built_in">number</span>): <span class="hljs-built_in">number</span>
+</code></pre><p>In <code>libc</code>, see <a href="http://man7.org/linux/man-pages/man2/faccessat.2.html">access(2)</a>::</p>
+<pre><code>int access(<span class="hljs-keyword">const</span> char *pathname, int mode);
+</code></pre><p>Check user’s permissions for a file.</p>
+
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">access</span>(<span class="hljs-params">pathname: <span class="hljs-built_in">string</span>, mode: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'access'</span>, pathname, mode);
+    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.access, pathname, mode);
+}</pre></div>
+        
+      
+        
+        <h3 id="chmod-and-fchmod">chmod and fchmod</h3>
+<pre><code>chmod(pathname: <span class="hljs-built_in">string</span>, mode: <span class="hljs-built_in">number</span>): <span class="hljs-built_in">number</span>
+fchmod(fd: <span class="hljs-built_in">number</span>, mode: <span class="hljs-built_in">number</span>): <span class="hljs-built_in">number</span>
+</code></pre><p>In <code>libc</code>, see <a href="http://man7.org/linux/man-pages/man2/chmod.2.html">chmod(2)</a>:</p>
+<pre><code>int chmod(<span class="hljs-keyword">const</span> char *pathname, mode_t mode);
+int fchmod(int fd, mode_t mode);
+</code></pre><p>Change permissions of a file. On success, zero is returned.  On error, -1 is returned,
+and errno is set appropriately.</p>
+
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">chmod</span>(<span class="hljs-params">pathname: <span class="hljs-built_in">string</span>, mode: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'chmod'</span>, pathname, mode);
+    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.chmod, pathname, mode);
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">fchmod</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, mode: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'fchmod'</span>, fd, mode);
+    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.chmod, fd, mode);
+}</pre></div>
+        
+      
+        
+        <h3 id="chown-fchown-and-lchown">chown, fchown and lchown</h3>
+<pre><code>chown(pathname: <span class="hljs-built_in">string</span>, owner: <span class="hljs-built_in">number</span>, group: <span class="hljs-built_in">number</span>): <span class="hljs-built_in">number</span>
+fchown(fd: <span class="hljs-built_in">number</span>, owner: <span class="hljs-built_in">number</span>, group: <span class="hljs-built_in">number</span>): <span class="hljs-built_in">number</span>
+lchown(pathname: <span class="hljs-built_in">string</span>, owner: <span class="hljs-built_in">number</span>, group: <span class="hljs-built_in">number</span>): <span class="hljs-built_in">number</span>
+</code></pre><p>In <code>libc</code>, <a href="http://man7.org/linux/man-pages/man2/lchown.2.html">chown(2)</a>:</p>
+<pre><code>int chown(<span class="hljs-keyword">const</span> char *pathname, uid_t owner, gid_t group);
+int fchown(int fd, uid_t owner, gid_t group);
+int lchown(<span class="hljs-keyword">const</span> char *pathname, uid_t owner, gid_t group);
+</code></pre><p>These system calls change the owner and group of a file.  The
+<code>chown()</code>, <code>fchown()</code>, and <code>lchown()</code> system calls differ only in how the
+file is specified:</p>
+<ul>
+<li><code>chown()</code> changes the ownership of the file specified by pathname, which is dereferenced if it is a symbolic link.</li>
+<li><code>fchown()</code> changes the ownership of the file referred to by the open file descriptor fd.</li>
+<li><code>lchown()</code> is like chown(), but does not dereference symbolic links.</li>
+</ul>
+
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">chown</span>(<span class="hljs-params">pathname: <span class="hljs-built_in">string</span>, owner: <span class="hljs-built_in">number</span>, group: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'chown'</span>, pathname, owner, group);
+    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.chown, pathname, owner, group);
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">fchown</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, owner: <span class="hljs-built_in">number</span>, group: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'fchown'</span>, fd, owner, group);
+    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.fchown, fd, owner, group);
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">lchown</span>(<span class="hljs-params">pathname: <span class="hljs-built_in">string</span>, owner: <span class="hljs-built_in">number</span>, group: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'lchown'</span>, pathname, owner, group);
+    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.lchown, pathname, owner, group);
+}</pre></div>
+        
+      
+        
+        <h2 id="fsync-and-fdatasync">fsync and fdatasync</h2>
+<p>Synchronize a file’s in-core state with storage.</p>
+
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">fsync</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'fsync'</span>, fd);
+    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.fsync, fd);
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">fdatasync</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'fdatasync'</span>, fd);
+    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.fdatasync, fd);
+}</pre></div>
+        
+      
+        
+        <h3 id="stat-lstat-fstat">stat, lstat, fstat</h3>
 <pre><code>stat(filepath: <span class="hljs-built_in">string</span>): defs.stat
 lstat(linkpath: <span class="hljs-built_in">string</span>): defs.stat
 fstat(fd: <span class="hljs-built_in">number</span>): defs.stat
+</code></pre><p>In <code>libc</code>, see <a href="http://man7.org/linux/man-pages/man2/stat.2.html">stat(2)</a>:</p>
+<pre><code>int stat(<span class="hljs-keyword">const</span> char *pathname, struct stat *buf);
+int fstat(int fd, struct stat *buf);
+int lstat(<span class="hljs-keyword">const</span> char *pathname, struct stat *buf);
 </code></pre><p>Returns a <code>stat</code> object of the form:</p>
 <pre><code><span class="hljs-keyword">interface</span> stat {
     dev: <span class="hljs-built_in">number</span>;
@@ -222,10 +291,11 @@ fstat(fd: <span class="hljs-built_in">number</span>): defs.stat
     ctime: <span class="hljs-built_in">number</span>;
     ctime_nsec: <span class="hljs-built_in">number</span>;
 }
-</code></pre>
-            </div>
-            
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">stat</span>(<span class="hljs-params">filepath: <span class="hljs-built_in">string</span></span>): <span class="hljs-title">defs</span>.<span class="hljs-title">stat</span> </span>{ <span class="hljs-comment">// Throws number</span>
+</code></pre><p>Fetches and returns statistics about a file.</p>
+
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">stat</span>(<span class="hljs-params">filepath: <span class="hljs-built_in">string</span></span>): <span class="hljs-title">defs</span>.<span class="hljs-title">stat</span> </span>{ <span class="hljs-comment">// Throws number</span>
     debug(<span class="hljs-string">'stat'</span>, filepath);
     <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">new</span> Buffer(defs.stat.size);
     <span class="hljs-keyword">var</span> result = sys.syscall(defs.syscalls.stat, filepath, buf);
@@ -247,113 +317,397 @@ fstat(fd: <span class="hljs-built_in">number</span>): defs.stat
     <span class="hljs-keyword">var</span> result = sys.syscall(defs.syscalls.fstat, fd, buf);
     <span class="hljs-keyword">if</span>(result == <span class="hljs-number">0</span>) <span class="hljs-keyword">return</span> defs.stat.unpack(buf);
     <span class="hljs-keyword">throw</span> result;
+}</pre></div>
+        
+      
+        
+        <h3 id="truncate-and-ftruncate">truncate and ftruncate</h3>
+<pre><code>truncate(path: <span class="hljs-built_in">string</span>, length: <span class="hljs-built_in">number</span>): <span class="hljs-built_in">number</span>
+ftruncate(fd: <span class="hljs-built_in">number</span>, length: <span class="hljs-built_in">number</span>): <span class="hljs-built_in">number</span>
+</code></pre><p>In <code>libc</code>, see <a href="http://man7.org/linux/man-pages/man2/truncate.2.html">truncate(2)</a>:</p>
+<pre><code>int truncate(<span class="hljs-keyword">const</span> char *path, off_t length);
+int ftruncate(int fd, off_t length);
+</code></pre><p>Truncate a file to a specified length</p>
+
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">truncate</span>(<span class="hljs-params">path: <span class="hljs-built_in">string</span>, length: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'truncate'</span>, path, length);
+    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.truncate, path, length);
 }
 
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">ftruncate</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, length: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'ftruncate'</span>, fd, length);
+    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.ftruncate, fd, length);
+}</pre></div>
+        
+      
+        
+        <h3 id="lseek">lseek</h3>
+<pre><code>lseek(fd: <span class="hljs-built_in">number</span>, offset: <span class="hljs-built_in">number</span>, whence: defs.SEEK): <span class="hljs-built_in">number</span>
+</code></pre><p>Seek into position in a file. In <code>libc</code>, see <a href="http://man7.org/linux/man-pages/man2/lseek.2.html">lseek(2)</a>:</p>
+<pre><code>off_t lseek(int fildes, off_t offset, int whence);
+</code></pre><p>Reposition read/write file offset.</p>
 
-<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">lseek</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, offset: <span class="hljs-built_in">number</span>, whence: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">lseek</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, offset: <span class="hljs-built_in">number</span>, whence: defs.SEEK</span>): <span class="hljs-title">number</span> </span>{
     debug(<span class="hljs-string">'lseek'</span>, fd, offset, whence);
     <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.lseek, fd, offset, whence);
-}</pre></div></div>
-            
-        </li>
+}</pre></div>
         
+      
         
-        <li id="section-11">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-11">&#182;</a>
-              </div>
-              <p>Memory ————————————————————————————————————–</p>
+        <h3 id="rename">rename</h3>
+<pre><code>rename(oldpath: <span class="hljs-built_in">string</span>, newpath: <span class="hljs-built_in">string</span>): <span class="hljs-built_in">number</span>
+</code></pre><p>In <code>libc</code>, see <a href="http://man7.org/linux/man-pages/man2/rename.2.html">rename(2)</a>:</p>
+<pre><code>int rename(<span class="hljs-keyword">const</span> char *oldpath, <span class="hljs-keyword">const</span> char *newpath);
+</code></pre><p>change the name or location of a file</p>
 
-            </div>
-            
-        </li>
         
+          <div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">rename</span>(<span class="hljs-params">oldpath: <span class="hljs-built_in">string</span>, newpath: <span class="hljs-built_in">string</span></span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'rename'</span>, oldpath, newpath);
+    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.rename, oldpath, newpath);
+}</pre></div>
         
-        <li id="section-12">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-12">&#182;</a>
-              </div>
-              <p>TODO: Could not make <code>mmap</code> work for some reason.
-void <em>mmap(void </em>addr, size_t lengthint “ prot “, int “ flags, int fd, off_t offset);</p>
+      
+        
+        <h2 id="directories">Directories</h2>
+<p>Now we implement functions for working with directories.</p>
 
-            </div>
-            
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">mmap</span>(<span class="hljs-params">addr: <span class="hljs-built_in">number</span>, length: <span class="hljs-built_in">number</span>, prot: <span class="hljs-built_in">number</span>, flags: <span class="hljs-built_in">number</span>, fd: <span class="hljs-built_in">number</span>, offset: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
-    debug(<span class="hljs-string">'mmap'</span>, addr, length, prot, flags, fd, offset);
-    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.mmap, length, prot, flags, fd, offset);
-}</pre></div></div>
-            
-        </li>
         
+      
         
-        <li id="section-13">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-13">&#182;</a>
-              </div>
-              <p>int munmap(void *addr, size_t length);</p>
+        <h3 id="mkdir-mkdirat-and-rmdir">mkdir, mkdirat and rmdir</h3>
+<pre><code>mkdir(pathname: <span class="hljs-built_in">string</span>, mode: <span class="hljs-built_in">number</span>): <span class="hljs-built_in">number</span>
+mkdirat(dirfd: <span class="hljs-built_in">number</span>, pathname: <span class="hljs-built_in">string</span>, mode: <span class="hljs-built_in">number</span>): <span class="hljs-built_in">number</span>
+rmdir(pathname: <span class="hljs-built_in">string</span>): <span class="hljs-built_in">number</span>
+</code></pre><p>In <code>libc</code>, see <a href="http://man7.org/linux/man-pages/man2/mkdir.2.html">mkdir(2)</a> and <a href="http://man7.org/linux/man-pages/man2/rmdir.2.html">rmdir(2)</a>:</p>
+<pre><code>int mkdir(<span class="hljs-keyword">const</span> char *pathname, mode_t mode);
+int mkdirat(int dirfd, <span class="hljs-keyword">const</span> char *pathname, mode_t mode);
+int rmdir(<span class="hljs-keyword">const</span> char *dirname);
+</code></pre><p>Use <code>mkdir</code> to create a directory and <code>rmdir</code> to remove one.</p>
 
-            </div>
-            
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">munmap</span>(<span class="hljs-params">addr: Buffer, length: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
-    debug(<span class="hljs-string">'munmap'</span>);
-    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.munmap, addr, length);
-}</pre></div></div>
-            
-        </li>
         
-        
-        <li id="section-14">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-14">&#182;</a>
-              </div>
-              <p>Sockets ————————————————————————————————————-</p>
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">mkdir</span>(<span class="hljs-params">pathname: <span class="hljs-built_in">string</span>, mode: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'mkdir'</span>, pathname, mode);
+    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.mkdir, pathname, mode);
+}
 
-            </div>
-            
-        </li>
-        
-        
-        <li id="section-15">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-15">&#182;</a>
-              </div>
-              <p><a href="http://www.skyfree.org/linux/kernel_network/socket.html">http://www.skyfree.org/linux/kernel_network/socket.html</a>
-<a href="https://github.com/torvalds/linux/blob/master/net/socket.c">https://github.com/torvalds/linux/blob/master/net/socket.c</a>
-<a href="http://www.wangafu.net/~nickm/libevent-book/01_intro.html">http://www.wangafu.net/~nickm/libevent-book/01_intro.html</a>
-<a href="https://banu.com/blog/2/how-to-use-epoll-a-complete-example-in-c/epoll-example.c">https://banu.com/blog/2/how-to-use-epoll-a-complete-example-in-c/epoll-example.c</a>
-int socket(int domain, int type, int protocol);</p>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">mkdirat</span>(<span class="hljs-params">dirfd: <span class="hljs-built_in">number</span>, pathname: <span class="hljs-built_in">string</span>, mode: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'mkdirat'</span>, dirfd, pathname, mode);
+    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.mkdirat, dirfd, pathname, mode);
+}
 
-            </div>
-            
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">socket</span>(<span class="hljs-params">domain: defs.AF, <span class="hljs-keyword">type</span>: defs.SOCK, protocol: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">rmdir</span>(<span class="hljs-params">pathname: <span class="hljs-built_in">string</span></span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'rmdir'</span>, pathname);
+    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.rmdir, pathname);
+}</pre></div>
+        
+      
+        
+        <h3 id="getcwd">getcwd</h3>
+<pre><code>getcwd(): <span class="hljs-built_in">string</span>
+</code></pre><p>Returns a <em>current-working-directory</em> path <code>string</code>, on error, throws a negative <code>number</code>
+representing <code>errno</code> global variable in <code>libc</code>.</p>
+<p>First we try to read path into a 64-byte buffer, if buffer is too small, we retry
+using large enough buffer to fit maximum possible file path, <code>PATH_MAX</code> is 4096 in <code>libc</code>.</p>
+<blockquote>
+<p>Linux has a maximum filename length of 255 characters for most filesystems (including EXT4), and a maximum path of 4096 characters.</p>
+</blockquote>
+
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getcwd</span>(<span class="hljs-params"></span>): <span class="hljs-title">string</span> </span>{
+    debug(<span class="hljs-string">'getcwd'</span>);
+
+    <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">64</span>);
+    <span class="hljs-keyword">var</span> res = sys.syscall(defs.syscalls.getcwd, buf, buf.length);
+
+    <span class="hljs-keyword">if</span>(res &lt; <span class="hljs-number">0</span>) {
+        <span class="hljs-keyword">if</span>(res === -defs.ERROR.ERANGE) {</pre></div>
+        
+      
+        
+        <blockquote>
+<p>ERANGE error - The size argument is less than the length of the absolute
+pathname of the working directory, including the terminating
+null byte.  You need to allocate a bigger array and try again.</p>
+</blockquote>
+
+        
+          <div class='highlight'><pre>            buf = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">4096</span>);
+            res = sys.syscall(defs.syscalls.getcwd, buf, buf.length);
+            <span class="hljs-keyword">if</span>(res &lt; <span class="hljs-number">0</span>) <span class="hljs-keyword">throw</span> res;
+        } <span class="hljs-keyword">else</span> <span class="hljs-keyword">throw</span> res;
+    }
+
+    <span class="hljs-keyword">return</span> buf.slice(<span class="hljs-number">0</span>, res).toString();
+}</pre></div>
+        
+      
+        
+        <h3 id="getdents64">getdents64</h3>
+<pre><code>getdents64(fd: <span class="hljs-built_in">number</span>, dirp: Buffer): <span class="hljs-built_in">number</span>
+</code></pre><p>In <code>C</code> it would be:</p>
+<pre><code>int getdents64(unsigned int fd, struct linux_dirent64 *dirp, unsigned int count);
+</code></pre><p><code>libc</code> does not implement <code>getdents64</code> system call, however it uses it internally
+to provide <a href="http://man7.org/linux/man-pages/man3/readdir.3.html">readdir(3)</a> fucntion.
+We will use this system call to implement our own <code>readdir</code> function below.</p>
+<p>On success, the number of bytes read is returned.  On end of
+directory, 0 is returned.  On error, -1 is returned, and errno is set
+appropriately.</p>
+
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getdents64</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, dirp: Buffer</span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'getdents64'</span>, fd, dirp.length);
+    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.getdents64, fd, dirp, dirp.length);
+}</pre></div>
+        
+      
+        
+        <h3 id="readdir">readdir</h3>
+<pre><code>readdir(path: <span class="hljs-built_in">string</span>, encoding = <span class="hljs-string">'utf8'</span>): IReaddirEntry[]
+readdirList(path: <span class="hljs-built_in">string</span>, encoding = <span class="hljs-string">'utf8'</span>): <span class="hljs-built_in">string</span>[]
+</code></pre><p><code>readdir</code> and <code>readdirList</code> are <code>libjs</code>‘s versions of <a href="http://man7.org/linux/man-pages/man3/readdir.3.html">readdir(3)</a>
+both functions are equivalent, they only differ in the type of result they return.</p>
+<p><code>readdir</code> returns an <code>Array</code> of <code>IReaddirEntry</code>, which is defined like so:</p>
+
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> IReaddirEntry {
+    ino: [<span class="hljs-built_in">number</span>, <span class="hljs-built_in">number</span>],
+    offset: <span class="hljs-built_in">number</span>,
+    <span class="hljs-keyword">type</span>: <span class="hljs-built_in">number</span>,
+    name: <span class="hljs-built_in">string</span>,
+}</pre></div>
+        
+      
+        
+        <p>The result of <code>readdir</code> could look like this:</p>
+<pre><code>[
+    { ino: [ <span class="hljs-number">48879</span>, <span class="hljs-number">0</span> ], offset: <span class="hljs-number">1</span>, <span class="hljs-keyword">type</span>: <span class="hljs-number">4</span>, name: <span class="hljs-string">'.'</span> },
+    { ino: [ <span class="hljs-number">48880</span>, <span class="hljs-number">0</span> ], offset: <span class="hljs-number">2</span>, <span class="hljs-keyword">type</span>: <span class="hljs-number">4</span>, name: <span class="hljs-string">'..'</span> },
+    { ino: [ <span class="hljs-number">48881</span>, <span class="hljs-number">0</span> ],
+        offset: <span class="hljs-number">3</span>,
+        <span class="hljs-keyword">type</span>: <span class="hljs-number">8</span>,
+        name: <span class="hljs-string">'architecture.gif'</span> },
+]
+</code></pre>
+        
+          <div class='highlight'><pre>
+export function readdir(path: string, encoding = 'utf8'): IReaddirEntry[] {
+    debug('readdir', path, encoding);
+
+    /* Open directory. */
+    var fd = open(path, defs.FLAG.O_RDONLY | defs.FLAG.O_DIRECTORY);
+    if(fd &lt; 0) throw fd;
+
+    /* Linux will write into our `buf` array of entries of type `linux_dirent64`. */
+    var buf = new Buffer(4096);
+    var struct = defs.linux_dirent64;
+
+    var list: IReaddirEntry[] = [];
+
+    var res = getdents64(fd, buf);
+    do {
+        var offset = 0;
+        while (offset + struct.size &lt; res) { // res contains number of bytes read.
+            var unpacked = struct.unpack(buf, offset);
+            var name = buf.slice(offset + struct.size, offset + unpacked.d_reclen).toString(encoding);
+            name = name.substr(0, name.indexOf("\0"));
+            var entry = {
+                ino: unpacked.ino64_t,
+                offset: unpacked.off64_t[0],
+                type: unpacked.d_type,
+                name: name,
+            };
+            list.push(entry);
+            offset += unpacked.d_reclen;
+        }
+        res = getdents64(fd, buf);
+    } while(res &gt; 0);
+
+    /* `res` should be `0` when we are done. */
+    if(res &lt; 0) throw res;
+
+    close(fd);
+    return list;
+}</pre></div>
+        
+      
+        
+        <p><code>readdirList</code> reurns a plain <code>Array</code> of <code>string</code>s of file names in directory,
+excluding <code>.</code> and <code>..</code> directories, similar to what <code>fs.readdirSync</code> does for <em>Node.js</em>.</p>
+
+        
+          <div class='highlight'><pre>
+export function readdirList(path: string, encoding = 'utf8'): string[] {
+    debug('readdirList', path, encoding);
+
+    var fd = open(path, defs.FLAG.O_RDONLY | defs.FLAG.O_DIRECTORY);
+    if(fd &lt; 0) throw fd;
+
+    var buf = new Buffer(4096);
+    var struct = defs.linux_dirent64;
+
+    var list: string[] = [];
+
+    var res = getdents64(fd, buf);
+    do {
+        var offset = 0;
+        while (offset + struct.size &lt; res) { // res contains number of bytes read.
+            var unpacked = struct.unpack(buf, offset);
+            var name = buf.slice(offset + struct.size, offset + unpacked.d_reclen).toString(encoding);
+            name = name.substr(0, name.indexOf("\0"));
+            if((name != '.') &amp;&amp; (name != '..')) list.push(name);
+            offset += unpacked.d_reclen;
+        }
+        res = getdents64(fd, buf);
+    } while(res &gt; 0);
+
+    if(res &lt; 0) throw res;
+
+    close(fd);
+    return list;
+}</pre></div>
+        
+      
+        
+        <h2 id="links">Links</h2>
+
+        
+      
+        
+        <h3 id="symlink">symlink</h3>
+<pre><code>symlink(target: <span class="hljs-built_in">string</span>, linkpath: <span class="hljs-built_in">string</span>): <span class="hljs-built_in">number</span>
+</code></pre><p>In <code>libc</code>, see <a href="http://man7.org/linux/man-pages/man2/symlink.2.html">symlink(2)</a>:</p>
+<pre><code>int symlink(<span class="hljs-keyword">const</span> char *target, <span class="hljs-keyword">const</span> char *linkpath);
+</code></pre><p>Make a new name for a file.</p>
+
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">symlink</span>(<span class="hljs-params">target: <span class="hljs-built_in">string</span>, linkpath: <span class="hljs-built_in">string</span></span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'symlink'</span>, target, linkpath);
+    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.symlink, target, linkpath);
+}</pre></div>
+        
+      
+        
+        <h3 id="unlink">unlink</h3>
+<pre><code>unlink(pathname: <span class="hljs-built_in">string</span>): <span class="hljs-built_in">number</span>
+</code></pre><p>In <code>libc</code>, see <a href="http://man7.org/linux/man-pages/man2/unlink.2.html">unlink(2)</a>:</p>
+<pre><code>int unlink(<span class="hljs-keyword">const</span> char *pathname);
+</code></pre><p>Delete a name and possibly the file it refers to.</p>
+
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">unlink</span>(<span class="hljs-params">pathname: <span class="hljs-built_in">string</span></span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'unlink'</span>, pathname);
+    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.unlink, pathname);
+}</pre></div>
+        
+      
+        
+        <h3 id="readlink">readlink</h3>
+<pre><code>readlink(pathname: <span class="hljs-built_in">string</span>, buf: Buffer): <span class="hljs-built_in">number</span>
+</code></pre><p>In <code>libc</code>, see <a href="http://man7.org/linux/man-pages/man2/readlink.2.html">readlink(2)</a>:</p>
+<pre><code>ssize_t readlink(<span class="hljs-keyword">const</span> char *pathname, char *buf, size_t bufsiz);
+</code></pre><p>read value of a symbolic link</p>
+
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">readlink</span>(<span class="hljs-params">pathname: <span class="hljs-built_in">string</span>, buf: Buffer</span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'readlink'</span>, pathname, buf.length);
+    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.readlink, pathname, buf, buf.length);
+}</pre></div>
+        
+      
+        
+        <h3 id="link">link</h3>
+<pre><code>link(oldpath: <span class="hljs-built_in">string</span>, newpath: <span class="hljs-built_in">string</span>): <span class="hljs-built_in">number</span>
+</code></pre><p>In <code>libc</code>, see <a href="http://man7.org/linux/man-pages/man2/link.2.html">link(2)</a>:</p>
+<pre><code>int link(<span class="hljs-keyword">const</span> char *oldpath, <span class="hljs-keyword">const</span> char *newpath);
+</code></pre><p>Make a new name for a file.</p>
+
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">link</span>(<span class="hljs-params">oldpath: <span class="hljs-built_in">string</span>, newpath: <span class="hljs-built_in">string</span></span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'link'</span>, oldpath, newpath);
+    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.link, oldpath, newpath);
+}</pre></div>
+        
+      
+        
+        <h2 id="time">Time</h2>
+
+        
+      
+        
+        <h2 id="utime-utimes-utimensat-and-futimens">utime, utimes, utimensat and futimens</h2>
+<p>In <code>libc</code>:</p>
+<pre><code>int utime(<span class="hljs-keyword">const</span> char *filename, <span class="hljs-keyword">const</span> struct utimbuf *times);
+int utimes(<span class="hljs-keyword">const</span> char *filename, <span class="hljs-keyword">const</span> struct timeval times[<span class="hljs-number">2</span>]);
+int utimensat(int dirfd, <span class="hljs-keyword">const</span> char *pathname, <span class="hljs-keyword">const</span> struct timespec times[<span class="hljs-number">2</span>], int flags);
+int futimens(int fd, <span class="hljs-keyword">const</span> struct timespec times[<span class="hljs-number">2</span>]);
+</code></pre>
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">utime</span>(<span class="hljs-params">filename: <span class="hljs-built_in">string</span>, times: defs.utimbuf</span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'utime'</span>, filename, times);
+    <span class="hljs-keyword">var</span> buf = defs.utimbuf.pack(times);
+    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.utime, filename, buf);
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">utimes</span>(<span class="hljs-params">filename: <span class="hljs-built_in">string</span>, times: defs.timevalarr</span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'utimes'</span>, filename, times);
+    <span class="hljs-keyword">var</span> buf = defs.timevalarr.pack(times);
+    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.utimes, buf);
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">utimensat</span>(<span class="hljs-params">dirfd: <span class="hljs-built_in">number</span>, pathname: <span class="hljs-built_in">string</span>, timespecarr, flags: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
+
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">futimens</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, times: defs.timespecarr</span>): <span class="hljs-title">number</span> </span>{
+
+}</pre></div>
+        
+      
+        
+        <h2 id="sockets">Sockets</h2>
+
+        
+      
+        
+        <h3 id="socket">socket</h3>
+<p>In <code>libc</code>:</p>
+<pre><code>int socket(int domain, int <span class="hljs-keyword">type</span>, int protocol);
+</code></pre><p>Useful references:</p>
+<ul>
+<li><a href="http://www.skyfree.org/linux/kernel_network/socket.html">http://www.skyfree.org/linux/kernel_network/socket.html</a></li>
+<li><a href="https://github.com/torvalds/linux/blob/master/net/socket.c">https://github.com/torvalds/linux/blob/master/net/socket.c</a></li>
+<li><a href="http://www.wangafu.net/~nickm/libevent-book/01_intro.html">http://www.wangafu.net/~nickm/libevent-book/01_intro.html</a></li>
+<li><a href="https://banu.com/blog/2/how-to-use-epoll-a-complete-example-in-c/epoll-example.c">https://banu.com/blog/2/how-to-use-epoll-a-complete-example-in-c/epoll-example.c</a></li>
+</ul>
+
+        
+          <div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">socket</span>(<span class="hljs-params">domain: defs.AF, <span class="hljs-keyword">type</span>: defs.SOCK, protocol: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
     debug(<span class="hljs-string">'socket'</span>, domain, <span class="hljs-keyword">type</span>, protocol);
     <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.socket, domain, <span class="hljs-keyword">type</span>, protocol);
-}</pre></div></div>
-            
-        </li>
+}</pre></div>
         
+      
         
-        <li id="section-16">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-16">&#182;</a>
-              </div>
-              <p>connect(sockfd, (struct sockaddr *)&amp;serv_addr, sizeof(serv_addr))</p>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">connect</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, sockaddr: defs.sockaddr_in</span>): <span class="hljs-title">number</span> </span>{
+        <h3 id="connect">connect</h3>
+<p>In <code>libc</code>:</p>
+<pre><code>int connect(sockfd, (struct sockaddr *)&amp;serv_addr, sizeof(serv_addr));
+</code></pre>
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">connect</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, sockaddr: defs.sockaddr_in</span>): <span class="hljs-title">number</span> </span>{
     debug(<span class="hljs-string">'connect'</span>, fd, sockaddr.sin_addr.s_addr.toString(), <span class="hljs-built_in">require</span>(<span class="hljs-string">'./socket'</span>).hton16(sockaddr.sin_port));
     <span class="hljs-keyword">var</span> buf = defs.sockaddr_in.pack(sockaddr);
     <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.connect, fd, buf, buf.length);
@@ -363,59 +717,35 @@ int socket(int domain, int type, int protocol);</p>
     debug(<span class="hljs-string">'bind'</span>, fd, sockaddr.sin_addr.s_addr.toString(), <span class="hljs-built_in">require</span>(<span class="hljs-string">'./socket'</span>).hton16(sockaddr.sin_port));
     <span class="hljs-keyword">var</span> buf = defs.sockaddr_in.pack(sockaddr);
     <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.bind, fd, buf, buf.length);
-}</pre></div></div>
-            
-        </li>
+}</pre></div>
         
+      
         
-        <li id="section-17">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-17">&#182;</a>
-              </div>
-              <p>int listen(int sockfd, int backlog);</p>
+        <p>int listen(int sockfd, int backlog);</p>
 
-            </div>
-            
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">listen</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, backlog: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
+        
+          <div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">listen</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, backlog: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
     debug(<span class="hljs-string">'listen'</span>, fd, backlog);
     <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.listen, fd, backlog);
-}</pre></div></div>
-            
-        </li>
+}</pre></div>
         
+      
         
-        <li id="section-18">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-18">&#182;</a>
-              </div>
-              <p>int accept(int sockfd, struct sockaddr <em>addr, socklen_t </em>addrlen);</p>
+        <p>int accept(int sockfd, struct sockaddr <em>addr, socklen_t </em>addrlen);</p>
 
-            </div>
-            
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">accept</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, buf: Buffer</span>): <span class="hljs-title">number</span> </span>{
+        
+          <div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">accept</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, buf: Buffer</span>): <span class="hljs-title">number</span> </span>{
     debug(<span class="hljs-string">'accept'</span>, fd);
     <span class="hljs-keyword">var</span> buflen = defs.int32.pack(buf.length);
     <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.accept, fd, buf, buflen);
-}</pre></div></div>
-            
-        </li>
+}</pre></div>
         
+      
         
-        <li id="section-19">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-19">&#182;</a>
-              </div>
-              <p>int accept4(int sockfd, struct sockaddr <em>addr, socklen_t </em>addrlen, int flags);</p>
+        <p>int accept4(int sockfd, struct sockaddr <em>addr, socklen_t </em>addrlen, int flags);</p>
 
-            </div>
-            
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">accept4</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, buf: Buffer, flags: defs.SOCK</span>) </span>{
+        
+          <div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">accept4</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, buf: Buffer, flags: defs.SOCK</span>) </span>{
     debug(<span class="hljs-string">'accept4'</span>, fd, flags);
     <span class="hljs-keyword">var</span> buflen = defs.int32.pack(buf.length);
     <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.accept4, fd, buf, buflen, flags);
@@ -424,23 +754,15 @@ int socket(int domain, int type, int protocol);</p>
 <span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">shutdown</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, how: defs.SHUT</span>) </span>{
     debug(<span class="hljs-string">'shutdown'</span>, fd, how);
     <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.shutdown, fd, how);
-}</pre></div></div>
-            
-        </li>
+}</pre></div>
         
+      
         
-        <li id="section-20">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-20">&#182;</a>
-              </div>
-              <p>TODO: does not work yet…
+        <p>TODO: does not work yet…
 ssize_t sendto(int sockfd, const void <em>buf, size_t len, int flags, const struct sockaddr </em>dest_addr, socklen_t addrlen);</p>
 
-            </div>
-            
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">sendto</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, buf: Buffer, flags: defs.MSG = 0, addr?: defs.sockaddr</span>): <span class="hljs-title">number</span> </span>{
+        
+          <div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">sendto</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, buf: Buffer, flags: defs.MSG = 0, addr?: defs.sockaddr</span>): <span class="hljs-title">number</span> </span>{
     debug(<span class="hljs-string">'sendto'</span>, fd);
     <span class="hljs-keyword">var</span> params = [defs.syscalls.sendto, fd, buf, buf.length, flags, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>];
     <span class="hljs-keyword">if</span>(addr) {
@@ -449,141 +771,144 @@ ssize_t sendto(int sockfd, const void <em>buf, size_t len, int flags, const stru
         params[<span class="hljs-number">6</span>] = addrbuf.length;
     }
     <span class="hljs-keyword">return</span> sys.syscall.apply(<span class="hljs-literal">null</span>, params);
-}</pre></div></div>
-            
-        </li>
+}</pre></div>
         
+      
         
-        <li id="section-21">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-21">&#182;</a>
-              </div>
-              <p>ssize_t send(int sockfd, const void *buf, size_t len, int flags);</p>
+        <p>ssize_t send(int sockfd, const void *buf, size_t len, int flags);</p>
 
-            </div>
-            
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">send</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, buf: Buffer, flags: defs.MSG = 0</span>): <span class="hljs-title">number</span> </span>{
+        
+          <div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">send</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, buf: Buffer, flags: defs.MSG = 0</span>): <span class="hljs-title">number</span> </span>{
     debug(<span class="hljs-string">'send'</span>, fd);
     <span class="hljs-keyword">return</span> sendto(fd, buf, flags);
-}</pre></div></div>
-            
-        </li>
+}</pre></div>
         
+      
         
-        <li id="section-22">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-22">&#182;</a>
-              </div>
-              <p>Process ————————————————————————————————————-</p>
+        <h2 id="process">Process</h2>
 
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>
-<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getpid</span>(<span class="hljs-params"></span>) </span>{
+        
+      
+        
+        <h3 id="getpid">getpid</h3>
+<pre><code>getpid(): <span class="hljs-built_in">number</span>
+</code></pre><p>Get process ID.</p>
+
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getpid</span>(<span class="hljs-params"></span>): <span class="hljs-title">number</span> </span>{
     debug(<span class="hljs-string">'getpid'</span>);
     <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.getpid);
-}
+}</pre></div>
+        
+      
+        
+        <h3 id="getppid">getppid</h3>
+<pre><code>getppid(): <span class="hljs-built_in">number</span>
+</code></pre><p>Get parent process ID.</p>
 
-<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getppid</span>(<span class="hljs-params"></span>) </span>{
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getppid</span>(<span class="hljs-params"></span>): <span class="hljs-title">number</span> </span>{
     debug(<span class="hljs-string">'getppid'</span>);
     <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.getppid);
-}
+}</pre></div>
+        
+      
+        
+        <h3 id="getuid">getuid</h3>
+<pre><code>getuid(): <span class="hljs-built_in">number</span>
+</code></pre><p>Get parent user ID.</p>
 
-<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getuid</span>(<span class="hljs-params"></span>) </span>{
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getuid</span>(<span class="hljs-params"></span>): <span class="hljs-title">number</span> </span>{
     debug(<span class="hljs-string">'getuid'</span>);
     <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.getuid);
-}
+}</pre></div>
+        
+      
+        
+        <h3 id="geteuid">geteuid</h3>
+<pre><code>geteuid(): <span class="hljs-built_in">number</span>
+</code></pre><p>Get parent real user ID.</p>
 
-<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">geteuid</span>(<span class="hljs-params"></span>) </span>{
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">geteuid</span>(<span class="hljs-params"></span>): <span class="hljs-title">number</span> </span>{
     debug(<span class="hljs-string">'geteuid'</span>);
     <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.geteuid);
-}
+}</pre></div>
+        
+      
+        
+        <h3 id="getgid">getgid</h3>
+<pre><code>getgid(): <span class="hljs-built_in">number</span>
+</code></pre><p>Get group ID.</p>
 
-<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getgid</span>(<span class="hljs-params"></span>) </span>{
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getgid</span>(<span class="hljs-params"></span>): <span class="hljs-title">number</span> </span>{
     debug(<span class="hljs-string">'getgid'</span>);
     <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.getgid);
-}
+}</pre></div>
+        
+      
+        
+        <h3 id="getgid">getgid</h3>
+<pre><code>getegid(): <span class="hljs-built_in">number</span>
+</code></pre><p>Get read group ID.</p>
 
-<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getegid</span>(<span class="hljs-params"></span>) </span>{
+        
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getegid</span>(<span class="hljs-params"></span>): <span class="hljs-title">number</span> </span>{
     debug(<span class="hljs-string">'getegid'</span>);
     <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.getegid);
-}</pre></div></div>
-            
-        </li>
+}</pre></div>
         
+      
         
-        <li id="section-23">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-23">&#182;</a>
-              </div>
-              <p>Events ————————————————————————————————————–</p>
+        <h2 id="events">Events</h2>
 
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>
-<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">fcntl</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, cmd: defs.FCNTL, arg?: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
+        
+      
+        
+        <h3 id="fcntl">fcntl</h3>
+
+        
+          <div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">fcntl</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, cmd: defs.FCNTL, arg?: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
     debug(<span class="hljs-string">'fcntl'</span>, fd, cmd, arg);
     <span class="hljs-keyword">var</span> params = [defs.syscalls.fcntl, fd, cmd];
     <span class="hljs-keyword">if</span>(<span class="hljs-keyword">typeof</span> arg !== <span class="hljs-string">'undefined'</span>) params.push(arg);
     <span class="hljs-keyword">return</span> sys.syscall.apply(<span class="hljs-literal">null</span>, params);
-}</pre></div></div>
-            
-        </li>
+}</pre></div>
         
+      
         
-        <li id="section-24">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-24">&#182;</a>
-              </div>
-              <p>getaddrinfo
-freeaddrinfo
-<a href="http://davmac.org/davpage/linux/async-io.html#epoll">http://davmac.org/davpage/linux/async-io.html#epoll</a>
-int epoll_create(int size);
-Size is ignored, but most be greater than 0.</p>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">epoll_create</span>(<span class="hljs-params">size: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
+        <h3 id="epoll_create">epoll_create</h3>
+<p>Size is ignored, but must be greater than 0.</p>
+<p>In <code>libc</code>:</p>
+<pre><code>int epoll_create(int size);
+</code></pre>
+        
+          <div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">epoll_create</span>(<span class="hljs-params">size: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
     debug(<span class="hljs-string">'epoll_create'</span>, size);
     <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.epoll_create, size);
-}</pre></div></div>
-            
-        </li>
+}</pre></div>
         
+      
         
-        <li id="section-25">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-25">&#182;</a>
-              </div>
-              <p>int epoll_create1(int flags);</p>
+        <p>int epoll_create1(int flags);</p>
 
-            </div>
-            
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">epoll_create1</span>(<span class="hljs-params">flags: defs.EPOLL</span>): <span class="hljs-title">number</span> </span>{
+        
+          <div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">epoll_create1</span>(<span class="hljs-params">flags: defs.EPOLL</span>): <span class="hljs-title">number</span> </span>{
     debug(<span class="hljs-string">'epoll_create1'</span>);
     <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.epoll_create1, flags);
-}</pre></div></div>
-            
-        </li>
+}</pre></div>
         
+      
         
-        <li id="section-26">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-26">&#182;</a>
-              </div>
-              <p>typedef union epoll_data {
+        <p>typedef union epoll_data {
     void    *ptr;
     int      fd;
     uint32_t u32;
@@ -596,69 +921,99 @@ Size is ignored, but most be greater than 0.</p>
 <a href="http://man7.org/linux/man-pages/man2/epoll_wait.2.html">http://man7.org/linux/man-pages/man2/epoll_wait.2.html</a>
 int epoll_wait(int epfd, struct epoll_event *events, int maxevents, int timeout);</p>
 
-            </div>
-            
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">epoll_wait</span>(<span class="hljs-params">epfd: <span class="hljs-built_in">number</span>, buf: Buffer, maxevents: <span class="hljs-built_in">number</span>, timeout: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
+        
+          <div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">epoll_wait</span>(<span class="hljs-params">epfd: <span class="hljs-built_in">number</span>, buf: Buffer, maxevents: <span class="hljs-built_in">number</span>, timeout: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
     debug(<span class="hljs-string">'epoll_wait'</span>, epfd, maxevents, timeout);
     <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.epoll_wait, epfd, buf, maxevents, timeout);
-}</pre></div></div>
-            
-        </li>
+}</pre></div>
         
+      
         
-        <li id="section-27">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-27">&#182;</a>
-              </div>
-              <p>int epoll_pwait(int epfd, struct epoll_event <em>events, int maxevents, int timeout, const sigset_t </em>sigmask);
+        <p>int epoll_pwait(int epfd, struct epoll_event <em>events, int maxevents, int timeout, const sigset_t </em>sigmask);
 export function epoll_pwait() {</p>
 <p>}</p>
 
-            </div>
-            
-        </li>
         
+      
         
-        <li id="section-28">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-28">&#182;</a>
-              </div>
-              <p>int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event);</p>
+        <p>int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event);</p>
 
-            </div>
-            
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">epoll_ctl</span>(<span class="hljs-params">epfd: <span class="hljs-built_in">number</span>, op: defs.EPOLL_CTL, fd: <span class="hljs-built_in">number</span>, epoll_event: defs.epoll_event</span>): <span class="hljs-title">number</span> </span>{
+        
+          <div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">epoll_ctl</span>(<span class="hljs-params">epfd: <span class="hljs-built_in">number</span>, op: defs.EPOLL_CTL, fd: <span class="hljs-built_in">number</span>, epoll_event: defs.epoll_event</span>): <span class="hljs-title">number</span> </span>{
     <span class="hljs-keyword">var</span> buf = defs.epoll_event.pack(epoll_event);
     <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.epoll_ctl, epfd, op, fd, buf);
-}</pre></div></div>
-            
-        </li>
+}</pre></div>
         
+      
         
-        <li id="section-29">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-29">&#182;</a>
-              </div>
-              <h2 id="memory">Memory</h2>
+        <h3 id="inotify_init-inotify_init1-inotify_add_watch-and-inotify_rm_watch">inotify_init, inotify_init1, inotify_add_watch and inotify_rm_watch</h3>
+<pre><code>inotify_init(): <span class="hljs-built_in">number</span>
+inotify_init1(flags: defs.IN): <span class="hljs-built_in">number</span>
+inotify_add_watch(fd: <span class="hljs-built_in">number</span>, pathname: <span class="hljs-built_in">string</span>, mask: defs.IN): <span class="hljs-built_in">number</span>
+inotify_rm_watch(fd: <span class="hljs-built_in">number</span>, wd: <span class="hljs-built_in">number</span>): <span class="hljs-built_in">number</span>
+</code></pre><p>In <code>libc</code>:</p>
+<pre><code>int inotify_init(<span class="hljs-built_in">void</span>);
+int inotify_init1(int flags);
+int inotify_add_watch(int fd, <span class="hljs-keyword">const</span> char *pathname, uint32_t mask);
+int inotify_rm_watch(int fd, int wd);
+</code></pre><p>Monitoring filesystem events, <a href="http://man7.org/linux/man-pages/man7/inotify.7.html">inotify(7)</a>.</p>
 
-            </div>
-            
-        </li>
         
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">inotify_init</span>(<span class="hljs-params"></span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'inotify_init'</span>);
+    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.inotify_init);
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">inotify_init1</span>(<span class="hljs-params">flags: defs.IN</span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'inotify_init1'</span>, flags);
+    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.inotify_init1,  flags);
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">inotify_add_watch</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, pathname: <span class="hljs-built_in">string</span>, mask: defs.IN</span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'inotify_add_watch'</span>, fd, pathname, mask);
+    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.inotify_add_watch, fd, pathname, mask);
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">inotify_rm_watch</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, wd: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'inotify_rm_watch'</span>, fd, wd);
+    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.inotify_rm_watch, fd, wd);
+}</pre></div>
         
-        <li id="section-30">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-30">&#182;</a>
-              </div>
-              <h3 id="shmget">shmget</h3>
+      
+        
+        <h2 id="memory">Memory</h2>
+
+        
+      
+        
+        <h3 id="mmap">mmap</h3>
+<p>Map files or devices into memory</p>
+<pre><code>mmap(addr: <span class="hljs-built_in">number</span>, length: <span class="hljs-built_in">number</span>, prot: defs.PROT, flags: defs.MAP, fd: <span class="hljs-built_in">number</span>, offset: <span class="hljs-built_in">number</span>): <span class="hljs-built_in">number</span>
+</code></pre><p>In <code>libc</code>:</p>
+<pre><code><span class="hljs-built_in">void</span> *mmap(<span class="hljs-built_in">void</span> *addr, size_t length, int prot, int flags, int fd, off_t offset);
+</code></pre>
+        
+          <div class='highlight'><pre>export function mmap(addr: number, length: number, prot: defs.PROT, flags: defs.MAP, fd: number, offset: number): [number, number] {
+    debug('mmap', addr, length, prot, flags, fd, offset);
+    return sys.syscall64(defs.syscalls.mmap, addr, length, prot, flags, fd, offset);
+}</pre></div>
+        
+      
+        
+        <h3 id="munmap">munmap</h3>
+<p>In <code>libc</code>:</p>
+<pre><code>int munmap(<span class="hljs-built_in">void</span> *addr, size_t length);
+</code></pre>
+        
+          <div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">munmap</span>(<span class="hljs-params">addr: Buffer, length: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'munmap'</span>, sys.addr64(addr), length);
+    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.munmap, addr, length);
+}</pre></div>
+        
+      
+        
+        <h3 id="shmget">shmget</h3>
 <pre><code>shmget(key: <span class="hljs-built_in">number</span>, size: <span class="hljs-built_in">number</span>, shmflg: defs.IPC|defs.FLAG): <span class="hljs-built_in">number</span>
 </code></pre><p>Allocates a shared memory segment. <code>shmget()</code> returns the identifier of the shared memory segment associated with the
 value of the argument key. A new shared memory segment, with size equal to the value of size rounded up to a multiple
@@ -684,10 +1039,8 @@ corresponding to key exists, and <code>IPC.CREAT</code> is specified in <code>sh
 </li>
 </ul>
 
-            </div>
-            
-            <div class="content"><div class='highlight'><pre> 
- 
+        
+          <div class='highlight'><pre> 
 <span class="hljs-comment">/**
  * @param key {number}
  * @param size {number}
@@ -699,18 +1052,11 @@ corresponding to key exists, and <code>IPC.CREAT</code> is specified in <code>sh
 <span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">shmget</span>(<span class="hljs-params">key: <span class="hljs-built_in">number</span>, size: <span class="hljs-built_in">number</span>, shmflg: defs.IPC|defs.FLAG</span>): <span class="hljs-title">number</span> </span>{
     debug(<span class="hljs-string">'shmget'</span>, key, size, shmflg);
     <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.shmget, key, size, shmflg);
-}</pre></div></div>
-            
-        </li>
+}</pre></div>
         
+      
         
-        <li id="section-31">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-31">&#182;</a>
-              </div>
-              <h3 id="shmat-">shmat`</h3>
+        <h3 id="shmat-">shmat`</h3>
 <pre><code>shmat(shmid: <span class="hljs-built_in">number</span>, shmaddr: <span class="hljs-built_in">number</span> = defs.NULL, shmflg: defs.SHM = <span class="hljs-number">0</span>): [<span class="hljs-built_in">number</span>, <span class="hljs-built_in">number</span>]
 </code></pre><p>Attaches the shared memory segment identified by shmid to the address space of the calling process.</p>
 <p>In <code>libc</code>:</p>
@@ -725,11 +1071,9 @@ corresponding to key exists, and <code>IPC.CREAT</code> is specified in <code>sh
 is returned, and errno is set to indicate the cause of the error.</li>
 </ul>
 
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>
+        
+          <div class='highlight'><pre>
 /**
- *
  * @param shmid {number} ID returned by `shmget`.
  * @param shmaddr {number} Optional approximate address where to allocate memory, or NULL.
  * @param shmflg {SHM}
@@ -738,31 +1082,33 @@ is returned, and errno is set to indicate the cause of the error.</li>
 export function shmat(shmid: number, shmaddr: number = defs.NULL, shmflg: defs.SHM = 0): [number, number] {
     debug('shmat', shmid, shmaddr, shmflg);
     return sys.syscall64(defs.syscalls.shmat, shmid, shmaddr, shmflg);
-}
+}</pre></div>
+        
+      
+        
+        <h3 id="shmdt">shmdt</h3>
+<p>Detaches the shared memory segment located at the address specified by shmaddr from the address space of the calling
+process. The to-be-detached segment must be currently attached with shmaddr equal to the value returned by the
+attaching shmat() call.</p>
+<p>In <code>libc</code>:</p>
+<pre><code> int shmdt(<span class="hljs-keyword">const</span> <span class="hljs-built_in">void</span> *shmaddr);
+</code></pre><p>Reference:</p>
+<ul>
+<li><a href="http://linux.die.net/man/2/shmat">http://linux.die.net/man/2/shmat</a></li>
+</ul>
 
-
-/**
- * Detaches the shared memory segment located at the address specified by shmaddr from the address space of the calling
- * process. The to-be-detached segment must be currently attached with shmaddr equal to the value returned by the
- * attaching shmat() call.
- *
- * In `libc`:
- *
- *      int shmdt(const void *shmaddr);
- *
- * Reference:
- *
- *  - http://linux.die.net/man/2/shmat
- *
+        
+          <div class='highlight'><pre>
+<span class="hljs-comment">/**
  * @param shmaddr {number}
  * @returns {number} On success shmdt() returns 0; on error -1 is returned, and errno is set to indicate the cause of the error.
- */
-export function shmdt(shmaddr: number): number {
-    debug('shmdt', shmaddr);
-    return sys.syscall(defs.syscalls.shmdt, shmaddr);
+ */</span>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">shmdt</span>(<span class="hljs-params">shmaddr: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'shmdt'</span>, shmaddr);
+    <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.shmdt, shmaddr);
 }
 
-/**
+<span class="hljs-comment">/**
  * Performs the control operation specified by cmd on the shared memory segment whose identifier is given in shmid.
  *
  * In `libc`:
@@ -782,62 +1128,38 @@ export function shmdt(shmaddr: number): number {
  *      with repeated SHM_STAT operations to obtain information about all shared memory segments on the system.) A
  *      successful SHM_STAT operation returns the identifier of the shared memory segment whose index was given in
  *      shmid. Other operations return 0 on success. On error, -1 is returned, and errno is set appropriately.
- */
-export function shmctl(shmid: number, cmd: defs.IPC|defs.SHM, buf: Buffer|defs.shmid_ds|number = defs.NULL): number {
-    debug('shmctl', shmid, cmd, buf instanceof Buffer ? '[Buffer]' : buf);
-    if(buf instanceof Buffer) {</pre></div></div>
-            
-        </li>
+ */</span>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">shmctl</span>(<span class="hljs-params">shmid: <span class="hljs-built_in">number</span>, cmd: defs.IPC|defs.SHM, buf: Buffer|defs.shmid_ds|<span class="hljs-built_in">number</span> = defs.NULL</span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'shmctl'</span>, shmid, cmd, buf <span class="hljs-keyword">instanceof</span> Buffer ? <span class="hljs-string">'[Buffer]'</span> : buf);
+    <span class="hljs-keyword">if</span>(buf <span class="hljs-keyword">instanceof</span> Buffer) {</pre></div>
         
+      
         
-        <li id="section-32">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-32">&#182;</a>
-              </div>
-              <p>User provided us buffer of size <code>defs.shmid_ds.size</code> where kernel will write reponse.</p>
+        <p>User provided us buffer of size <code>defs.shmid_ds.size</code> where kernel will write reponse.</p>
 
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(<span class="hljs-keyword">typeof</span> buf === <span class="hljs-string">'object'</span>) {</pre></div></div>
-            
-        </li>
         
+          <div class='highlight'><pre>    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(<span class="hljs-keyword">typeof</span> buf === <span class="hljs-string">'object'</span>) {</pre></div>
         
-        <li id="section-33">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-33">&#182;</a>
-              </div>
-              <p>User provided <code>defs.shmid_ds</code> object, so we serialize it.</p>
+      
+        
+        <p>User provided <code>defs.shmid_ds</code> object, so we serialize it.</p>
 
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>        buf = defs.shmid_ds.pack(buf) as Buffer;
-    } <span class="hljs-keyword">else</span> {</pre></div></div>
-            
-        </li>
         
+          <div class='highlight'><pre>        buf = defs.shmid_ds.pack(buf) as Buffer;
+    } <span class="hljs-keyword">else</span> {</pre></div>
         
-        <li id="section-34">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-34">&#182;</a>
-              </div>
-              <p>Third argument is just <code>defs.NULL</code>.</p>
+      
+        
+        <p>Third argument is just <code>defs.NULL</code>.</p>
 
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>    }
+        
+          <div class='highlight'><pre>    }
     <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.shmctl, shmid, cmd, buf as Buffer|<span class="hljs-built_in">number</span>);
-}</pre></div></div>
-            
-        </li>
+}</pre></div>
         
-    </ul>
+      
+      <div class="fleur">h</div>
+    </div>
   </div>
 </body>
 </html>

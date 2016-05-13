@@ -29,5 +29,8 @@
   "dependencies": {
     "libsys": "*",
     "debug": "*"
+  },
+  "scripts": {
+    "docs": "docco --output ./docs --layout linear libjs.ts platforms/linux_x86_64/types.ts"
   }
 }

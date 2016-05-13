@@ -1,5 +1,12 @@
 import * as libjs from '../libjs/libjs';
+import * as libaio from '../libaio/libaio';
+import * as pathModule from 'path';
+import {EventEmitter} from 'events';
+import {Buffer} from 'buffer';
+import {Stream} from 'stream';
 
+
+var fs = exports;
 
 function noop() {}
 
@@ -10,6 +17,8 @@ function throwError(errno, func = '', path = '', path2 = '') {
         case libjs.ERROR.EBADF:     throw Error(`EBADF: bad file descriptor, ${func}`);
         case libjs.ERROR.EINVAL:    throw Error(`EINVAL: invalid argument, ${func}`);
         case libjs.ERROR.EPERM:     throw Error(`EPERM: operation not permitted, ${func} '${path}' -> '${path2}'`);
+        case libjs.ERROR.EPROTO:    throw Error(`EPROTO: protocol error, ${func} '${path}' -> '${path2}'`);
+        case libjs.ERROR.EEXIST:    throw Error(`EEXIST: file already exists, ${func} '${path}' -> '${path2}'`);
         default:                    throw Error(`Error occurred in ${func}: errno = ${errno}`);
     }
 }
@@ -398,20 +407,329 @@ export function readSync(fd: number, buffer: Buffer, offset: number, length: num
 }
 
 
-export interface IReaddirOptions {
-    encoding: string;
+export interface IOptions {
+    encoding?: string;
 }
 
-var readdirOptionsDefaults: IReaddirOptions = {
+var optionsDefaults: IReaddirOptions = {
     encoding: 'utf8',
 };
 
-export function readdirSync(path: string|Buffer, options: IReaddirOptions = {}) {
+
+export function readdirSync(path: string|Buffer, options: IOptions = {}) {
     path = validPathOrThrow(path);
-    options = Object.assign(options, readdirOptionsDefaults);
+    options = Object.assign(options, optionsDefaults);
+    return libjs.readdirList(path, options.encoding);
+}
+
+
+var readFileOptionsDefaults: IReaddirOptions = {
+    flag: 'r',
+};
+
+export function readFileSync(file: string|Buffer|number, options: IOptions|string = {}) {
+    var opts: IOptions;
+    if(typeof options === 'string') opts = {encoding: options};
+    else if(typeof options !== 'object') throw TypeError('Invalid options');
+    else opts = Object.assign(options, readFileOptionsDefaults);
+    if(opts.encoding && (typeof opts.encoding != 'string')) throw TypeError('Invalid encoding');
+
+    var fd: number;
+    if(typeof file === 'number') fd = file;
+    else {
+        file = validPathOrThrow(file);
+        var flag = flags[options.flag];
+        fd = libjs.open(file, flag, MODE_DEFAULT);
+        if(fd < 0) throwError(fd, 'readFile', file);
+    }
+
+    var CHUNK = 4096;
+    var list: Buffer[] = [];
+
+    do {
+        var buf = new Buffer(CHUNK);
+        var res = libjs.read(fd, buf);
+        if(res < CHUNK) buf = buf.slice(0, res);
+        list.push(buf);
+        if (res < 0) throwError(res, 'readFile');
+    } while(res > 0);
+
+    libjs.close(fd);
+
+    var buffer = Buffer.concat(list);
+    if(opts.encoding) return buffer.toString(opts.encoding);
+    else return buffer;
+}
+
+
+export function readlinkSync(path: string, options: IOptions|string = null): string|Buffer {
+    path = validPathOrThrow(path);
+    var buf = new Buffer(64);
+    var res = libjs.readlink(path, buf);
+    if(res < 0) throwError(res, 'readlink', path);
+
+    var encoding = 'buffer';
+    if(options) {
+        if(typeof options === 'string') encoding = options;
+        else if(typeof options === 'object') {
+            if(typeof options.encoding != 'string') throw TypeError('Encoding must be string.');
+            else encoding = options.encoding;
+        } else throw TypeError('Invalid options.');
+    }
+
+    buf = buf.slice(0, res);
+    return encoding == 'buffer' ? buf : buf.toString(encoding);
+}
+
+
+export function renameSync(oldPath: string|Buffer, newPath: string|Buffer) {
+    oldPath = validPathOrThrow(oldPath);
+    newPath = validPathOrThrow(newPath);
+    var res = libjs.rename(oldPath, newPath);
+    if(res < 0) throwError(res, 'rename', oldPath, newPath);
+}
+
+
+export function rmdirSync(path: string|Buffer) {
+    path = validPathOrThrow(path);
+    var res = libjs.rmdir(path);
+    if(res < 0) throwError(res, 'rmdir', path);
+}
+
+
+export function symlinkSync(target: string|Buffer, path: string|Buffer/*, type?: string*/) {
+    target = validPathOrThrow(target);
+    path = validPathOrThrow(path);
+    // > The type argument [..] is only available on Windows (ignored on other platforms)
+    /* type = typeof type === 'string' ? type : null; */
+    var res = libjs.symlink(target, path);
+    if(res < 0) throwError(res, 'symlink', target, path);
+}
+
+
+export function unlinkSync(path: string|Buffer) {
+    path = validPathOrThrow(path);
+    var res = libjs.unlink(path);
+    if(res < 0) throwError(res, 'unlink', path);
+}
+
+
+class FSWatcher extends EventEmitter {
+
+    inotify = new libaio.Inotify;
+
+    start(filename: string, persistent: boolean, recursive: boolean, encoding: string) {
+        this.inotify.encoding = encoding;
+        this.inotify.onerror = noop;
+        this.inotify.onevent = (event: libaio.IInotifyEvent) => {
+            if(event.mask & libjs.IN.MOVE) {
+                this.emit('change', 'rename', event.name);
+            } else {
+                this.emit('change', 'change', event.name);
+            }
+        };
+        this.inotify.start();
+        this.inotify.addPath(filename);
+    }
+
+    close() {
+        this.inotify.stop();
+        this.inotify = null;
+    }
+}
+
+export interface IWatchOptions extends IOptions {
+    /* Both of these options are actually redundant, as `inotify(7)` on Linux
+     * does not support recursive watching and we cannot implement `persistent=false`
+     * from JavaScript as we don't know how many callbacks are the in the event loop. */
+    persistent?: boolean;
+    recursive?: boolean;
+}
+
+export type CwatchListener = (event: string, filename: string) => void;
+
+var watchOptionsDefaults = {
+    encoding: 'utf8',
+    persistent: true,
+    recursive: false,
+};
+
+export function watch(filename: string|Buffer, options: string|IWatchOptions, listener?: CwatchListener) {
+    filename = validPathOrThrow(filename);
+    filename = pathModule.resolve(filename);
+    
+    if(options) {
+        if(typeof options === 'function') {
+            listener = options as any as CwatchListener;
+            options = watchOptionsDefaults;
+        } else if (typeof options === 'string') {
+            options = Object.assign({encoding: options}, watchOptionsDefaults);
+        } else if(typeof options === 'object') {
+            options = Object.assign(options, watchOptionsDefaults);
+        } else
+            throw TypeError('"options" must be a string or an object');
+    } else options = watchOptionsDefaults;
+
+    const watcher = new FSWatcher;
+    watcher.start(filename, options.persistent, options.recursive, options.encoding);
+
+    if (listener) {
+        if(typeof listener !== 'function')
+            throw TypeError('"listener" must be a callback');
+        watcher.on('change', listener);
+    }
+
+    return watcher;
+}
+
+
+class StatWatcher extends EventEmitter {
+
+    static map = new Map();
+
+    filename: string;
+
+    interval;
+
+    last: Stats = null;
+
+    protected loop() {
+        fs.stat(this.filename, (err, stats) => {
+            if(err) return this.emit('error', err);
+            if(this.last instanceof Stats) {
+                // > The callback listener will be called each time the file is accessed.
+                if(this.last.atime.getTime() != stats.atime.getTime()) {
+                    this.emit('change', stats, this.last);
+                }
+            }
+            this.last = stats;
+        });
+    }
+
+    start(filename: string, persistent: boolean, interval: number) {
+        this.filename = filename;
+        fs.stat(filename, (err, stats) => {
+            if(err) return this.emit('error', err);
+            this.last = stats;
+            this.interval = setInterval(this.loop.bind(this), interval);
+        });
+    }
+
+    stop() {
+        clearInterval(this.interval);
+        this.last = null;
+    }
+}
+
+export interface IWatchFileOptions {
+
+    // TODO: `persistent` option is not supported yet, always `true`, any
+    // TODO: idea how to make it work in Node.js in pure JavaScript?
+    persistent: boolean;
+
+    interval: number;
+}
+
+const watchFileOptionDefaults: IWatchFileOptions = {
+    persistent: true,
+    interval: 5007,
+};
+
+export type TwatchListener = (curr: Stats, prev: Stats) => void;
+
+export function watchFile(filename: string|Buffer, listener: TwatchListener);
+export function watchFile(filename: string|Buffer, options: IWatchFileOptions = {}, listener: TwatchListener) {
+    filename = validPathOrThrow(filename);
+    filename = pathModule.resolve(filename);
+
+    if(typeof options !== 'object') {
+        listener = options;
+        options = watchFileOptionDefaults;
+    } else options = Object.assign(options, watchFileOptionDefaults);
+
+    if(typeof listener !== 'function')
+        throw new Error('"watchFile()" requires a listener function');
+
+    var watcher = StatWatcher.map.get(filename);
+    if(!watcher) {
+        watcher = new StatWatcher;
+        watcher.start(filename, options.persistent, options.interval);
+        StatWatcher.map.set(filename, watcher);
+    }
+
+    watcher.on('change', listener);
+    return watcher;
+}
+
+export function unwatchFile(filename: string|Buffer, listener?: TwatchListener) {
+    filename = validPathOrThrow(filename);
+    filename = pathModule.resolve(filename);
+
+    var watcher = StatWatcher.map.get(filename);
+    if(!watcher) return;
+
+    if(typeof listener === 'function') watcher.removeListener('change', listener);
+    else watcher.removeAllListeners('change');
+
+    if(watcher.listenerCount('change') === 0) {
+        watcher.stop();
+        StatWatcher.map.delete(filename);
+    }
+}
+
+
+
+// Phew, lucky us:
+//
+// > The recursive option is only supported on OS X and Windows.
+export function watch() {
 
 }
 
+
+export function writeSync(fd: number, buffer: Buffer,       offset: number,     length: number,             position?: number);
+export function writeSync(fd: number, data: string|Buffer,  position?: number,  encoding: string = 'utf8');
+export function writeSync(fd: number, data: string|Buffer,  a: number,          b:number|string,            c?: number) {
+    validateFd(fd);
+
+    var buf: Buffer;
+    var position: number;
+
+    // Check which function definition we are working with.
+    if(typeof b === 'number') {
+        //     writeSync(fd: number, buffer: Buffer, offset: number, length: number, position?: number);
+        if(!(buffer instanceof Buffer)) throw TypeError('buffer must be instance of Buffer.');
+
+        var offset = a;
+        if(typeof offset !== 'number') throw TypeError('offset must be an integer');
+        var length = b;
+        buf = data.slice(offset, offset + length);
+
+        position = c;
+    } else {
+        //     writeSync(fd: number, data: string|Buffer, position?: number, encoding: string = 'utf8');
+        var encoding: string = 'utf8';
+        if(b) {
+            if(typeof b !== 'string') throw TypeError('encoding must be a string');
+            encoding = b;
+        }
+
+        if(data instanceof Buffer) buf = data;
+        else if(typeof data === 'string') {
+            buf = new Buffer(data, encoding);
+        } else throw TypeError('data must be a Buffer or a string.');
+
+        position = a;
+    }
+
+    if(typeof position === 'number') {
+        var sres = libjs.lseek(fd, position, libjs.SEEK.SET);
+        if(sres < 0) throwError(sres, 'write:lseek');
+    }
+
+    var res = libjs.write(fd, buf);
+    if(res < 0) throwError(res, 'write');
+}
 
 
 function createFakeAsyncs() {
@@ -454,6 +772,14 @@ function createFakeAsyncs() {
         'mkdtemp',
         'open',
         'read',
+        'readdir',
+        'readFile',
+        'readlink',
+        'rename',
+        'rmdir',
+        'symlink',
+        'unlink',
+        'write',
     ]) createFakeAsyncFunction(func);
 }
 
