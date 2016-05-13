@@ -9,6 +9,16 @@ var libaio = require('../libaio/libaio');
 var pathModule = require('path');
 var events_1 = require('events');
 var buffer_1 = require('buffer');
+// interface ObjectConstructor {
+//     assign(...args: any[]): any;
+// }
+//
+// var extend = Object.assign;
+function extend(o1, o2) {
+    for (var i in o2)
+        o1[i] = o2[i];
+    return o1;
+}
 var fs = exports;
 function noop() { }
 function throwError(errno, func, path, path2) {
@@ -72,28 +82,29 @@ exports.W_OK = 2 /* W_OK */;
 exports.X_OK = 1 /* X_OK */;
 function accessSync(path, mode) {
     if (mode === void 0) { mode = exports.F_OK; }
-    var result = libjs.access(path, mode);
-    if (result < 0)
-        throw Error("Access to file denied [" + result + "]: " + path);
+    var vpath = validPathOrThrow(path);
+    var res = libjs.access(vpath, mode);
+    if (res < 0)
+        throwError(res, 'access', vpath);
 }
 exports.accessSync = accessSync;
 var appendFileDefaults = {
     encoding: 'utf8',
     mode: MODE_DEFAULT,
-    flag: flags.a
+    flag: 'a'
 };
 function appendFileSync(file, data, options) {
     if (options === void 0) { options = {}; }
-    options = Object.assign(options, appendFileDefaults);
+    options = extend(options, appendFileDefaults);
 }
 exports.appendFileSync = appendFileSync;
 function chmodSync(path, mode) {
-    path = validPathOrThrow(path);
+    var vpath = validPathOrThrow(path);
     if (typeof mode !== 'number')
         throw TypeError('mode must be an integer');
-    var result = libjs.chmod(path, mode);
+    var result = libjs.chmod(vpath, mode);
     if (result < 0)
-        throwError(result, 'chmod', path);
+        throwError(result, 'chmod', vpath);
 }
 exports.chmodSync = chmodSync;
 function fchmodSync(fd, mode) {
@@ -108,14 +119,14 @@ exports.fchmodSync = fchmodSync;
 // Mac OS only:
 //     export function lchmodSync(path: string|Buffer, mode: number) {}
 function chownSync(path, uid, gid) {
-    path = validPathOrThrow(path);
+    var vpath = validPathOrThrow(path);
     if (typeof uid !== 'number')
         throw TypeError('uid must be an unsigned int');
     if (typeof gid !== 'number')
         throw TypeError('gid must be an unsigned int');
-    var result = libjs.chown(path, uid, gid);
+    var result = libjs.chown(vpath, uid, gid);
     if (result < 0)
-        throwError(result, 'chown', path);
+        throwError(result, 'chown', vpath);
 }
 exports.chownSync = chownSync;
 function fchownSync(fd, uid, gid) {
@@ -130,14 +141,14 @@ function fchownSync(fd, uid, gid) {
 }
 exports.fchownSync = fchownSync;
 function lchownSync(path, uid, gid) {
-    path = validPathOrThrow(path);
+    var vpath = validPathOrThrow(path);
     if (typeof uid !== 'number')
         throw TypeError('uid must be an unsigned int');
     if (typeof gid !== 'number')
         throw TypeError('gid must be an unsigned int');
-    var result = libjs.lchown(path, uid, gid);
+    var result = libjs.lchown(vpath, uid, gid);
     if (result < 0)
-        throwError(result, 'lchown', path);
+        throwError(result, 'lchown', vpath);
 }
 exports.lchownSync = lchownSync;
 function closeSync(fd) {
@@ -148,24 +159,22 @@ function closeSync(fd) {
         throwError(result, 'close');
 }
 exports.closeSync = closeSync;
-var readStreamOptionsDefaults = {
-    flags: 'r',
-    encoding: null,
-    fd: null,
-    mode: MODE_DEFAULT,
-    autoClose: true
-};
-function createReadStream(path, options) {
-    if (options === void 0) { options = {}; }
-    options = Object.assign(options, readStreamOptionsDefaults);
-}
-exports.createReadStream = createReadStream;
+// var readStreamOptionsDefaults: IReadStreamOptions = {
+//     flags: 'r',
+//     encoding: null,
+//     fd: null,
+//     mode: MODE_DEFAULT,
+//     autoClose: true,
+// };
+// export function createReadStream(path: string|Buffer, options: IReadStreamOptions|string = {}) {
+//     options = extend(options, readStreamOptionsDefaults);
+// }
 function createWriteStream(path, options) { }
 exports.createWriteStream = createWriteStream;
 function existsSync(path) {
     console.log('Deprecated fs.existsSync(): Use fs.statSync() or fs.accessSync() instead.');
     try {
-        access(path);
+        accessSync(path);
         return true;
     }
     catch (e) {
@@ -235,13 +244,13 @@ function createStatsObject(res) {
     return stats;
 }
 function statSync(path) {
-    path = validPathOrThrow(path);
+    var vpath = validPathOrThrow(path);
     try {
-        var res = libjs.stat(path);
+        var res = libjs.stat(vpath);
         return createStatsObject(res);
     }
     catch (errno) {
-        throwError(errno, 'stat', path);
+        throwError(errno, 'stat', vpath);
     }
 }
 exports.statSync = statSync;
@@ -257,23 +266,23 @@ function fstatSync(fd) {
 }
 exports.fstatSync = fstatSync;
 function lstatSync(path) {
-    path = validPathOrThrow(path);
+    var vpath = validPathOrThrow(path);
     try {
-        var res = libjs.lstat(path);
+        var res = libjs.lstat(vpath);
         return createStatsObject(res);
     }
     catch (errno) {
-        throwError(errno, 'lstat', path);
+        throwError(errno, 'lstat', vpath);
     }
 }
 exports.lstatSync = lstatSync;
 function truncateSync(path, len) {
-    path = validPathOrThrow(path);
+    var vpath = validPathOrThrow(path);
     if (typeof len !== 'number')
         throw TypeError('len must be an integer');
-    var res = libjs.truncate(path, len);
+    var res = libjs.truncate(vpath, len);
     if (res < 0)
-        throwError(res, 'truncate', path);
+        throwError(res, 'truncate', vpath);
 }
 exports.truncateSync = truncateSync;
 function ftruncateSync(fd, len) {
@@ -297,16 +306,20 @@ function utimesSync(path, atime, mtime) {
         throw TypeError('atime must be an integer');
     if (typeof mtime !== 'number')
         throw TypeError('mtime must be an integer');
-    if (!Number.isFinite(atime))
-        atime = Date.now();
-    if (!Number.isFinite(mtime))
-        mtime = Date.now();
+    var vatime = atime;
+    var vmtime = mtime;
+    // if(!Number.isFinite(atime)) atime = Date.now();
+    // if(!Number.isFinite(mtime)) mtime = Date.now();
+    if (!isFinite(vatime))
+        vatime = Date.now();
+    if (!isFinite(vmtime))
+        vmtime = Date.now();
     // `libjs.utime` works with 1 sec precision.
-    atime = Math.round(atime / 1000);
-    mtime = Math.round(mtime / 1000);
+    vatime = Math.round(vatime / 1000);
+    vmtime = Math.round(vmtime / 1000);
     var times = {
-        actime: [libjs.UInt64.lo(atime), libjs.UInt64.hi(atime)],
-        modtime: [libjs.UInt64.lo(mtime), libjs.UInt64.hi(mtime)]
+        actime: [libjs.UInt64.lo(vatime), libjs.UInt64.hi(vatime)],
+        modtime: [libjs.UInt64.lo(vmtime), libjs.UInt64.hi(vmtime)]
     };
     var res = libjs.utime(path, times);
     console.log(res);
@@ -316,21 +329,21 @@ function utimesSync(path, atime, mtime) {
 exports.utimesSync = utimesSync;
 // export function futimesSync(fd: number, atime: number|string, mtime: number|string) {}
 function linkSync(srcpath, dstpath) {
-    srcpath = validPathOrThrow(srcpath);
-    dstpath = validPathOrThrow(dstpath);
-    var res = libjs.link(srcpath, dstpath);
+    var vsrcpath = validPathOrThrow(srcpath);
+    var vdstpath = validPathOrThrow(dstpath);
+    var res = libjs.link(vsrcpath, vdstpath);
     if (res < 0)
-        throwError(res, 'link', srcpath, dstpath);
+        throwError(res, 'link', vsrcpath, vdstpath);
 }
 exports.linkSync = linkSync;
 function mkdirSync(path, mode) {
     if (mode === void 0) { mode = MODE_DEFAULT; }
-    path = validPathOrThrow(path);
+    var vpath = validPathOrThrow(path);
     if (typeof mode !== 'number')
         throw TypeError('mode must be an integer');
-    var res = libjs.mkdir(path, mode);
+    var res = libjs.mkdir(vpath, mode);
     if (res < 0)
-        throwError(res, 'mkdir', path);
+        throwError(res, 'mkdir', vpath);
 }
 exports.mkdirSync = mkdirSync;
 function randomString6() {
@@ -374,13 +387,13 @@ function flagsToFlagsValue(f) {
 }
 function openSync(path, flags, mode) {
     if (mode === void 0) { mode = MODE_DEFAULT; }
-    path = validPathOrThrow(path);
+    var vpath = validPathOrThrow(path);
     var flagsval = flagsToFlagsValue(flags);
     if (typeof mode !== 'number')
         throw TypeError('mode must be an integer');
-    var res = libjs.open(path, flagsval, mode);
+    var res = libjs.open(vpath, flagsval, mode);
     if (res < 0)
-        throwError(res, 'open', path);
+        throwError(res, 'open', vpath);
     return res;
 }
 exports.openSync = openSync;
@@ -411,34 +424,35 @@ var optionsDefaults = {
 };
 function readdirSync(path, options) {
     if (options === void 0) { options = {}; }
-    path = validPathOrThrow(path);
-    options = Object.assign(options, optionsDefaults);
-    return libjs.readdirList(path, options.encoding);
+    var vpath = validPathOrThrow(path);
+    options = extend(options, optionsDefaults);
+    return libjs.readdirList(vpath, options.encoding);
 }
 exports.readdirSync = readdirSync;
 var readFileOptionsDefaults = {
+    encoding: 'utf8',
     flag: 'r'
 };
 function readFileSync(file, options) {
     if (options === void 0) { options = {}; }
     var opts;
     if (typeof options === 'string')
-        opts = { encoding: options };
+        opts = readFileOptionsDefaults;
     else if (typeof options !== 'object')
         throw TypeError('Invalid options');
     else
-        opts = Object.assign(options, readFileOptionsDefaults);
+        opts = extend(options, readFileOptionsDefaults);
     if (opts.encoding && (typeof opts.encoding != 'string'))
         throw TypeError('Invalid encoding');
     var fd;
     if (typeof file === 'number')
         fd = file;
     else {
-        file = validPathOrThrow(file);
-        var flag = flags[options.flag];
-        fd = libjs.open(file, flag, MODE_DEFAULT);
+        var vfile = validPathOrThrow(file);
+        var flag = flags[opts.flag];
+        fd = libjs.open(vfile, flag, MODE_DEFAULT);
         if (fd < 0)
-            throwError(fd, 'readFile', file);
+            throwError(fd, 'readFile', vfile);
     }
     var CHUNK = 4096;
     var list = [];
@@ -484,35 +498,35 @@ function readlinkSync(path, options) {
 }
 exports.readlinkSync = readlinkSync;
 function renameSync(oldPath, newPath) {
-    oldPath = validPathOrThrow(oldPath);
-    newPath = validPathOrThrow(newPath);
-    var res = libjs.rename(oldPath, newPath);
+    var voldPath = validPathOrThrow(oldPath);
+    var vnewPath = validPathOrThrow(newPath);
+    var res = libjs.rename(voldPath, vnewPath);
     if (res < 0)
-        throwError(res, 'rename', oldPath, newPath);
+        throwError(res, 'rename', voldPath, vnewPath);
 }
 exports.renameSync = renameSync;
 function rmdirSync(path) {
-    path = validPathOrThrow(path);
-    var res = libjs.rmdir(path);
+    var vpath = validPathOrThrow(path);
+    var res = libjs.rmdir(vpath);
     if (res < 0)
-        throwError(res, 'rmdir', path);
+        throwError(res, 'rmdir', vpath);
 }
 exports.rmdirSync = rmdirSync;
 function symlinkSync(target, path /*, type?: string*/) {
-    target = validPathOrThrow(target);
-    path = validPathOrThrow(path);
+    var vtarget = validPathOrThrow(target);
+    var vpath = validPathOrThrow(path);
     // > The type argument [..] is only available on Windows (ignored on other platforms)
     /* type = typeof type === 'string' ? type : null; */
-    var res = libjs.symlink(target, path);
+    var res = libjs.symlink(vtarget, vpath);
     if (res < 0)
-        throwError(res, 'symlink', target, path);
+        throwError(res, 'symlink', vtarget, vpath);
 }
 exports.symlinkSync = symlinkSync;
 function unlinkSync(path) {
-    path = validPathOrThrow(path);
-    var res = libjs.unlink(path);
+    var vpath = validPathOrThrow(path);
+    var res = libjs.unlink(vpath);
     if (res < 0)
-        throwError(res, 'unlink', path);
+        throwError(res, 'unlink', vpath);
 }
 exports.unlinkSync = unlinkSync;
 var FSWatcher = (function (_super) {
@@ -526,7 +540,8 @@ var FSWatcher = (function (_super) {
         this.inotify.encoding = encoding;
         this.inotify.onerror = noop;
         this.inotify.onevent = function (event) {
-            if (event.mask & 192 /* MOVE */) {
+            var is_rename = (event.mask & 192 /* MOVE */) || (event.mask & 256 /* CREATE */);
+            if (is_rename) {
                 _this.emit('change', 'rename', event.name);
             }
             else {
@@ -547,27 +562,31 @@ var watchOptionsDefaults = {
     persistent: true,
     recursive: false
 };
+// Phew, lucky us:
+//
+// > The recursive option is only supported on OS X and Windows.
 function watch(filename, options, listener) {
-    filename = validPathOrThrow(filename);
-    filename = pathModule.resolve(filename);
+    var vfilename = validPathOrThrow(filename);
+    vfilename = pathModule.resolve(vfilename);
+    var otps;
     if (options) {
         if (typeof options === 'function') {
             listener = options;
-            options = watchOptionsDefaults;
+            otps = watchOptionsDefaults;
         }
         else if (typeof options === 'string') {
-            options = Object.assign({ encoding: options }, watchOptionsDefaults);
+            otps = extend({ encoding: options }, watchOptionsDefaults);
         }
         else if (typeof options === 'object') {
-            options = Object.assign(options, watchOptionsDefaults);
+            otps = extend(options, watchOptionsDefaults);
         }
         else
             throw TypeError('"options" must be a string or an object');
     }
     else
-        options = watchOptionsDefaults;
+        otps = watchOptionsDefaults;
     var watcher = new FSWatcher;
-    watcher.start(filename, options.persistent, options.recursive, options.encoding);
+    watcher.start(vfilename, otps.persistent, otps.recursive, otps.encoding);
     if (listener) {
         if (typeof listener !== 'function')
             throw TypeError('"listener" must be a callback');
@@ -610,30 +629,34 @@ var StatWatcher = (function (_super) {
         clearInterval(this.interval);
         this.last = null;
     };
-    StatWatcher.map = new Map();
+    StatWatcher.map = {};
     return StatWatcher;
 }(events_1.EventEmitter));
 var watchFileOptionDefaults = {
     persistent: true,
     interval: 5007
 };
-function watchFile(filename, options, listener) {
-    if (options === void 0) { options = {}; }
+function watchFile(filename, a, b) {
+    if (a === void 0) { a = {}; }
     filename = validPathOrThrow(filename);
     filename = pathModule.resolve(filename);
-    if (typeof options !== 'object') {
-        listener = options;
-        options = watchFileOptionDefaults;
+    var opts;
+    var listener;
+    if (typeof a !== 'object') {
+        opts = watchFileOptionDefaults;
+        listener = a;
     }
-    else
-        options = Object.assign(options, watchFileOptionDefaults);
+    else {
+        opts = extend(a, watchFileOptionDefaults);
+        listener = b;
+    }
     if (typeof listener !== 'function')
         throw new Error('"watchFile()" requires a listener function');
-    var watcher = StatWatcher.map.get(filename);
+    var watcher = StatWatcher.map[filename];
     if (!watcher) {
         watcher = new StatWatcher;
-        watcher.start(filename, options.persistent, options.interval);
-        StatWatcher.map.set(filename, watcher);
+        watcher.start(filename, opts.persistent, opts.interval);
+        StatWatcher.map[filename] = watcher;
     }
     watcher.on('change', listener);
     return watcher;
@@ -642,7 +665,7 @@ exports.watchFile = watchFile;
 function unwatchFile(filename, listener) {
     filename = validPathOrThrow(filename);
     filename = pathModule.resolve(filename);
-    var watcher = StatWatcher.map.get(filename);
+    var watcher = StatWatcher.map[filename];
     if (!watcher)
         return;
     if (typeof listener === 'function')
@@ -651,16 +674,10 @@ function unwatchFile(filename, listener) {
         watcher.removeAllListeners('change');
     if (watcher.listenerCount('change') === 0) {
         watcher.stop();
-        StatWatcher.map.delete(filename);
+        delete StatWatcher.map[filename];
     }
 }
 exports.unwatchFile = unwatchFile;
-// Phew, lucky us:
-//
-// > The recursive option is only supported on OS X and Windows.
-function watch() {
-}
-exports.watch = watch;
 function writeSync(fd, data, a, b, c) {
     validateFd(fd);
     var buf;
@@ -668,7 +685,7 @@ function writeSync(fd, data, a, b, c) {
     // Check which function definition we are working with.
     if (typeof b === 'number') {
         //     writeSync(fd: number, buffer: Buffer, offset: number, length: number, position?: number);
-        if (!(buffer instanceof buffer_1.Buffer))
+        if (!(data instanceof buffer_1.Buffer))
             throw TypeError('buffer must be instance of Buffer.');
         var offset = a;
         if (typeof offset !== 'number')
@@ -711,7 +728,7 @@ function createFakeAsyncs() {
             for (var _i = 0; _i < arguments.length; _i++) {
                 args[_i - 0] = arguments[_i];
             }
-            var callback = noop();
+            var callback = noop;
             if (args.length && (typeof args[args.length - 1] === 'function')) {
                 callback = args[args.length - 1];
                 args = args.splice(0, args.length - 1);

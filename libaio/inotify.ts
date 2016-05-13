@@ -143,7 +143,7 @@ export class Inotify {
 
         /* First path added, so we start polling. */
         if(this.wdCount == 1) this.nextTick();
-console.log('here', pathname);
+
         return wd;
     }
 

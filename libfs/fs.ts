@@ -6,8 +6,20 @@ import {Buffer} from 'buffer';
 import {Stream} from 'stream';
 
 
+// interface ObjectConstructor {
+//     assign(...args: any[]): any;
+// }
+//
+// var extend = Object.assign;
+
+function extend(o1, o2) {
+    for(var i in o2) o1[i] = o2[i];
+    return o1;
+}
+
 var fs = exports;
 
+function noop(...args: any[]);
 function noop() {}
 
 function throwError(errno, func = '', path = '', path2 = '') {
@@ -26,7 +38,7 @@ function throwError(errno, func = '', path = '', path2 = '') {
 function validPathOrThrow(path: string|Buffer): string {
     if(path instanceof Buffer) path = path.toString();
     if(typeof path !== 'string') throw TypeError('path must be a string');
-    return path;
+    return path as string;
 }
 
 function validateFd(fd: number) {
@@ -70,9 +82,10 @@ export var R_OK = libjs.AMODE.R_OK;
 export var W_OK = libjs.AMODE.W_OK;
 export var X_OK = libjs.AMODE.X_OK;
 
-export function accessSync(path: string, mode: number = F_OK) {
-    var result = libjs.access(path, mode);
-    if(result < 0) throw Error(`Access to file denied [${result}]: ${path}`);
+export function accessSync(path: string|Buffer, mode: number = F_OK) {
+    var vpath = validPathOrThrow(path);
+    var res = libjs.access(vpath, mode);
+    if(res < 0) throwError(res, 'access', vpath);
 }
 
 
@@ -85,20 +98,20 @@ export interface IFileOptions {
 var appendFileDefaults: IFileOptions = {
     encoding: 'utf8',
     mode: MODE_DEFAULT,
-    flag: flags.a,
+    flag: 'a',
 };
 
 export function appendFileSync(file: string|number, data: string|Buffer, options = {}) {
-    options = Object.assign(options, appendFileDefaults);
+    options = extend(options, appendFileDefaults);
 
 }
 
 
 export function chmodSync(path: string|Buffer, mode: number) {
-    path = validPathOrThrow(path);
+    var vpath = validPathOrThrow(path);
     if(typeof mode !== 'number') throw TypeError('mode must be an integer');
-    var result = libjs.chmod(path, mode);
-    if(result < 0) throwError(result, 'chmod', path);
+    var result = libjs.chmod(vpath, mode);
+    if(result < 0) throwError(result, 'chmod', vpath);
 }
 
 export function fchmodSync(fd: number, mode: number) {
@@ -113,11 +126,11 @@ export function fchmodSync(fd: number, mode: number) {
 
 
 export function chownSync(path: string|Buffer, uid: number, gid: number) {
-    path = validPathOrThrow(path);
+    var vpath = validPathOrThrow(path);
     if(typeof uid !== 'number') throw TypeError('uid must be an unsigned int');
     if(typeof gid !== 'number') throw TypeError('gid must be an unsigned int');
-    var result = libjs.chown(path, uid, gid);
-    if(result < 0) throwError(result, 'chown', path);
+    var result = libjs.chown(vpath, uid, gid);
+    if(result < 0) throwError(result, 'chown', vpath);
 }
 
 export function fchownSync(fd: number, uid: number, gid: number) {
@@ -129,11 +142,11 @@ export function fchownSync(fd: number, uid: number, gid: number) {
 }
 
 export function lchownSync(path: string|Buffer, uid: number, gid: number) {
-    path = validPathOrThrow(path);
+    var vpath = validPathOrThrow(path);
     if(typeof uid !== 'number') throw TypeError('uid must be an unsigned int');
     if(typeof gid !== 'number') throw TypeError('gid must be an unsigned int');
-    var result = libjs.lchown(path, uid, gid);
-    if(result < 0) throwError(result, 'lchown', path);
+    var result = libjs.lchown(vpath, uid, gid);
+    if(result < 0) throwError(result, 'lchown', vpath);
 }
 
 
@@ -145,7 +158,7 @@ export function closeSync(fd: number) {
 
 
 export interface IReadStreamOptions {
-    flags: flags;
+    flags: string;
     encoding: string;
     fd: number;
     mode: number;
@@ -154,17 +167,17 @@ export interface IReadStreamOptions {
     end: number;
 }
 
-var readStreamOptionsDefaults: IReadStreamOptions = {
-    flags: 'r',
-    encoding: null,
-    fd: null,
-    mode: MODE_DEFAULT,
-    autoClose: true,
-};
+// var readStreamOptionsDefaults: IReadStreamOptions = {
+//     flags: 'r',
+//     encoding: null,
+//     fd: null,
+//     mode: MODE_DEFAULT,
+//     autoClose: true,
+// };
 
-export function createReadStream(path: string|Buffer, options: IReadStreamOptions|string = {}) {
-    options = Object.assign(options, readStreamOptionsDefaults);
-}
+// export function createReadStream(path: string|Buffer, options: IReadStreamOptions|string = {}) {
+//     options = extend(options, readStreamOptionsDefaults);
+// }
 
 
 export function createWriteStream(path, options) {}
@@ -173,7 +186,7 @@ export function createWriteStream(path, options) {}
 export function existsSync(path: string|Buffer): boolean {
     console.log('Deprecated fs.existsSync(): Use fs.statSync() or fs.accessSync() instead.');
     try {
-        access(path);
+        accessSync(path);
         return true;
     } catch(e) {
         return false;
@@ -205,10 +218,10 @@ export class Stats {
     size: number;
     blksize: number;
     blocks: number;
-    atime: string;
-    mtime: string;
-    ctime: string;
-    birthtime: string;
+    atime: Date;
+    mtime: Date;
+    ctime: Date;
+    birthtime: Date;
 
     isFile(): boolean {
         return (this.mode & libjs.S.IFREG) == libjs.S.IFREG;
@@ -253,12 +266,12 @@ function createStatsObject(res) {
 }
 
 export function statSync(path: string|Buffer): Stats {
-    path = validPathOrThrow(path);
+    var vpath = validPathOrThrow(path);
     try {
-        var res = libjs.stat(path);
+        var res = libjs.stat(vpath);
         return createStatsObject(res);
     } catch(errno) {
-        throwError(errno, 'stat', path);
+        throwError(errno, 'stat', vpath);
     }
 }
 
@@ -273,21 +286,21 @@ export function fstatSync(fd: number): Stats {
 }
 
 export function lstatSync(path: string|Buffer): Stats {
-    path = validPathOrThrow(path);
+    var vpath = validPathOrThrow(path);
     try {
-        var res = libjs.lstat(path);
+        var res = libjs.lstat(vpath);
         return createStatsObject(res);
     } catch(errno) {
-        throwError(errno, 'lstat', path);
+        throwError(errno, 'lstat', vpath);
     }
 }
 
 
 export function truncateSync(path: string, len: number) {
-    path = validPathOrThrow(path);
+    var vpath = validPathOrThrow(path);
     if(typeof len !== 'number') throw TypeError('len must be an integer');
-    var res = libjs.truncate(path, len);
-    if(res < 0) throwError(res, 'truncate', path);
+    var res = libjs.truncate(vpath, len);
+    if(res < 0) throwError(res, 'truncate', vpath);
 }
 
 export function ftruncateSync(fd: number, len: number) {
@@ -302,20 +315,26 @@ export function ftruncateSync(fd: number, len: number) {
 //     TODO: how to set time using file descriptor, possibly use `utimensat` system call.
 export function utimesSync(path: string, atime: number|string, mtime: number|string) {
     path = validPathOrThrow(path);
-    if(typeof atime === 'string') atime = parseInt(atime);
-    if(typeof mtime === 'string') mtime = parseInt(mtime);
+    if(typeof atime === 'string') atime = parseInt(atime as string);
+    if(typeof mtime === 'string') mtime = parseInt(mtime as string);
     if(typeof atime !== 'number') throw TypeError('atime must be an integer');
     if(typeof mtime !== 'number') throw TypeError('mtime must be an integer');
-    if(!Number.isFinite(atime)) atime = Date.now();
-    if(!Number.isFinite(mtime)) mtime = Date.now();
+
+    var vatime = atime as number;
+    var vmtime = mtime as number;
+
+    // if(!Number.isFinite(atime)) atime = Date.now();
+    // if(!Number.isFinite(mtime)) mtime = Date.now();
+    if(!isFinite(vatime)) vatime = Date.now();
+    if(!isFinite(vmtime)) vmtime = Date.now();
 
     // `libjs.utime` works with 1 sec precision.
-    atime = Math.round(atime / 1000);
-    mtime = Math.round(mtime / 1000);
+    vatime = Math.round(vatime as number / 1000);
+    vmtime = Math.round(vmtime as number / 1000);
 
     var times: libjs.utimbuf = {
-        actime:     [libjs.UInt64.lo(atime), libjs.UInt64.hi(atime)],
-        modtime:    [libjs.UInt64.lo(mtime), libjs.UInt64.hi(mtime)],
+        actime:     [libjs.UInt64.lo(vatime), libjs.UInt64.hi(vatime)],
+        modtime:    [libjs.UInt64.lo(vmtime), libjs.UInt64.hi(vmtime)],
     };
     var res = libjs.utime(path, times);
     console.log(res);
@@ -326,18 +345,18 @@ export function utimesSync(path: string, atime: number|string, mtime: number|str
 
 
 export function linkSync(srcpath: string|Buffer, dstpath: string|Buffer) {
-    srcpath = validPathOrThrow(srcpath);
-    dstpath = validPathOrThrow(dstpath);
-    var res = libjs.link(srcpath, dstpath);
-    if(res < 0) throwError(res, 'link', srcpath, dstpath);
+    var vsrcpath = validPathOrThrow(srcpath);
+    var vdstpath = validPathOrThrow(dstpath);
+    var res = libjs.link(vsrcpath, vdstpath);
+    if(res < 0) throwError(res, 'link', vsrcpath, vdstpath);
 }
 
 
 export function mkdirSync(path: string|Buffer, mode: number = MODE_DEFAULT) {
-    path = validPathOrThrow(path);
+    var vpath = validPathOrThrow(path);
     if(typeof mode !== 'number') throw TypeError('mode must be an integer');
-    var res = libjs.mkdir(path, mode);
-    if(res < 0) throwError(res, 'mkdir', path);
+    var res = libjs.mkdir(vpath, mode);
+    if(res < 0) throwError(res, 'mkdir', vpath);
 }
 
 function randomString6() {
@@ -379,11 +398,11 @@ function flagsToFlagsValue(f: string|number) {
 }
 
 export function openSync(path: string|Buffer, flags: string|number, mode: number = MODE_DEFAULT): number {
-    path = validPathOrThrow(path);
+    var vpath = validPathOrThrow(path);
     var flagsval = flagsToFlagsValue(flags);
     if(typeof mode !== 'number') throw TypeError('mode must be an integer');
-    var res = libjs.open(path, flagsval, mode);
-    if(res < 0) throwError(res, 'open', path);
+    var res = libjs.open(vpath, flagsval, mode);
+    if(res < 0) throwError(res, 'open', vpath);
     return res;
 }
 
@@ -411,36 +430,41 @@ export interface IOptions {
     encoding?: string;
 }
 
-var optionsDefaults: IReaddirOptions = {
+var optionsDefaults: IOptions = {
     encoding: 'utf8',
 };
 
 
 export function readdirSync(path: string|Buffer, options: IOptions = {}) {
-    path = validPathOrThrow(path);
-    options = Object.assign(options, optionsDefaults);
-    return libjs.readdirList(path, options.encoding);
+    var vpath = validPathOrThrow(path);
+    options = extend(options, optionsDefaults);
+    return libjs.readdirList(vpath, options.encoding);
 }
 
 
-var readFileOptionsDefaults: IReaddirOptions = {
+export interface IReadFileOptions extends IOptions {
+    flag?: string;
+}
+
+var readFileOptionsDefaults: IReadFileOptions = {
+    encoding: 'utf8',
     flag: 'r',
 };
 
-export function readFileSync(file: string|Buffer|number, options: IOptions|string = {}) {
-    var opts: IOptions;
-    if(typeof options === 'string') opts = {encoding: options};
+export function readFileSync(file: string|Buffer|number, options: IReadFileOptions|string = {}): string|Buffer {
+    var opts: IReadFileOptions;
+    if(typeof options === 'string') opts = readFileOptionsDefaults;
     else if(typeof options !== 'object') throw TypeError('Invalid options');
-    else opts = Object.assign(options, readFileOptionsDefaults);
+    else opts = extend(options, readFileOptionsDefaults);
     if(opts.encoding && (typeof opts.encoding != 'string')) throw TypeError('Invalid encoding');
 
     var fd: number;
-    if(typeof file === 'number') fd = file;
+    if(typeof file === 'number') fd = file as number;
     else {
-        file = validPathOrThrow(file);
-        var flag = flags[options.flag];
-        fd = libjs.open(file, flag, MODE_DEFAULT);
-        if(fd < 0) throwError(fd, 'readFile', file);
+        var vfile = validPathOrThrow(file as string|Buffer);
+        var flag = flags[opts.flag];
+        fd = libjs.open(vfile, flag, MODE_DEFAULT);
+        if(fd < 0) throwError(fd, 'readFile', vfile);
     }
 
     var CHUNK = 4096;
@@ -483,34 +507,34 @@ export function readlinkSync(path: string, options: IOptions|string = null): str
 
 
 export function renameSync(oldPath: string|Buffer, newPath: string|Buffer) {
-    oldPath = validPathOrThrow(oldPath);
-    newPath = validPathOrThrow(newPath);
-    var res = libjs.rename(oldPath, newPath);
-    if(res < 0) throwError(res, 'rename', oldPath, newPath);
+    var voldPath = validPathOrThrow(oldPath);
+    var vnewPath = validPathOrThrow(newPath);
+    var res = libjs.rename(voldPath, vnewPath);
+    if(res < 0) throwError(res, 'rename', voldPath, vnewPath);
 }
 
 
 export function rmdirSync(path: string|Buffer) {
-    path = validPathOrThrow(path);
-    var res = libjs.rmdir(path);
-    if(res < 0) throwError(res, 'rmdir', path);
+    var vpath = validPathOrThrow(path);
+    var res = libjs.rmdir(vpath);
+    if(res < 0) throwError(res, 'rmdir', vpath);
 }
 
 
 export function symlinkSync(target: string|Buffer, path: string|Buffer/*, type?: string*/) {
-    target = validPathOrThrow(target);
-    path = validPathOrThrow(path);
+    var vtarget = validPathOrThrow(target);
+    var vpath = validPathOrThrow(path);
     // > The type argument [..] is only available on Windows (ignored on other platforms)
     /* type = typeof type === 'string' ? type : null; */
-    var res = libjs.symlink(target, path);
-    if(res < 0) throwError(res, 'symlink', target, path);
+    var res = libjs.symlink(vtarget, vpath);
+    if(res < 0) throwError(res, 'symlink', vtarget, vpath);
 }
 
 
 export function unlinkSync(path: string|Buffer) {
-    path = validPathOrThrow(path);
-    var res = libjs.unlink(path);
-    if(res < 0) throwError(res, 'unlink', path);
+    var vpath = validPathOrThrow(path);
+    var res = libjs.unlink(vpath);
+    if(res < 0) throwError(res, 'unlink', vpath);
 }
 
 
@@ -522,7 +546,8 @@ class FSWatcher extends EventEmitter {
         this.inotify.encoding = encoding;
         this.inotify.onerror = noop;
         this.inotify.onevent = (event: libaio.IInotifyEvent) => {
-            if(event.mask & libjs.IN.MOVE) {
+            var is_rename = (event.mask & libjs.IN.MOVE) || (event.mask & libjs.IN.CREATE);
+            if(is_rename) {
                 this.emit('change', 'rename', event.name);
             } else {
                 this.emit('change', 'change', event.name);
@@ -554,24 +579,29 @@ var watchOptionsDefaults = {
     recursive: false,
 };
 
+// Phew, lucky us:
+//
+// > The recursive option is only supported on OS X and Windows.
+
 export function watch(filename: string|Buffer, options: string|IWatchOptions, listener?: CwatchListener) {
-    filename = validPathOrThrow(filename);
-    filename = pathModule.resolve(filename);
-    
+    var vfilename = validPathOrThrow(filename);
+    vfilename = pathModule.resolve(vfilename);
+
+    var otps: IWatchOptions;
     if(options) {
         if(typeof options === 'function') {
             listener = options as any as CwatchListener;
-            options = watchOptionsDefaults;
+            otps = watchOptionsDefaults;
         } else if (typeof options === 'string') {
-            options = Object.assign({encoding: options}, watchOptionsDefaults);
+            otps = extend({encoding: options}, watchOptionsDefaults) as IWatchOptions;
         } else if(typeof options === 'object') {
-            options = Object.assign(options, watchOptionsDefaults);
+            otps = extend(options, watchOptionsDefaults) as IWatchOptions;
         } else
             throw TypeError('"options" must be a string or an object');
-    } else options = watchOptionsDefaults;
+    } else otps = watchOptionsDefaults;
 
     const watcher = new FSWatcher;
-    watcher.start(filename, options.persistent, options.recursive, options.encoding);
+    watcher.start(vfilename, otps.persistent, otps.recursive, otps.encoding);
 
     if (listener) {
         if(typeof listener !== 'function')
@@ -585,7 +615,7 @@ export function watch(filename: string|Buffer, options: string|IWatchOptions, li
 
 class StatWatcher extends EventEmitter {
 
-    static map = new Map();
+    static map = {};
 
     filename: string;
 
@@ -625,9 +655,8 @@ export interface IWatchFileOptions {
 
     // TODO: `persistent` option is not supported yet, always `true`, any
     // TODO: idea how to make it work in Node.js in pure JavaScript?
-    persistent: boolean;
-
-    interval: number;
+    persistent?: boolean;
+    interval?: number;
 }
 
 const watchFileOptionDefaults: IWatchFileOptions = {
@@ -638,23 +667,30 @@ const watchFileOptionDefaults: IWatchFileOptions = {
 export type TwatchListener = (curr: Stats, prev: Stats) => void;
 
 export function watchFile(filename: string|Buffer, listener: TwatchListener);
-export function watchFile(filename: string|Buffer, options: IWatchFileOptions = {}, listener: TwatchListener) {
+export function watchFile(filename: string|Buffer, options: IWatchFileOptions, listener: TwatchListener);
+export function watchFile(filename: string|Buffer, a: TwatchListener|IWatchFileOptions = {}, b?: TwatchListener) {
     filename = validPathOrThrow(filename);
     filename = pathModule.resolve(filename);
 
-    if(typeof options !== 'object') {
-        listener = options;
-        options = watchFileOptionDefaults;
-    } else options = Object.assign(options, watchFileOptionDefaults);
+    var opts: IWatchFileOptions;
+    var listener: TwatchListener;
+
+    if(typeof a !== 'object') {
+        opts = watchFileOptionDefaults;
+        listener = a as TwatchListener;
+    } else {
+        opts = extend(a, watchFileOptionDefaults);
+        listener = b;
+    }
 
     if(typeof listener !== 'function')
         throw new Error('"watchFile()" requires a listener function');
 
-    var watcher = StatWatcher.map.get(filename);
+    var watcher = StatWatcher.map[filename];
     if(!watcher) {
         watcher = new StatWatcher;
-        watcher.start(filename, options.persistent, options.interval);
-        StatWatcher.map.set(filename, watcher);
+        watcher.start(filename, opts.persistent, opts.interval);
+        StatWatcher.map[filename] = watcher;
     }
 
     watcher.on('change', listener);
@@ -665,7 +701,7 @@ export function unwatchFile(filename: string|Buffer, listener?: TwatchListener) 
     filename = validPathOrThrow(filename);
     filename = pathModule.resolve(filename);
 
-    var watcher = StatWatcher.map.get(filename);
+    var watcher = StatWatcher.map[filename];
     if(!watcher) return;
 
     if(typeof listener === 'function') watcher.removeListener('change', listener);
@@ -673,23 +709,14 @@ export function unwatchFile(filename: string|Buffer, listener?: TwatchListener) 
 
     if(watcher.listenerCount('change') === 0) {
         watcher.stop();
-        StatWatcher.map.delete(filename);
+        delete StatWatcher.map[filename];
     }
 }
 
 
-
-// Phew, lucky us:
-//
-// > The recursive option is only supported on OS X and Windows.
-export function watch() {
-
-}
-
-
-export function writeSync(fd: number, buffer: Buffer,       offset: number,     length: number,             position?: number);
-export function writeSync(fd: number, data: string|Buffer,  position?: number,  encoding: string = 'utf8');
-export function writeSync(fd: number, data: string|Buffer,  a: number,          b:number|string,            c?: number) {
+export function writeSync(fd: number, buffer: Buffer,       offset: number,     length: number,     position?: number);
+export function writeSync(fd: number, data: string|Buffer,  position?: number,  encoding?: string);
+export function writeSync(fd: number, data: string|Buffer,  a: number,          b:number|string,    c?: number) {
     validateFd(fd);
 
     var buf: Buffer;
@@ -698,12 +725,12 @@ export function writeSync(fd: number, data: string|Buffer,  a: number,          
     // Check which function definition we are working with.
     if(typeof b === 'number') {
         //     writeSync(fd: number, buffer: Buffer, offset: number, length: number, position?: number);
-        if(!(buffer instanceof Buffer)) throw TypeError('buffer must be instance of Buffer.');
+        if(!(data instanceof Buffer)) throw TypeError('buffer must be instance of Buffer.');
 
         var offset = a;
         if(typeof offset !== 'number') throw TypeError('offset must be an integer');
         var length = b;
-        buf = data.slice(offset, offset + length);
+        buf = data.slice(offset, offset + length) as Buffer;
 
         position = c;
     } else {
@@ -735,7 +762,7 @@ export function writeSync(fd: number, data: string|Buffer,  a: number,          
 function createFakeAsyncs() {
     function createFakeAsyncFunction(name) {
         exports[name] = (...args:any[]) => {
-            var callback = noop();
+            var callback = noop;
             if (args.length && (typeof args[args.length - 1] === 'function')) {
                 callback = args[args.length - 1];
                 args = args.splice(0, args.length - 1);

@@ -101,7 +101,6 @@ var Inotify = (function () {
         /* First path added, so we start polling. */
         if (this.wdCount == 1)
             this.nextTick();
-        console.log('here', pathname);
         return wd;
     };
     // Intentionally does not throw error if we are not watching a path, simply returns -1.
