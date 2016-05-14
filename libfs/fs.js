@@ -9,15 +9,15 @@ var libaio = require('../libaio/libaio');
 var pathModule = require('path');
 var events_1 = require('events');
 var buffer_1 = require('buffer');
-// interface ObjectConstructor {
-//     assign(...args: any[]): any;
-// }
+//     interface ObjectConstructor {
+//         assign(...args: any[]): any;
+//     }
 //
-// var extend = Object.assign;
-function extend(o1, o2) {
-    for (var i in o2)
-        o1[i] = o2[i];
-    return o1;
+//      extend = Object.assign;
+function extend(a, b) {
+    for (var i in b)
+        a[i] = b[i];
+    return a;
 }
 var fs = exports;
 function noop() { }
@@ -93,11 +93,15 @@ var appendFileDefaults = {
     mode: MODE_DEFAULT,
     flag: 'a'
 };
+function appendFile(file, data, options, callback) { }
+exports.appendFile = appendFile;
 function appendFileSync(file, data, options) {
     if (options === void 0) { options = {}; }
     options = extend(options, appendFileDefaults);
 }
 exports.appendFileSync = appendFileSync;
+function chmod(path, mode, callback) { }
+exports.chmod = chmod;
 function chmodSync(path, mode) {
     var vpath = validPathOrThrow(path);
     if (typeof mode !== 'number')
@@ -107,6 +111,8 @@ function chmodSync(path, mode) {
         throwError(result, 'chmod', vpath);
 }
 exports.chmodSync = chmodSync;
+function fchmod(fd, mode, callback) { }
+exports.fchmod = fchmod;
 function fchmodSync(fd, mode) {
     validateFd(fd);
     if (typeof mode !== 'number')
@@ -118,6 +124,8 @@ function fchmodSync(fd, mode) {
 exports.fchmodSync = fchmodSync;
 // Mac OS only:
 //     export function lchmodSync(path: string|Buffer, mode: number) {}
+function chown(path, uid, gid, callback) { }
+exports.chown = chown;
 function chownSync(path, uid, gid) {
     var vpath = validPathOrThrow(path);
     if (typeof uid !== 'number')
@@ -129,6 +137,8 @@ function chownSync(path, uid, gid) {
         throwError(result, 'chown', vpath);
 }
 exports.chownSync = chownSync;
+function fchown(fd, uid, gid, callback) { }
+exports.fchown = fchown;
 function fchownSync(fd, uid, gid) {
     validateFd(fd);
     if (typeof uid !== 'number')
@@ -140,6 +150,8 @@ function fchownSync(fd, uid, gid) {
         throwError(result, 'fchown');
 }
 exports.fchownSync = fchownSync;
+function lchown(path, uid, gid, callback) { }
+exports.lchown = lchown;
 function lchownSync(path, uid, gid) {
     var vpath = validPathOrThrow(path);
     if (typeof uid !== 'number')
@@ -430,14 +442,13 @@ function readdirSync(path, options) {
 }
 exports.readdirSync = readdirSync;
 var readFileOptionsDefaults = {
-    encoding: 'utf8',
     flag: 'r'
 };
 function readFileSync(file, options) {
     if (options === void 0) { options = {}; }
     var opts;
     if (typeof options === 'string')
-        opts = readFileOptionsDefaults;
+        opts = extend({ encoding: options }, readFileOptionsDefaults);
     else if (typeof options !== 'object')
         throw TypeError('Invalid options');
     else
@@ -557,6 +568,7 @@ var FSWatcher = (function (_super) {
     };
     return FSWatcher;
 }(events_1.EventEmitter));
+exports.FSWatcher = FSWatcher;
 var watchOptionsDefaults = {
     encoding: 'utf8',
     persistent: true,
@@ -638,8 +650,8 @@ var watchFileOptionDefaults = {
 };
 function watchFile(filename, a, b) {
     if (a === void 0) { a = {}; }
-    filename = validPathOrThrow(filename);
-    filename = pathModule.resolve(filename);
+    var vfilename = validPathOrThrow(filename);
+    vfilename = pathModule.resolve(vfilename);
     var opts;
     var listener;
     if (typeof a !== 'object') {
@@ -652,20 +664,20 @@ function watchFile(filename, a, b) {
     }
     if (typeof listener !== 'function')
         throw new Error('"watchFile()" requires a listener function');
-    var watcher = StatWatcher.map[filename];
+    var watcher = StatWatcher.map[vfilename];
     if (!watcher) {
         watcher = new StatWatcher;
-        watcher.start(filename, opts.persistent, opts.interval);
-        StatWatcher.map[filename] = watcher;
+        watcher.start(vfilename, opts.persistent, opts.interval);
+        StatWatcher.map[vfilename] = watcher;
     }
     watcher.on('change', listener);
     return watcher;
 }
 exports.watchFile = watchFile;
 function unwatchFile(filename, listener) {
-    filename = validPathOrThrow(filename);
-    filename = pathModule.resolve(filename);
-    var watcher = StatWatcher.map[filename];
+    var vfilename = validPathOrThrow(filename);
+    vfilename = pathModule.resolve(vfilename);
+    var watcher = StatWatcher.map[vfilename];
     if (!watcher)
         return;
     if (typeof listener === 'function')
@@ -674,7 +686,7 @@ function unwatchFile(filename, listener) {
         watcher.removeAllListeners('change');
     if (watcher.listenerCount('change') === 0) {
         watcher.stop();
-        delete StatWatcher.map[filename];
+        delete StatWatcher.map[vfilename];
     }
 }
 exports.unwatchFile = unwatchFile;
@@ -721,61 +733,16 @@ function writeSync(fd, data, a, b, c) {
         throwError(res, 'write');
 }
 exports.writeSync = writeSync;
-function createFakeAsyncs() {
-    function createFakeAsyncFunction(name) {
-        exports[name] = function () {
-            var args = [];
-            for (var _i = 0; _i < arguments.length; _i++) {
-                args[_i - 0] = arguments[_i];
-            }
-            var callback = noop;
-            if (args.length && (typeof args[args.length - 1] === 'function')) {
-                callback = args[args.length - 1];
-                args = args.splice(0, args.length - 1);
-            }
-            process.nextTick(function () {
-                try {
-                    var result = exports[name + 'Sync'].apply(null, args);
-                    callback(null, result);
-                }
-                catch (err) {
-                    callback(err);
-                }
-            });
-        };
-    }
-    for (var _i = 0, _a = [
-        'appendFile',
-        'chmod',
-        'fchmod',
-        'chown',
-        'fchown',
-        'close',
-        'exists',
-        'fsync',
-        'fdatasync',
-        'stat',
-        'fstat',
-        'lstat',
-        'truncate',
-        'ftruncate',
-        'utimes',
-        'link',
-        'mkdir',
-        'mkdtemp',
-        'open',
-        'read',
-        'readdir',
-        'readFile',
-        'readlink',
-        'rename',
-        'rmdir',
-        'symlink',
-        'unlink',
-        'write',
-    ]; _i < _a.length; _i++) {
-        var func = _a[_i];
-        createFakeAsyncFunction(func);
-    }
+// Wrap synchronous/blocking functions into async ones just to confirm to Node's API.
+function useFake(fs) {
+    require('./afs-fake')(fs);
 }
-createFakeAsyncs();
+exports.useFake = useFake;
+function useTagg(fs) {
+    require('./afs-tagg')(fs);
+}
+exports.useTagg = useTagg;
+function useLibaio(fs) {
+    require('./afs-libaio')(fs);
+}
+exports.useLibaio = useLibaio;

@@ -20,6 +20,7 @@ import * as sys from './sys';
 
 // `defs` provides platform specific constants and structs, the default one we use is `x86_64_linux`.
 import * as defs from './definitions';
+import {Type, Arr, Struct} from './typebase';
 
 
 // In development mode we use `debug` library to trace all our system calls.
@@ -602,15 +603,20 @@ export function futimens(fd: number, times: defs.timespecarr): number {
 
 // ### socket
 //
+//     socket(domain: defs.AF, type: defs.SOCK, protocol: number): number
+//
 // In `libc`:
 //
 //     int socket(int domain, int type, int protocol);
 //
+// Create an endpoint for communication. On success, a file descriptor for the new socket is returned. On
+// error, `errno` is returned.
+//
 // Useful references:
-//  - http://www.skyfree.org/linux/kernel_network/socket.html
-//  - https://github.com/torvalds/linux/blob/master/net/socket.c
-//  - http://www.wangafu.net/~nickm/libevent-book/01_intro.html
-//  - https://banu.com/blog/2/how-to-use-epoll-a-complete-example-in-c/epoll-example.c
+//  - [Linux socket implementation](https://github.com/torvalds/linux/blob/master/net/socket.c)
+//  - [Asynchronous IO introduction](http://www.wangafu.net/~nickm/libevent-book/01_intro.html)
+//  - [Asynchronous IO with `epoll` example](https://banu.com/blog/2/how-to-use-epoll-a-complete-example-in-c/epoll-example.c)
+
 export function socket(domain: defs.AF, type: defs.SOCK, protocol: number): number {
     debug('socket', domain, type, protocol);
     return sys.syscall(defs.syscalls.socket, domain, type, protocol);
@@ -618,9 +624,13 @@ export function socket(domain: defs.AF, type: defs.SOCK, protocol: number): numb
 
 // ### connect
 //
+//     connect(fd: number, sockaddr: defs.sockaddr_in): number
+//
 // In `libc`:
 //
 //     int connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
+//
+// Initiate a connection on a socket.
 
 export function connect(fd: number, sockaddr: defs.sockaddr_in): number {
     debug('connect', fd, sockaddr.sin_addr.s_addr.toString(), require('./socket').hton16(sockaddr.sin_port));
@@ -628,9 +638,19 @@ export function connect(fd: number, sockaddr: defs.sockaddr_in): number {
     return sys.syscall(defs.syscalls.connect, fd, buf, buf.length);
 }
 
-export function bind(fd: number, sockaddr: defs.sockaddr_in): number {
-    debug('bind', fd, sockaddr.sin_addr.s_addr.toString(), require('./socket').hton16(sockaddr.sin_port));
-    var buf = defs.sockaddr_in.pack(sockaddr);
+// ### bind
+//
+//     bind(fd: number, sockaddr: defs.sockaddr_in): number
+//
+// In `libc`, see [bind(2)](http://man7.org/linux/man-pages/man2/bind.2.html):
+//
+//     int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+//
+// Bind a name to a socket. On success, zero is returned.
+
+export function bind(fd: number, sockaddr: defs.sockaddr_in, addr_type: Struct): number {
+    debug('bind', fd, sockaddr, require('./socket').hton16(sockaddr.sin_port));
+    var buf = addr_type.pack(sockaddr);
     return sys.syscall(defs.syscalls.bind, fd, buf, buf.length);
 }
 
@@ -659,23 +679,80 @@ export function shutdown(fd: number, how: defs.SHUT) {
     return sys.syscall(defs.syscalls.shutdown, fd, how);
 }
 
-// TODO: does not work yet...
-// ssize_t sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen);
-export function sendto(fd: number, buf: Buffer, flags: defs.MSG = 0, addr?: defs.sockaddr): number {
-    debug('sendto', fd);
+
+// ### send and sendto
+//
+//     send(fd: number, buf: Buffer, flags: defs.MSG = 0): number
+//     sendto(fd: number, buf: Buffer, flags: defs.MSG = 0, addr?: defs.sockaddr_in, addr_type?: Struct): number
+//
+// `send` is simply a proxy for `sendto` without the last two arguments.
+//
+// In `libc`, see [sendto(2)](http://man7.org/linux/man-pages/man2/sendto.2.html):
+//
+// ```c
+// ssize_t send(int sockfd, const void *buf, size_t len, int flags);
+// ssize_t sendto(int sockfd, const void *buf, size_t len, int flags,
+// ```
+//
+// Send a message on a socket.
+
+export function send(fd: number, buf: Buffer, flags: defs.MSG = 0): number {
+    debug('send');
+    return sendto(fd, buf, flags);
+}
+
+export function sendto(fd: number, buf: Buffer, flags: defs.MSG = 0, addr?: defs.sockaddr_in, addr_type?: Struct): number {
+    debug('sendto', fd, buf.toString(), buf.length, flags, addr);
     var params = [defs.syscalls.sendto, fd, buf, buf.length, flags, 0, 0];
     if(addr) {
-        var addrbuf = defs.sockaddr.pack(addr);
+        var addrbuf = addr_type.pack(addr);
         params[5] = addrbuf;
         params[6] = addrbuf.length;
     }
     return sys.syscall.apply(null, params);
 }
 
-// ssize_t send(int sockfd, const void *buf, size_t len, int flags);
-export function send(fd: number, buf: Buffer, flags: defs.MSG = 0): number {
-    debug('send', fd);
-    return sendto(fd, buf, flags);
+
+// ### recv and recvfrom
+//
+// In `libc`, [recv(2)]():
+//
+//     ssize_t recv(int sockfd, void *buf, size_t len, int flags);
+//     ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen);
+//
+// Receive a message from a socket. These calls return the number of bytes received.
+
+export function recv(sockfd: number, buf: Buffer, flags: number = 0): number {
+    debug('recv', sockfd, buf.length, flags);
+    return recvfrom(sockfd, buf, flags);
+}
+
+export function recvfrom(sockfd: number, buf: Buffer, flags: number, addr?: defs.sockaddr_in, addr_type?: Struct): number {
+    debug('recvfrom', sockfd, buf.length, flags, addr);
+    var args = [defs.syscalls.recvfrom, sockfd, buf, buf.length, flags, 0, 0];
+    if(addr) {
+        var addrbuf = addr_type.pack(addr);
+        args[5] = addrbuf;
+        args[6] = addrbuf.length;
+    }
+    return sys.syscall.apply(null, args);
+}
+
+
+// ### setsockopt and getsockopt
+//
+// In `libc`, see [getsockopt(2)](http://man7.org/linux/man-pages/man2/getsockopt.2.html):
+//
+//     int setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t optlen);
+//     int getsockopt(int sockfd, int level, int optname, void *optval, socklen_t *optlen);
+
+export function setsockopt(sockfd: number, level: number, optname: number, optval: Buffer): number {
+    debug('setsockopt', sockfd, level, optname, optval.toString(), optval.length);
+    return sys.syscall(defs.syscalls.setsockopt, sockfd, level, optname, optval, optval.length);
+}
+
+export function getsockopt(sockfd: number, level: number, optname: number, optval: Buffer): number {
+    debug('getsockopt', sockfd, level, optname, optval.length);
 }
 
 
@@ -802,6 +879,7 @@ export function epoll_wait(epfd: number, buf: Buffer, maxevents: number, timeout
 
 // int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event);
 export function epoll_ctl(epfd: number, op: defs.EPOLL_CTL, fd: number, epoll_event: defs.epoll_event): number {
+    debug('epoll_ctl', epfd, op, fd, epoll_event);
     var buf = defs.epoll_event.pack(epoll_event);
     return sys.syscall(defs.syscalls.epoll_ctl, epfd, op, fd, buf);
 }

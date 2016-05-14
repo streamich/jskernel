@@ -533,6 +533,7 @@ export const enum MSG {
     PEEK = 2,
     TRUNC = 32,
     WAITALL = 256,
+    NOSIGNAL = 16384,
 }
 
 export const enum SHUT {

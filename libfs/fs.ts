@@ -3,24 +3,27 @@ import * as libaio from '../libaio/libaio';
 import * as pathModule from 'path';
 import {EventEmitter} from 'events';
 import {Buffer} from 'buffer';
-import {Stream} from 'stream';
+import {Readable, Writable} from 'stream';
 
 
-// interface ObjectConstructor {
-//     assign(...args: any[]): any;
-// }
+//     interface ObjectConstructor {
+//         assign(...args: any[]): any;
+//     }
 //
-// var extend = Object.assign;
+//      extend = Object.assign;
 
-function extend(o1, o2) {
-    for(var i in o2) o1[i] = o2[i];
-    return o1;
+function extend(a, b) {
+    for(var i in b) a[i] = b[i];
+    return a;
 }
 
 var fs = exports;
 
 function noop(...args: any[]);
 function noop() {}
+
+export type Tcallback = (err?: Error, data?: any) => void;
+
 
 function throwError(errno, func = '', path = '', path2 = '') {
     // console.log(-errno, libjs.ERROR.EBADF);
@@ -101,12 +104,14 @@ var appendFileDefaults: IFileOptions = {
     flag: 'a',
 };
 
-export function appendFileSync(file: string|number, data: string|Buffer, options = {}) {
+export function appendFile(file: string|number, data: string|Buffer, options: IFileOptions, callback: Tcallback) {}
+export function appendFileSync(file: string|number, data: string|Buffer, options: IFileOptions = {}) {
     options = extend(options, appendFileDefaults);
 
 }
 
 
+export function chmod(path: string|Buffer, mode: number, callback: Tcallback) {}
 export function chmodSync(path: string|Buffer, mode: number) {
     var vpath = validPathOrThrow(path);
     if(typeof mode !== 'number') throw TypeError('mode must be an integer');
@@ -114,6 +119,7 @@ export function chmodSync(path: string|Buffer, mode: number) {
     if(result < 0) throwError(result, 'chmod', vpath);
 }
 
+export function fchmod(fd: number, mode: number, callback: Tcallback) {}
 export function fchmodSync(fd: number, mode: number) {
     validateFd(fd);
     if(typeof mode !== 'number') throw TypeError('mode must be an integer');
@@ -125,6 +131,7 @@ export function fchmodSync(fd: number, mode: number) {
 //     export function lchmodSync(path: string|Buffer, mode: number) {}
 
 
+export function chown(path: string|Buffer, uid: number, gid: number, callback: Tcallback) {}
 export function chownSync(path: string|Buffer, uid: number, gid: number) {
     var vpath = validPathOrThrow(path);
     if(typeof uid !== 'number') throw TypeError('uid must be an unsigned int');
@@ -133,6 +140,7 @@ export function chownSync(path: string|Buffer, uid: number, gid: number) {
     if(result < 0) throwError(result, 'chown', vpath);
 }
 
+export function fchown(fd: number, uid: number, gid: number, callback: Tcallback) {}
 export function fchownSync(fd: number, uid: number, gid: number) {
     validateFd(fd);
     if(typeof uid !== 'number') throw TypeError('uid must be an unsigned int');
@@ -141,6 +149,7 @@ export function fchownSync(fd: number, uid: number, gid: number) {
     if(result < 0) throwError(result, 'fchown');
 }
 
+export function lchown(path: string|Buffer, uid: number, gid: number, callback: Tcallback) {}
 export function lchownSync(path: string|Buffer, uid: number, gid: number) {
     var vpath = validPathOrThrow(path);
     if(typeof uid !== 'number') throw TypeError('uid must be an unsigned int');
@@ -447,13 +456,12 @@ export interface IReadFileOptions extends IOptions {
 }
 
 var readFileOptionsDefaults: IReadFileOptions = {
-    encoding: 'utf8',
     flag: 'r',
 };
 
 export function readFileSync(file: string|Buffer|number, options: IReadFileOptions|string = {}): string|Buffer {
     var opts: IReadFileOptions;
-    if(typeof options === 'string') opts = readFileOptionsDefaults;
+    if(typeof options === 'string') opts = extend({encoding: options}, readFileOptionsDefaults);
     else if(typeof options !== 'object') throw TypeError('Invalid options');
     else opts = extend(options, readFileOptionsDefaults);
     if(opts.encoding && (typeof opts.encoding != 'string')) throw TypeError('Invalid encoding');
@@ -538,7 +546,7 @@ export function unlinkSync(path: string|Buffer) {
 }
 
 
-class FSWatcher extends EventEmitter {
+export class FSWatcher extends EventEmitter {
 
     inotify = new libaio.Inotify;
 
@@ -669,8 +677,8 @@ export type TwatchListener = (curr: Stats, prev: Stats) => void;
 export function watchFile(filename: string|Buffer, listener: TwatchListener);
 export function watchFile(filename: string|Buffer, options: IWatchFileOptions, listener: TwatchListener);
 export function watchFile(filename: string|Buffer, a: TwatchListener|IWatchFileOptions = {}, b?: TwatchListener) {
-    filename = validPathOrThrow(filename);
-    filename = pathModule.resolve(filename);
+    var vfilename = validPathOrThrow(filename);
+    vfilename = pathModule.resolve(vfilename);
 
     var opts: IWatchFileOptions;
     var listener: TwatchListener;
@@ -686,11 +694,11 @@ export function watchFile(filename: string|Buffer, a: TwatchListener|IWatchFileO
     if(typeof listener !== 'function')
         throw new Error('"watchFile()" requires a listener function');
 
-    var watcher = StatWatcher.map[filename];
+    var watcher = StatWatcher.map[vfilename];
     if(!watcher) {
         watcher = new StatWatcher;
-        watcher.start(filename, opts.persistent, opts.interval);
-        StatWatcher.map[filename] = watcher;
+        watcher.start(vfilename, opts.persistent, opts.interval);
+        StatWatcher.map[vfilename] = watcher;
     }
 
     watcher.on('change', listener);
@@ -698,10 +706,10 @@ export function watchFile(filename: string|Buffer, a: TwatchListener|IWatchFileO
 }
 
 export function unwatchFile(filename: string|Buffer, listener?: TwatchListener) {
-    filename = validPathOrThrow(filename);
-    filename = pathModule.resolve(filename);
+    var vfilename = validPathOrThrow(filename);
+    vfilename = pathModule.resolve(vfilename);
 
-    var watcher = StatWatcher.map[filename];
+    var watcher = StatWatcher.map[vfilename];
     if(!watcher) return;
 
     if(typeof listener === 'function') watcher.removeListener('change', listener);
@@ -709,7 +717,7 @@ export function unwatchFile(filename: string|Buffer, listener?: TwatchListener) 
 
     if(watcher.listenerCount('change') === 0) {
         watcher.stop();
-        delete StatWatcher.map[filename];
+        delete StatWatcher.map[vfilename];
     }
 }
 
@@ -759,55 +767,16 @@ export function writeSync(fd: number, data: string|Buffer,  a: number,          
 }
 
 
-function createFakeAsyncs() {
-    function createFakeAsyncFunction(name) {
-        exports[name] = (...args:any[]) => {
-            var callback = noop;
-            if (args.length && (typeof args[args.length - 1] === 'function')) {
-                callback = args[args.length - 1];
-                args = args.splice(0, args.length - 1);
-            }
-            process.nextTick(() => {
-                try {
-                    var result = exports[name + 'Sync'].apply(null, args);
-                    callback(null, result);
-                } catch (err) {
-                    callback(err);
-                }
-            });
-        }
-    }
 
-    for (var func of [
-        'appendFile',
-        'chmod',
-        'fchmod',
-        'chown',
-        'fchown',
-        'close',
-        'exists',
-        'fsync',
-        'fdatasync',
-        'stat',
-        'fstat',
-        'lstat',
-        'truncate',
-        'ftruncate',
-        'utimes',
-        'link',
-        'mkdir',
-        'mkdtemp',
-        'open',
-        'read',
-        'readdir',
-        'readFile',
-        'readlink',
-        'rename',
-        'rmdir',
-        'symlink',
-        'unlink',
-        'write',
-    ]) createFakeAsyncFunction(func);
+// Wrap synchronous/blocking functions into async ones just to confirm to Node's API.
+export function useFake(fs) {
+    require('./afs-fake')(fs);
 }
 
-createFakeAsyncs();
+export function useTagg(fs) {
+    require('./afs-tagg')(fs);
+}
+
+export function useLibaio(fs) {
+    require('./afs-libaio')(fs);
+}

@@ -1,4 +1,4 @@
-// g++ snip/consts.cc -o snip/consts && ./snip/consts
+// g++ /share/libjs/snip/consts.cc -o /share/libjs/snip/consts && /share/libjs/snip/consts
 #include <iostream>
 #include <stdint.h>
 #include <string.h>
@@ -291,6 +291,8 @@ int main() {
     std::cout << "IN_CLOEXEC = " << IN_CLOEXEC << "," << endl;
     std::cout << "IN_NONBLOCK = " << IN_NONBLOCK << "," << endl;
     std::cout << "IN_CLOSE_NOWRITE = " << IN_CLOSE_NOWRITE << "," << endl;
+
+    std::cout << "MSG_NOSIGNAL = " << MSG_NOSIGNAL << "," << endl;
 
     std::cout << "sizeof(size_t) = " << sizeof(size_t) << "," << endl;
     std::cout << "sizeof(time_t) = " << sizeof(time_t) << "," << endl;

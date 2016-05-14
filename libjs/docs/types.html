@@ -699,6 +699,7 @@ EACCES, // Search permission is denied on a component of the path prefix. (See a
     PEEK = <span class="hljs-number">2</span>,
     TRUNC = <span class="hljs-number">32</span>,
     WAITALL = <span class="hljs-number">256</span>,
+    NOSIGNAL = <span class="hljs-number">16384</span>,
 }
 
 <span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">enum</span> SHUT {
@@ -1085,6 +1086,7 @@ struct epoll_event {
     mask: <span class="hljs-built_in">number</span>;
     cookie: <span class="hljs-built_in">number</span>;
     len: <span class="hljs-built_in">number</span>;
+    name?: <span class="hljs-built_in">string</span>;
 }</pre></div>
         
       

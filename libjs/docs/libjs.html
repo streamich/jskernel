@@ -69,7 +69,8 @@ libjs.close(fd);
         <p><code>defs</code> provides platform specific constants and structs, the default one we use is <code>x86_64_linux</code>.</p>
 
         
-          <div class='highlight'><pre><span class="hljs-keyword">import</span> * as defs from <span class="hljs-string">'./definitions'</span>;</pre></div>
+          <div class='highlight'><pre><span class="hljs-keyword">import</span> * as defs from <span class="hljs-string">'./definitions'</span>;
+<span class="hljs-keyword">import</span> {Type, Arr, Struct} from <span class="hljs-string">'./typebase'</span>;</pre></div>
         
       
         
@@ -683,18 +684,21 @@ int futimens(int fd, <span class="hljs-keyword">const</span> struct timespec tim
       
         
         <h3 id="socket">socket</h3>
-<p>In <code>libc</code>:</p>
+<pre><code>socket(domain: defs.AF, <span class="hljs-keyword">type</span>: defs.SOCK, protocol: <span class="hljs-built_in">number</span>): <span class="hljs-built_in">number</span>
+</code></pre><p>In <code>libc</code>:</p>
 <pre><code>int socket(int domain, int <span class="hljs-keyword">type</span>, int protocol);
-</code></pre><p>Useful references:</p>
+</code></pre><p>Create an endpoint for communication. On success, a file descriptor for the new socket is returned. On
+error, <code>errno</code> is returned.</p>
+<p>Useful references:</p>
 <ul>
-<li><a href="http://www.skyfree.org/linux/kernel_network/socket.html">http://www.skyfree.org/linux/kernel_network/socket.html</a></li>
-<li><a href="https://github.com/torvalds/linux/blob/master/net/socket.c">https://github.com/torvalds/linux/blob/master/net/socket.c</a></li>
-<li><a href="http://www.wangafu.net/~nickm/libevent-book/01_intro.html">http://www.wangafu.net/~nickm/libevent-book/01_intro.html</a></li>
-<li><a href="https://banu.com/blog/2/how-to-use-epoll-a-complete-example-in-c/epoll-example.c">https://banu.com/blog/2/how-to-use-epoll-a-complete-example-in-c/epoll-example.c</a></li>
+<li><a href="https://github.com/torvalds/linux/blob/master/net/socket.c">Linux socket implementation</a></li>
+<li><a href="http://www.wangafu.net/~nickm/libevent-book/01_intro.html">Asynchronous IO introduction</a></li>
+<li><a href="https://banu.com/blog/2/how-to-use-epoll-a-complete-example-in-c/epoll-example.c">Asynchronous IO with <code>epoll</code> example</a></li>
 </ul>
 
         
-          <div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">socket</span>(<span class="hljs-params">domain: defs.AF, <span class="hljs-keyword">type</span>: defs.SOCK, protocol: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">socket</span>(<span class="hljs-params">domain: defs.AF, <span class="hljs-keyword">type</span>: defs.SOCK, protocol: <span class="hljs-built_in">number</span></span>): <span class="hljs-title">number</span> </span>{
     debug(<span class="hljs-string">'socket'</span>, domain, <span class="hljs-keyword">type</span>, protocol);
     <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.socket, domain, <span class="hljs-keyword">type</span>, protocol);
 }</pre></div>
@@ -702,17 +706,29 @@ int futimens(int fd, <span class="hljs-keyword">const</span> struct timespec tim
       
         
         <h3 id="connect">connect</h3>
-<p>In <code>libc</code>:</p>
+<pre><code>connect(fd: <span class="hljs-built_in">number</span>, sockaddr: defs.sockaddr_in): <span class="hljs-built_in">number</span>
+</code></pre><p>In <code>libc</code>:</p>
 <pre><code>int connect(sockfd, (struct sockaddr *)&amp;serv_addr, sizeof(serv_addr));
-</code></pre>
+</code></pre><p>Initiate a connection on a socket.</p>
+
         
           <div class='highlight'><pre>
 <span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">connect</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, sockaddr: defs.sockaddr_in</span>): <span class="hljs-title">number</span> </span>{
     debug(<span class="hljs-string">'connect'</span>, fd, sockaddr.sin_addr.s_addr.toString(), <span class="hljs-built_in">require</span>(<span class="hljs-string">'./socket'</span>).hton16(sockaddr.sin_port));
     <span class="hljs-keyword">var</span> buf = defs.sockaddr_in.pack(sockaddr);
     <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.connect, fd, buf, buf.length);
-}
+}</pre></div>
+        
+      
+        
+        <h3 id="bind">bind</h3>
+<pre><code>bind(fd: <span class="hljs-built_in">number</span>, sockaddr: defs.sockaddr_in): <span class="hljs-built_in">number</span>
+</code></pre><p>In <code>libc</code>, see <a href="http://man7.org/linux/man-pages/man2/bind.2.html">bind(2)</a>:</p>
+<pre><code>int bind(int sockfd, <span class="hljs-keyword">const</span> struct sockaddr *addr, socklen_t addrlen);
+</code></pre><p>Bind a name to a socket.</p>
 
+        
+          <div class='highlight'><pre>
 <span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">bind</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, sockaddr: defs.sockaddr_in</span>): <span class="hljs-title">number</span> </span>{
     debug(<span class="hljs-string">'bind'</span>, fd, sockaddr.sin_addr.s_addr.toString(), <span class="hljs-built_in">require</span>(<span class="hljs-string">'./socket'</span>).hton16(sockaddr.sin_port));
     <span class="hljs-keyword">var</span> buf = defs.sockaddr_in.pack(sockaddr);
@@ -758,29 +774,32 @@ int futimens(int fd, <span class="hljs-keyword">const</span> struct timespec tim
         
       
         
-        <p>TODO: does not work yet…
-ssize_t sendto(int sockfd, const void <em>buf, size_t len, int flags, const struct sockaddr </em>dest_addr, socklen_t addrlen);</p>
+        <h3 id="send-and-sendto">send and sendto</h3>
+<pre><code>send(fd: <span class="hljs-built_in">number</span>, buf: Buffer, flags: defs.MSG = <span class="hljs-number">0</span>): <span class="hljs-built_in">number</span>
+sendto(fd: <span class="hljs-built_in">number</span>, buf: Buffer, flags: defs.MSG = <span class="hljs-number">0</span>, addr?: defs.sockaddr_in, addr_type?: Struct): <span class="hljs-built_in">number</span>
+</code></pre><p><code>send</code> is simply a proxy for <code>sendto</code> without the last two arguments.</p>
+<p>In <code>libc</code>, see <a href="http://man7.org/linux/man-pages/man2/sendto.2.html">sendto(2)</a>:</p>
+<pre><code class="lang-c"><span class="hljs-keyword">ssize_t</span> send(<span class="hljs-keyword">int</span> sockfd, <span class="hljs-keyword">const</span> <span class="hljs-keyword">void</span> *buf, <span class="hljs-keyword">size_t</span> len, <span class="hljs-keyword">int</span> flags);
+<span class="hljs-keyword">ssize_t</span> sendto(<span class="hljs-keyword">int</span> sockfd, <span class="hljs-keyword">const</span> <span class="hljs-keyword">void</span> *buf, <span class="hljs-keyword">size_t</span> len, <span class="hljs-keyword">int</span> flags,
+</code></pre>
+<p>Send a message on a socket.</p>
 
         
-          <div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">sendto</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, buf: Buffer, flags: defs.MSG = 0, addr?: defs.sockaddr</span>): <span class="hljs-title">number</span> </span>{
-    debug(<span class="hljs-string">'sendto'</span>, fd);
+          <div class='highlight'><pre>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">send</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, buf: Buffer, flags: defs.MSG = 0</span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'send'</span>);
+    <span class="hljs-keyword">return</span> sendto(fd, buf, flags);
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">sendto</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, buf: Buffer, flags: defs.MSG = 0, addr?: defs.sockaddr_in, addr_type?: Struct</span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'sendto'</span>, fd, buf.toString(), buf.length, flags, addr);
     <span class="hljs-keyword">var</span> params = [defs.syscalls.sendto, fd, buf, buf.length, flags, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>];
     <span class="hljs-keyword">if</span>(addr) {
-        <span class="hljs-keyword">var</span> addrbuf = defs.sockaddr.pack(addr);
+        <span class="hljs-keyword">var</span> addrbuf = addr_type.pack(addr);
         params[<span class="hljs-number">5</span>] = addrbuf;
         params[<span class="hljs-number">6</span>] = addrbuf.length;
     }
     <span class="hljs-keyword">return</span> sys.syscall.apply(<span class="hljs-literal">null</span>, params);
-}</pre></div>
-        
-      
-        
-        <p>ssize_t send(int sockfd, const void *buf, size_t len, int flags);</p>
-
-        
-          <div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">send</span>(<span class="hljs-params">fd: <span class="hljs-built_in">number</span>, buf: Buffer, flags: defs.MSG = 0</span>): <span class="hljs-title">number</span> </span>{
-    debug(<span class="hljs-string">'send'</span>, fd);
-    <span class="hljs-keyword">return</span> sendto(fd, buf, flags);
 }</pre></div>
         
       
@@ -940,6 +959,7 @@ export function epoll_pwait() {</p>
 
         
           <div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">epoll_ctl</span>(<span class="hljs-params">epfd: <span class="hljs-built_in">number</span>, op: defs.EPOLL_CTL, fd: <span class="hljs-built_in">number</span>, epoll_event: defs.epoll_event</span>): <span class="hljs-title">number</span> </span>{
+    debug(<span class="hljs-string">'epoll_ctl'</span>, epfd, op, fd, epoll_event);
     <span class="hljs-keyword">var</span> buf = defs.epoll_event.pack(epoll_event);
     <span class="hljs-keyword">return</span> sys.syscall(defs.syscalls.epoll_ctl, epfd, op, fd, buf);
 }</pre></div>
@@ -957,6 +977,8 @@ int inotify_init1(int flags);
 int inotify_add_watch(int fd, <span class="hljs-keyword">const</span> char *pathname, uint32_t mask);
 int inotify_rm_watch(int fd, int wd);
 </code></pre><p>Monitoring filesystem events, <a href="http://man7.org/linux/man-pages/man7/inotify.7.html">inotify(7)</a>.</p>
+<p>See <a href="http://www.npmjs.com/package/libaio"><code>libaio</code></a> OOP wrapper <code>libaio.Notify</code> around <code>inotify(7)</code>
+system calls.</p>
 
         
           <div class='highlight'><pre>
