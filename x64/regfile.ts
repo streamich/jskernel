@@ -1,12 +1,5 @@
+import {Register, SIZE} from './operand';
 
-
-export const enum RTYPE {
-    GENERAL_PURPOSE = 0,
-    GENERAL_PURPOSE_SPECIAL, // Like RAX which plays special role in multiplication/division operations.
-    STACK_POINTER,
-    BASE_POINTER,
-    FLOATING_POINT,
-}
 
 // Values on standard registers as used in Mod-R/M byte:
 export const enum R64 {
@@ -76,175 +69,60 @@ export const enum RE8 {
     R15B,
 }
 
-export class Operand {
-    isRegister = false;
-    isMemory = false;
-    toString() {
-        return '[operand]';
-    }
-}
 
-export class Register extends Operand {
-    id: number;
-    type: RTYPE;
-    name: string;
-    size: number;   // Size in bits.o
-    isExtended = false;  // Is one of the standard 8 registers: RAX, RBX,...
-    isRegister = true;
+export var rax  = new Register('rax', R64.RAX, SIZE.QUAD, false);
+export var rbx  = new Register('rbx', R64.RBX, SIZE.QUAD, false);
+export var rcx  = new Register('rcx', R64.RCX, SIZE.QUAD, false);
+export var rdx  = new Register('rdx', R64.RDX, SIZE.QUAD, false);
+export var rsi  = new Register('rsi', R64.RSI, SIZE.QUAD, false);
+export var rdi  = new Register('rdi', R64.RDI, SIZE.QUAD, false);
+export var rbp  = new Register('rbp', R64.RBP, SIZE.QUAD, false);
+export var rsp  = new Register('rsp', R64.RSP, SIZE.QUAD, false);
 
-    constructor(id, name, size, type = RTYPE.GENERAL_PURPOSE) {
-        super();
-        this.id = id;
-        this.type = type;
-        this.name = name;
-        this.size = size;
-    }
-
-    disp(disp: number) {
-        return (new MemoryReference).ref(this).disp(disp);
-    }
-
-    ref(index: Register = null, scale: number = 0) {
-        return (new MemoryReference).ref(this).ind(index, scale);
-    }
-
-    ind(scale: number = 1) {
-        return (new MemoryReference).ind(this, scale);
-    }
-
-    toString() {
-        return this.name;
-    }
-}
-
-export class Register64 extends Register {
-    constructor(id, name, type = RTYPE.GENERAL_PURPOSE) {
-        super(id, name, 64, type);
-    }
-}
-
-export class Register64E extends Register64 {
-    isExtended = true; // Extended register.
-}
-
-export class Register32 extends Register {
-    parent: Register64;
-    offset = 32;
-    size = 32;
-    constructor(parent: Register64, id, name, type = RTYPE.GENERAL_PURPOSE) {
-        super(id, name, 32, type);
-        this.parent = parent;
-    }
-}
-
-export class Register32E extends Register32 {
-    isExtended = true; // Extended register.
-}
-
-export class Register8 extends Register {
-    parent: Register64;
-    offset = 56;
-    size = 8;
-    constructor(parent: Register64, id, name, type = RTYPE.GENERAL_PURPOSE) {
-        super(id, name, 8, type);
-        this.parent = parent;
-    }
-}
-
-export class Register8E extends Register8 {
-    isExtended = true; // Extended register.
-}
-
-export class MemoryReference extends Operand {
-    isMemory = true;
-    base: Register = null;
-    displacement: number = 0;
-    scale: number = 0;
-    index: Register = null;
-
-    disp(disp: number): this {
-        this.displacement = disp;
-        return this;
-    }
-
-    ind(index: Register = null, scale: number = 1): this {
-        var scale_values = [1, 2, 4, 8];
-
-        // Validate inputs.
-        if(index && !(index instanceof Register))
-            throw Error(`Reference index must be a register.`);
-        if(index && ((typeof scale != 'number') || scale_values.indexOf(scale) < 0))
-            throw Error(`Scale value must be one of ${scale_values}.`);
-
-        this.index = index;
-        switch(scale) {
-            case 1: this.scale = 0; break;
-            case 2: this.scale = 1; break;
-            case 4: this.scale = 2; break;
-            case 8: this.scale = 3; break;
-        }
-        return this;
-    }
-
-    ref(base: Register): this {
-        this.base = base;
-        return this;
-    }
-
-    toString() {
-        return `[${this.base.toString()} + ${this.index} * ${2 ** this.scale}]`;
-    }
-}
+export var r8   = new Register('r8',  RE64.R8, SIZE.QUAD, true);
+export var r9   = new Register('r9',  RE64.R9, SIZE.QUAD, true);
+export var r10  = new Register('r10', RE64.R10, SIZE.QUAD, true);
+export var r11  = new Register('r11', RE64.R11, SIZE.QUAD, true);
+export var r12  = new Register('r12', RE64.R12, SIZE.QUAD, true);
+export var r13  = new Register('r13', RE64.R13, SIZE.QUAD, true);
+export var r14  = new Register('r14', RE64.R14, SIZE.QUAD, true);
+export var r15  = new Register('r15', RE64.R15, SIZE.QUAD, true);
 
 
-export var rax = new Register64(R64.RAX, 'rax', RTYPE.GENERAL_PURPOSE_SPECIAL);
-export var rbx = new Register64(R64.RBX, 'rbx');
-export var rcx = new Register64(R64.RCX, 'rcx', RTYPE.GENERAL_PURPOSE_SPECIAL);
-export var rdx = new Register64(R64.RDX, 'rdx', RTYPE.GENERAL_PURPOSE_SPECIAL);
-export var rsi = new Register64(R64.RSI, 'rsi');
-export var rdi = new Register64(R64.RDI, 'rdi');
-export var rbp = new Register64(R64.RBP, 'rbp', RTYPE.BASE_POINTER);
-export var rsp = new Register64(R64.RSP, 'rsp', RTYPE.STACK_POINTER);
-export var r8  = new Register64E(RE64.R8, 'r8');
-export var r9  = new Register64E(RE64.R9, 'r9');
-export var r10 = new Register64E(RE64.R10, 'r10');
-export var r11 = new Register64E(RE64.R11, 'r11');
-export var r12 = new Register64E(RE64.R12, 'r12');
-export var r13 = new Register64E(RE64.R13, 'r13');
-export var r14 = new Register64E(RE64.R14, 'r14');
-export var r15 = new Register64E(RE64.R15, 'r15');
+export var eax  = new Register('eax', R32.EAX, SIZE.DOUBLE, false);
+export var ebx  = new Register('ebx', R32.EBX, SIZE.DOUBLE, false);
+export var ecx  = new Register('ecx', R32.ECX, SIZE.DOUBLE, false);
+export var edx  = new Register('edx', R32.EDX, SIZE.DOUBLE, false);
+export var esi  = new Register('esi', R32.ESI, SIZE.DOUBLE, false);
+export var edi  = new Register('edi', R32.EDI, SIZE.DOUBLE, false);
+export var ebp  = new Register('ebp', R32.EBP, SIZE.DOUBLE, false);
+export var esp  = new Register('esp', R32.ESP, SIZE.DOUBLE, false);
 
-export var eax = new Register32(rax, R32.EAX, 'eax', rax.type);
-export var ebx = new Register32(rbx, R32.EBX, 'ebx', rbx.type);
-export var ecx = new Register32(rcx, R32.ECX, 'ecx', rcx.type);
-export var edx = new Register32(rdx, R32.EDX, 'edx', rdx.type);
-export var esi = new Register32(rsi, R32.ESI, 'esi', rsi.type);
-export var edi = new Register32(rdi, R32.EDI, 'edi', rdi.type);
-export var ebp = new Register32(rbp, R32.EBP, 'ebp', rbp.type);
-export var esp = new Register32(rsp, R32.ESP, 'esp', rsp.type);
-export var r8d = new Register32E(r8, RE32.R8D, 'r8d', r8.type);
-export var r9d = new Register32E(r9, RE32.R9D, 'r9d', r9.type);
-export var r10d = new Register32E(r10, RE32.R10D, 'r10d', r10.type);
-export var r11d = new Register32E(r11, RE32.R11D, 'r11d', r11.type);
-export var r12d = new Register32E(r12, RE32.R12D, 'r12d', r12.type);
-export var r13d = new Register32E(r13, RE32.R13D, 'r13d', r13.type);
-export var r14d = new Register32E(r14, RE32.R14D, 'r14d', r14.type);
-export var r15d = new Register32E(r15, RE32.R15D, 'r15d', r15.type);
+export var r8d  = new Register('r8d',  RE32.R8D, SIZE.DOUBLE, true);
+export var r9d  = new Register('r9d',  RE32.R9D, SIZE.DOUBLE, true);
+export var r10d = new Register('r10d', RE32.R10D, SIZE.DOUBLE, true);
+export var r11d = new Register('r11d', RE32.R11D, SIZE.DOUBLE, true);
+export var r12d = new Register('r12d', RE32.R12D, SIZE.DOUBLE, true);
+export var r13d = new Register('r13d', RE32.R13D, SIZE.DOUBLE, true);
+export var r14d = new Register('r14d', RE32.R14D, SIZE.DOUBLE, true);
+export var r15d = new Register('r15d', RE32.R15D, SIZE.DOUBLE, true);
 
-export var al = new Register8(rax, R8.AL, 'al', rax.type);
-export var bl = new Register8(rbx, R8.BL, 'bl', rbx.type);
-export var cl = new Register8(rcx, R8.CL, 'cl', rcx.type);
-export var dl = new Register8(rdx, R8.DL, 'dl', rdx.type);
-export var sil = new Register8(rsi, R8.SIL, 'sil', rsi.type);
-export var dil = new Register8(rdi, R8.DIL, 'dil', rdi.type);
-export var bpl = new Register8(rbp, R8.BPL, 'bpl', rbp.type);
-export var spl = new Register8(rsp, R8.SPL, 'spl', rsp.type);
-export var r8b = new Register8E(r8, RE8.R8B, 'r8b', r8.type);
-export var r9b = new Register8E(r9, RE8.R9B, 'r9b', r9.type);
-export var r10b = new Register8E(r10, RE8.R10B, 'r10b', r10.type);
-export var r11b = new Register8E(r11, RE8.R11B, 'r11b', r11.type);
-export var r12b = new Register8E(r12, RE8.R12B, 'r12b', r12.type);
-export var r13b = new Register8E(r13, RE8.R13B, 'r13b', r13.type);
-export var r14b = new Register8E(r14, RE8.R14B, 'r14b', r14.type);
-export var r15b = new Register8E(r15, RE8.R15B, 'r15b', r15.type);
+
+export var al   = new Register('al',  R8.AL, SIZE.BYTE, false);
+export var bl   = new Register('bl',  R8.BL, SIZE.BYTE, false);
+export var cl   = new Register('cl',  R8.CL, SIZE.BYTE, false);
+export var dl   = new Register('dl',  R8.DL, SIZE.BYTE, false);
+export var sil  = new Register('sil', R8.SIL, SIZE.BYTE, false);
+export var dil  = new Register('dil', R8.DIL, SIZE.BYTE, false);
+export var bpl  = new Register('bpl', R8.BPL, SIZE.BYTE, false);
+export var spl  = new Register('spl', R8.SPL, SIZE.BYTE, false);
+
+export var r8b  = new Register('r8b',  RE8.R8B, SIZE.BYTE, true);
+export var r9b  = new Register('r9b',  RE8.R9B, SIZE.BYTE, true);
+export var r10b = new Register('r10b', RE8.R10B, SIZE.BYTE, true);
+export var r11b = new Register('r11b', RE8.R11B, SIZE.BYTE, true);
+export var r12b = new Register('r12b', RE8.R12B, SIZE.BYTE, true);
+export var r13b = new Register('r13b', RE8.R13B, SIZE.BYTE, true);
+export var r14b = new Register('r14b', RE8.R14B, SIZE.BYTE, true);
+export var r15b = new Register('r15b', RE8.R15B, SIZE.BYTE, true);
 

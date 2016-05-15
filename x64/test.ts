@@ -1,17 +1,31 @@
+import * as i from './instruction';
+import {extend} from './util';
 import {Encoder} from './encoder';
-import {rax, rbx, r9, r11, r12, r10d, eax, edx, ebx} from './regfile';
+import {rax, r8} from './regfile';
+import * as def from './def';
+import {Compiler} from './compiler';
 
 
-var t = new Encoder();
+var _ = new Compiler;
+_.movq(rax, rax);
+// _.push(rax);
+// _.push(r8);
+// _.pop(rax);
+// _.push(r8);
+console.log(new Buffer(_.compile()));
 
-console.log(new Buffer(t.dec(r10d)));
-console.log(new Buffer(t.mov_rm(eax, ebx)));
-console.log(new Buffer(t.movq_r_r(rax, rax)));
-console.log(new Buffer(t.movq_r_m(rax, rax.ref())));
-console.log(new Buffer(t.movq_m_r(rbx.ref(), rax)));
-console.log(new Buffer(t.movq_r_r(r12, r12)));
-console.log(new Buffer(t.movq_m_r(r12.ref(), r12)));
-console.log(new Buffer(t.movq_r_m(r12, r12.ref())));
 
+// console.log(_.push(rax).write([]));
+// console.log(_.push(r8).write([]));
+// console.log(_.pop(rax).write([]));
+// console.log(_.push(r8).write([]));
+
+
+
+// var ops = new i.Operands(r8);
+// var encoder = new Encoder;
+// var ins = encoder.createInstruction(def.PUSH, ops);
+// console.log(ins);
+// var code = ins.write([]);
 
 

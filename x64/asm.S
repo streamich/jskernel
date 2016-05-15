@@ -13,6 +13,24 @@ test2:
         movq (%r12), %r12
         movq %r12, (%r12)
 
+push:
+        push %rax
+        push %rbx
+        push %rcx
+        push %rdx
+        push %rsp
+        push %rbp
+        push %rdi
+        push %rsi
+        push %r8
+        push %r9
+
+        pop %rax
+        pop %rbx
+        pop %r8
+        pop %r9
+        pop %r10
+
 mov_r_r:
         movq %rbx, %rax
         mov %eax, %ebx

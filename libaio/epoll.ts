@@ -204,8 +204,6 @@ export class Pool {
     protected socks: {[n: number]: Socket} = [];
 
     constructor() {
-        super();
-
         this.epfd = libjs.epoll_create1(0);
         if(this.epfd < 0) throw Error(`Could create epoll: errno = ${this.epfd}`);
     }
@@ -231,6 +229,5 @@ export class Pool {
 
         this.socks[sock.fd] = sock;
     }
-
 }
 

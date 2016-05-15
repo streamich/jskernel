@@ -1,0 +1,33 @@
+{
+  "name": "libfs-tagg",
+  "description": "Asynchronous fs.js function for libfs using threads_a_gogo",
+  "version": "1.0.0",
+  "main": "index.js",
+  "keywords": [
+    "libaio",
+    "libc",
+    "libjs",
+    "libfs",
+    "libfs-tagg",
+    "tagg",
+    "threads-a-gogo",
+    "posix",
+    "syscall",
+    "system-call",
+    "kernel",
+    "exokernel",
+    "exo-kernel",
+    "read",
+    "write",
+    "open",
+    "sys",
+    "system"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/streamich/libfs-tagg"
+  },
+  "dependencies": {
+    "webworker-threads": "0.7.4"
+  }
+}

@@ -187,7 +187,6 @@ var Pool = (function () {
     function Pool() {
         this.epfd = 0; /* `epoll` file descriptor */
         this.socks = [];
-        _super.call(this);
         this.epfd = libjs.epoll_create1(0);
         if (this.epfd < 0)
             throw Error("Could create epoll: errno = " + this.epfd);
