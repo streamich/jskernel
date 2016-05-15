@@ -1,0 +1,23 @@
+
+nasm.o:     file format binary
+
+
+Disassembly of section .data:
+
+00000000 <.data>:
+   0:	66 ba 0e 00 00 00    	mov    $0xe,%edx
+   6:	66 b9 24 00 00 00    	mov    $0x24,%ecx
+   c:	66 bb 01 00 00 00    	mov    $0x1,%ebx
+  12:	66 b8 04 00 00 00    	mov    $0x4,%eax
+  18:	cd 80                	int    $0x80
+  1a:	66 b8 01 00 00 00    	mov    $0x1,%eax
+  20:	cd 80                	int    $0x80
+  22:	00 00                	add    %al,(%bx,%si)
+  24:	48                   	dec    %ax
+  25:	65 6c                	gs insb (%dx),%es:(%di)
+  27:	6c                   	insb   (%dx),%es:(%di)
+  28:	6f                   	outsw  %ds:(%si),(%dx)
+  29:	2c 20                	sub    $0x20,%al
+  2b:	77 6f                	ja     0x9c
+  2d:	72 6c                	jb     0x9b
+  2f:	64 21 0a             	and    %cx,%fs:(%bp,%si)

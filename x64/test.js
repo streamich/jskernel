@@ -1,7 +1,7 @@
 "use strict";
 var regfile_1 = require('./regfile');
-var compiler_1 = require('./compiler');
-var _ = new compiler_1.Compiler;
+var code_1 = require('./code');
+var _ = new code_1.Code;
 _.movq(regfile_1.rax, regfile_1.rax);
 // _.push(rax);
 // _.push(r8);

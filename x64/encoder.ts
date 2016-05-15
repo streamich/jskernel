@@ -59,9 +59,18 @@ export class Encoder {
         var opcode = new i.Opcode;
         opcode.op = def.op;
 
-        // Direction bit
-        opcode.op = (opcode.op & i.OP_DIRECTION_MASK) |
-            (op.dst instanceof o.Register ? i.OP_DIRECTION.REG_IS_DST : i.OP_DIRECTION.REG_IS_SRC);
+        if(def.regInOp) {
+            // We have register encoded in op-code here.
+            if(!dstreg) throw TypeError(`Operation needs destination register.`);
+            opcode.op = (opcode.op & i.Opcode.MASK_OP) | dstreg.id;
+        } else {
+            // Direction bit `d`
+            opcode.op = (opcode.op & i.Opcode.MASK_DIRECTION) |
+                (dstreg ? i.Opcode.DIRECTION.REG_IS_DST : i.Opcode.DIRECTION.REG_IS_SRC);
+
+            // Size bit `s`
+            opcode.op = (opcode.op & i.Opcode.MASK_SIZE) | (i.Opcode.SIZE.WORD);
+        }
 
         opcode.regIsDest = def.regIsDest;
         opcode.isSizeWord = def.isSizeWord;
@@ -72,11 +81,19 @@ export class Encoder {
         // Mod-RM
         if(srcreg) {
             var mod = 0, reg = 0, rm = 0;
-            if(srcreg) {
-                if(dstreg) {
-                    mod = i.MOD.REG_TO_REG;
-                    reg = dstreg.id;
-                    rm = srcreg.id;
+            if(srcreg && dstreg) {
+                mod = i.Modrm.MOD.REG_TO_REG;
+                reg = dstreg.id;
+                rm = srcreg.id;
+            } else {
+                var mem: o.Memory = srcmem || dstmem;
+                if(mem) {
+                    if(mem.disp) {
+
+                    } else {
+                        mod = i.Modrm.MOD.INDIRECT;
+
+                    }
                 }
             }
             ins.parts.push(new i.Modrm(mod, reg, rm));
@@ -90,4 +107,9 @@ export class Encoder {
 
         return ins;
     }
+}
+
+
+export class RandomizingEncoder extends Encoder {
+
 }

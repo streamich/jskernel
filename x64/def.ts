@@ -1,4 +1,4 @@
-import {OP} from './opcode';
+import {OP, OPREG} from './opcode';
 
 
 export class Definition {
@@ -57,8 +57,10 @@ export class Definition {
     }
 }
 
-//                                   Op-code    REX     reg in op   opreg   reg is dst  word_size   has immediate
-// __________________________________|__________|_______|___________|_______|___________|___________|___________________
-export const PUSH   = new Definition(OP.PUSH,   false,  true,       -1,     true,       true,       false);
+//                                   Op-code    REX     reg in op   opreg       reg is dst  word_size   has immediate
+// __________________________________|__________|_______|___________|___________|___________|___________|___________________
+export const PUSH   = new Definition(OP.PUSH,   false,  true,       -1,         true,       true,       false);
 export const POP    = new Definition(OP.POP,    false,  true);
 export const MOVQ   = new Definition(OP.MOV,    true);
+export const INC    = new Definition(OP.INC,    false,  false,      OPREG.INC);
+export const DEC    = new Definition(OP.DEC,    false,  false,      OPREG.DEC);

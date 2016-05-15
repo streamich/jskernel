@@ -1,4 +1,9 @@
 "use strict";
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
 var o = require('./operand');
 var i = require('./instruction');
 (function (MODE) {
@@ -59,9 +64,19 @@ var Encoder = (function () {
         // Op-code
         var opcode = new i.Opcode;
         opcode.op = def.op;
-        // Direction bit
-        opcode.op = (opcode.op & i.OP_DIRECTION_MASK) |
-            (op.dst instanceof o.Register ? 2 /* REG_IS_DST */ : 0 /* REG_IS_SRC */);
+        if (def.regInOp) {
+            // We have register encoded in op-code here.
+            if (!dstreg)
+                throw TypeError("Operation needs destination register.");
+            opcode.op = (opcode.op & i.Opcode.MASK_OP) | dstreg.id;
+        }
+        else {
+            // Direction bit `d`
+            opcode.op = (opcode.op & i.Opcode.MASK_DIRECTION) |
+                (dstreg ? i.Opcode.DIRECTION.REG_IS_DST : i.Opcode.DIRECTION.REG_IS_SRC);
+            // Size bit `s`
+            opcode.op = (opcode.op & i.Opcode.MASK_SIZE) | (i.Opcode.SIZE.WORD);
+        }
         opcode.regIsDest = def.regIsDest;
         opcode.isSizeWord = def.isSizeWord;
         opcode.regInOp = def.regInOp;
@@ -69,11 +84,19 @@ var Encoder = (function () {
         // Mod-RM
         if (srcreg) {
             var mod = 0, reg = 0, rm = 0;
-            if (srcreg) {
-                if (dstreg) {
-                    mod = 3 /* REG_TO_REG */;
-                    reg = dstreg.id;
-                    rm = srcreg.id;
+            if (srcreg && dstreg) {
+                mod = i.Modrm.MOD.REG_TO_REG;
+                reg = dstreg.id;
+                rm = srcreg.id;
+            }
+            else {
+                var mem = srcmem || dstmem;
+                if (mem) {
+                    if (mem.disp) {
+                    }
+                    else {
+                        mod = i.Modrm.MOD.INDIRECT;
+                    }
                 }
             }
             ins.parts.push(new i.Modrm(mod, reg, rm));
@@ -85,3 +108,11 @@ var Encoder = (function () {
     return Encoder;
 }());
 exports.Encoder = Encoder;
+var RandomizingEncoder = (function (_super) {
+    __extends(RandomizingEncoder, _super);
+    function RandomizingEncoder() {
+        _super.apply(this, arguments);
+    }
+    return RandomizingEncoder;
+}(Encoder));
+exports.RandomizingEncoder = RandomizingEncoder;

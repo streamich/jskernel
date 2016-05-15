@@ -3,10 +3,10 @@ import {extend} from './util';
 import {Encoder} from './encoder';
 import {rax, r8} from './regfile';
 import * as def from './def';
-import {Compiler} from './compiler';
+import {Code} from './code';
 
 
-var _ = new Compiler;
+var _ = new Code;
 _.movq(rax, rax);
 // _.push(rax);
 // _.push(r8);

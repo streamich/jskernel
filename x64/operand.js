@@ -1,10 +1,10 @@
-// # General operand used in our assembly "language".
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
+// # General operand used in our assembly "language".
 var Operand = (function () {
     function Operand() {
     }
@@ -24,6 +24,15 @@ var Constant = (function (_super) {
         // Size in bits.
         this.size = 32;
     }
+    Constant.sizeClass = function (value) {
+        if ((value <= 0x7f) && (value >= -0x80))
+            return 8 /* BYTE */;
+        if ((value <= 0x7fff) && (value >= -0x8000))
+            return 16 /* WORD */;
+        if ((value <= 0x7fffffff) && (value >= -0x80000000))
+            return 32 /* DOUBLE */;
+        return 64 /* QUAD */;
+    };
     Constant.prototype.toString = function () {
         return "const[" + this.size + "]: " + this.value;
     };
@@ -32,21 +41,39 @@ var Constant = (function (_super) {
 exports.Constant = Constant;
 var Displacement = (function (_super) {
     __extends(Displacement, _super);
-    function Displacement() {
-        _super.apply(this, arguments);
+    function Displacement(value) {
+        _super.call(this);
+        this.size = Displacement.SIZE.DISP8;
     }
+    Displacement.SIZE = {
+        DISP8: 8 /* BYTE */,
+        DISP32: 32 /* DOUBLE */
+    };
     return Displacement;
-}(Operand));
+}(Constant));
 exports.Displacement = Displacement;
+// # Scale
+//
+// `Scale` used in SIB byte in two bit `SCALE` field.
 var Scale = (function (_super) {
     __extends(Scale, _super);
-    function Scale() {
-        _super.apply(this, arguments);
+    function Scale(scale) {
+        if (scale === void 0) { scale = 1; }
+        _super.call(this);
+        if (Scale.VALUES.indexOf(scale) < 0)
+            throw TypeError("Scale must be one of [1, 2, 4, 8].");
+        this.value = scale;
     }
-    Scale.scale = [1, 2, 4, 8];
+    Scale.prototype.toString = function () {
+        return '' + this.value;
+    };
+    Scale.VALUES = [1, 2, 4, 8];
     return Scale;
 }(Operand));
 exports.Scale = Scale;
+// ## Registers
+//
+// `Register` represents one of `%rax`, `%rbx`, etc. registers.
 var Register = (function (_super) {
     __extends(Register, _super);
     function Register(name, id, size, extended) {
@@ -60,6 +87,10 @@ var Register = (function (_super) {
         this.size = size;
         this.isExtended = extended;
     }
+    Register.prototype.ref = function () {
+    };
+    Register.prototype.disp = function () {
+    };
     Register.prototype.toString = function () {
         return '%' + this.name;
     };
@@ -78,6 +109,16 @@ var Memory = (function (_super) {
         this.scale = null;
         this.disp = null;
     }
+    Memory.prototype.needsSib = function () {
+        return !!this.index || !!this.scale;
+    };
+    Memory.prototype.ref = function () {
+        return this;
+    };
+    Memory.prototype.disp = function (value) {
+        this.disp = new Displacement(value);
+        return this;
+    };
     Memory.prototype.toString = function () {
         var base = this.base ? this.base.toString() : '';
         var index = this.index ? this.index.toString() : '';

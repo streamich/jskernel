@@ -18,8 +18,10 @@ var Definition = (function () {
     return Definition;
 }());
 exports.Definition = Definition;
-//                                   Op-code    REX     reg in op   opreg   reg is dst  word_size   has immediate
-// __________________________________|__________|_______|___________|_______|___________|___________|___________________
+//                                   Op-code    REX     reg in op   opreg       reg is dst  word_size   has immediate
+// __________________________________|__________|_______|___________|___________|___________|___________|___________________
 exports.PUSH = new Definition(80 /* PUSH */, false, true, -1, true, true, false);
 exports.POP = new Definition(88 /* POP */, false, true);
 exports.MOVQ = new Definition(137 /* MOV */, true);
+exports.INC = new Definition(255 /* INC */, false, false, 0 /* INC */);
+exports.DEC = new Definition(255 /* DEC */, false, false, 1 /* DEC */);

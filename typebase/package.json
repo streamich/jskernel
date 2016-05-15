@@ -1,0 +1,25 @@
+{
+  "name": "typebase",
+  "description": "Package and unpackage binary structs",
+  "version": "1.0.0",
+  "keywords": [
+    "struct",
+    "type",
+    "variable",
+    "pointer",
+    "array",
+    "list",
+    "native",
+    "native-code",
+    "machine-code",
+    "compiler"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/streamich/typebase"
+  },
+  "main": "typebase.js",
+  "scripts": {
+    "docs": "docco --output ./docs --layout linear typebase.ts"
+  }
+}

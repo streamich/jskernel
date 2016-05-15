@@ -1,19 +1,24 @@
-import {Encoder} from './encoder';
 import * as i from './instruction';
 import * as o from './operand';
 import * as d from './def';
 
 
-export class Compiler {
+export enum MODE {
+    REAL = 0,
+    COMPAT,
+    LONG,
+}
 
-    encoder = new Encoder;
+export class Code {
+    
+    mode: MODE = MODE.LONG;
 
-    // code: number[] = [];
+    protected ins: i.Instruction[] = [];
 
-    ins: i.Instruction[] = [];
+    protected ClassInstruction = i.Instruction;
 
     protected insert(def: d.Definition, op: i.Operands) {
-        var ins = this.encoder.createInstruction(def, op);
+        var ins = new this.ClassInstruction(def, op);
         ins.index = this.ins.length;
         this.ins.push(ins);
         return ins;
@@ -26,12 +31,6 @@ export class Compiler {
         }
         return code;
     }
-
-    // write(writer) {
-    //     var pos = this.code.length;
-    //     writer.write(this.code);
-    //     return pos;
-    // }
 
     push(what: o.Operand) {
         return this.insert(d.PUSH, new i.Operands(what));
@@ -46,4 +45,24 @@ export class Compiler {
         return this.insert(d.MOVQ, new i.Operands(dst, src));
     }
 
+    nop(size = 1) {
+
+    }
+
+    nopw() {
+        return this.nop(2);
+    }
+
+    nopl() {
+        return this.nop(4);
+    }
+}
+
+
+export class FuzzyCode extends Code {
+    protected ClassInstruction = i.FuzzyInstruction;
+
+    nop(size = 1) {
+
+    }
 }
