@@ -2,7 +2,10 @@
 var regfile_1 = require('./regfile');
 var code_1 = require('./code');
 var _ = new code_1.Code;
-_.movq(regfile_1.rax, regfile_1.rax);
+_.mov(regfile_1.rax, 1);
+// _.mov(rsi, rax);
+// _.syscall();
+// _.movq(rax, rax);
 // _.push(rax);
 // _.push(r8);
 // _.pop(rax);

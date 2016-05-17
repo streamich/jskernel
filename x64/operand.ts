@@ -1,4 +1,4 @@
-import {} from './instruction';
+import {UInt64} from './ctypes';
 
 
 export const enum SIZE {
@@ -21,6 +21,9 @@ export abstract class Operand {
 // ## Constant
 //
 // Constants are everything where we directly type in a `number` value.
+
+export type number64 = [number, number];
+
 export class Constant extends Operand {
 
     static sizeClass(value) {
@@ -33,13 +36,69 @@ export class Constant extends Operand {
     // Size in bits.
     size: number = 32;
 
-    // Each byte as a `number`.
-    value: number[];
+    value: number|number64 = 0;
+
+    // Each byte as a `number` in reverse order.
+    octets: number[] = [];
+
+    constructor(value: number|number64) {
+        super();
+        this.Value = value;
+    }
+
+    set Value(value: number|number64) {
+        if(value instanceof Array) {
+            if(value.length !== 2) throw TypeError('number64 must be a 2-tuple, given: ' + value);
+            this.setValue64(value as number64);
+        } else if(typeof value === 'number') {
+            /* JS integers are 53-bit, so split here `number`s over 32 bits into [number, number]. */
+            if(Constant.sizeClass(value) === SIZE.QUAD) this.setValue64([UInt64.lo(value), UInt64.hi(value)]);
+            else                                        this.setValue32(value);
+        } else
+            throw TypeError('Constant value must be of type number|number64.');
+    }
+
+    protected setValue32(value: number) {
+        var size = Constant.sizeClass(value);
+        this.size = size;
+        this.value = value;
+        this.octets = [];
+        this.octets[0] = value & 0xFF;
+        if(size > SIZE.BYTE) this.octets[1] = (value >> 8) & 0xFF;
+        if(size > SIZE.WORD) {
+            this.octets[2] = (value >> 16) & 0xFF;
+            this.octets[3] = (value >> 24) & 0xFF;
+        }
+    }
+
+    protected setValue64(value: number64) {
+        this.size = 64;
+        this.value = value;
+        this.octets = [];
+        var [lo, hi] = value;
+        this.octets[0] = (lo) & 0xFF;
+        this.octets[1] = (lo >> 8) & 0xFF;
+        this.octets[2] = (lo >> 16) & 0xFF;
+        this.octets[3] = (lo >> 24) & 0xFF;
+        this.octets[4] = (hi) & 0xFF;
+        this.octets[5] = (hi >> 8) & 0xFF;
+        this.octets[6] = (hi >> 16) & 0xFF;
+        this.octets[7] = (hi >> 24) & 0xFF;
+    }
+
+    zeroExtend(size) {
+        if(this.size > size) throw Error(`Already larger than ${size} bits, cannot zero-extend.`);
+        var missing_bytes = (size - this.size) / 8;
+        this.size = size;
+        for(var i = 0; i < missing_bytes; i++) this.octets.push(0);
+    }
 
     toString() {
         return `const[${this.size}]: ${this.value}`;
     }
 }
+
+export class Immediate extends Constant {}
 
 export class Displacement extends Constant {
     static SIZE = {
@@ -50,7 +109,17 @@ export class Displacement extends Constant {
     size = Displacement.SIZE.DISP8;
 
     constructor(value: number) {
-        super();
+        super(value);
+    }
+
+    protected setValue32(value: number) {
+        super.setValue32(value);
+        /* Make sure `Displacement` is 1 or 4 bytes, not 2. */
+        if(this.size > Displacement.SIZE.DISP8) this.zeroExtend(Displacement.SIZE.DISP32);
+    }
+
+    protected setValue64() {
+        throw TypeError(`Displacement can be only of these sizes: ${Displacement.SIZE.DISP8} and ${Displacement.SIZE.DISP32}.`);
     }
 }
 
@@ -94,11 +163,11 @@ export class Register extends Operand {
     }
 
     ref(): Memory {
-
+        return (new Memory).ref(this);
     }
 
-    disp(): Memory {
-
+    disp(value: number): Memory {
+        return (new Memory).ref(this).disp(value);
     }
 
     toString() {
@@ -114,19 +183,19 @@ export class Memory extends Operand {
     base: Register = null;
     index: Register = null;
     scale: Scale = null;
-    disp: Displacement = null;
+    displacement: Displacement = null;
 
     needsSib() {
         return !!this.index || !!this.scale;
     }
 
-    ref(): this {
-
+    ref(base: Register): this {
+        this.base = base;
         return this;
     }
 
     disp(value: number): this {
-        this.disp = new Displacement(value);
+        this.displacement = new Displacement(value);
         return this;
     }
 

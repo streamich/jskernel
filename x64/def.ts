@@ -46,7 +46,7 @@ export class Definition {
     // Wheter this instruction supports *immediate* value.
     hasImmediate: boolean;
 
-    constructor(op: number, rex = false, reg_in_op = false, opreg = -1, reg_is_dst = true, word_size = true, imm = false) {
+    constructor(op: number, rex = false, reg_in_op = false, opreg = -1, imm = false, reg_is_dst = true, word_size = true) {
         this.op = op;
         this.opreg = opreg;
         this.regInOp = reg_in_op;
@@ -57,10 +57,13 @@ export class Definition {
     }
 }
 
-//                                   Op-code    REX     reg in op   opreg       reg is dst  word_size   has immediate
-// __________________________________|__________|_______|___________|___________|___________|___________|___________________
-export const PUSH   = new Definition(OP.PUSH,   false,  true,       -1,         true,       true,       false);
-export const POP    = new Definition(OP.POP,    false,  true);
-export const MOVQ   = new Definition(OP.MOV,    true);
-export const INC    = new Definition(OP.INC,    false,  false,      OPREG.INC);
-export const DEC    = new Definition(OP.DEC,    false,  false,      OPREG.DEC);
+//                                      Op-code    REX     reg in op   opreg       immediate    reg is dst  word_size
+// _____________________________________|__________|_______|___________|___________|____________|___________|___________________
+export const PUSH       = new Definition(OP.PUSH,   false,  true,       -1,         false,      true,       true);
+export const POP        = new Definition(OP.POP,    false,  true);
+export const MOVQ       = new Definition(OP.MOV,    true);
+export const MOVimm     = new Definition(OP.MOVimm, false);
+export const INC        = new Definition(OP.INC,    false,  false,      OPREG.INC);
+export const DEC        = new Definition(OP.DEC,    false,  false,      OPREG.DEC);
+export const INT        = new Definition(OP.INT,    false,  false,      -1,         true,       true,       false);
+export const SYSCALL    = new Definition(OP.SYSCALL);

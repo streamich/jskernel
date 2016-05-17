@@ -6,3 +6,28 @@
 //     |......d
 //     |XXXXXX00 <--- Op-code = OP
 "use strict";
+(function (OP) {
+    OP[OP["MOV"] = 137] = "MOV";
+    OP[OP["MOVimm"] = 196] = "MOVimm";
+    // MOVL    = 0xB8,
+    // MOVQ    = 0xC7,
+    OP[OP["MOVABS"] = 184] = "MOVABS";
+    OP[OP["INC"] = 255] = "INC";
+    OP[OP["DEC"] = 255] = "DEC";
+    OP[OP["PUSH"] = 80] = "PUSH";
+    OP[OP["POP"] = 88] = "POP";
+    OP[OP["INT"] = 205] = "INT";
+    OP[OP["SYSCALL"] = 3845] = "SYSCALL";
+})(exports.OP || (exports.OP = {}));
+var OP = exports.OP;
+// Op-code extension into `REG` field of Mod-R/M byte, Mod-R/M byte:
+//
+//     |76543210|
+//      .....XXX <--- R/M field
+//      ..XXX <------ REG field = OPREG
+//      XX <--------- MOD field
+(function (OPREG) {
+    OPREG[OPREG["INC"] = 0] = "INC";
+    OPREG[OPREG["DEC"] = 1] = "DEC";
+})(exports.OPREG || (exports.OPREG = {}));
+var OPREG = exports.OPREG;

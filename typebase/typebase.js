@@ -5,7 +5,7 @@
 // Let's jump straight into example. Consider the following `C/C++` *stuct*:
 //
 // ```c
-// struct address {
+// typedef struct address {
 //     int port,
 //     unsigned char ip[4],
 // }
@@ -26,10 +26,10 @@
 // a tuple of `Buffer` and a `number` offset in the buffer:
 //
 // ```js
-// var p = new t.Pointer(new Buffer(address.size), 0);
+// var p = new t.Pointer(new Buffer(100), 0);
 // ```
 //
-// Finally, you can pack your data into the `Buffer`:
+// Finally, you can pack your data into the `Buffer` specified by the pointer `p`:
 //
 // ```js
 // var host = {
@@ -43,15 +43,80 @@
 //
 // ```js
 // var unpacked = address.unpack(p);
-// console.log(unpacked);
 // ```
+//
+// Or use `Variable` object to do the same thing:
+//
+// ```js
+// var v = new t.Variable(address, p);
+// v.pack(host);
+// var unpacked = v.unpack();
+// ```
+//
+// Now let's say you want to *"extend"* your C struct with a `protocol` field:
+//
+// ```c
+// typedef struct address_and_protocol {
+//     int port,
+//     unsigned char ip[4],
+//     int protocol,
+// }
+// ```
+//
+// In *C11* you can actually do it like this:
+//
+// ```c
+// typedef struct address_and_protocol {
+//     struct address,
+//     int protocol,
+// }
+// ```
+//
+// `typebase` also allows you to "extend" `Struct`s:
+//
+// ```js
+// var address_and_protocol = t.Struct.define([
+//     address,
+//     ['protocol', t.i32]
+// ]);
+// ```
+//
+// Now you can *"cast"* your `Variable` to the new type and write data to it:
+//
+// ```js
+// v.cast(address_and_protocol);
+// v.pack({
+//     port: 8080,
+//     ip: [127, 0, 0, 1],
+//     protocol: 4
+// });
+// ```
+//
+// When you pack and unpack `Variable`s, you don't need to do it for the whole `Variable` at once, instead
+// you can just pick the field you need:
+//
+// ```js
+// v.get('ip').pack([192, 168, 1, 100]);
+// console.log(v.get('ip').unpack());
+// ```
+//
+// One useful property all `typebase` types have is `size`, which is size of the type in bytes:
+//
+// ```js
+// console.log(address.size);
+// ```
+//
+// ## TL;DR
 //
 // `typbase` defines five basic building blocks: `Pointer`, `Primitive`, `List`, `Struct`, `Variable`.
 //
-// `Pointer` represents a location of data in memory, similar `C/C++` pointers. `Primitive` is a basic data type
-// that knows how to pack and unpack itself into `Buffer`. `Struct` is a structure of data, similar to `struct` in C.
-// `List` is an array of `Primitive`s, `Struct`s or other `List`s. And, finally, `Variable` is an object that has
-// an address in memory represented by `Pointer` and a type represented by one of `Primitive`, `List` or `Struct`.
+// `Pointer` represents a location of data in memory, similar to `C/C++` pointers.
+//
+// `Primitive` is a basic data type that knows how to pack and unpack itself into `Buffer`. `Struct` is a structure
+// of data, similar to `struct` in C. `List` is an array of `Primitive`s, `Struct`s or other `List`s.
+//
+// And, finally, `Variable` is an object that has an **address in memory** represented by `Pointer` and a
+// **type** represented by one of `Primitive`, `List` or `Struct`.
 "use strict";
 // ## Pointer
 //
@@ -153,30 +218,40 @@ var IStructField = (function () {
 exports.IStructField = IStructField;
 // Represents a structured memory record definition similar to that of `struct` in `C`.
 var Struct = (function () {
-    function Struct() {
+    function Struct(fields, name) {
         this.size = 0;
         this.fields = [];
         this.map = {};
+        this.addFields(fields);
+        this.name = name;
     }
     Struct.define = function (fields, name) {
         if (name === void 0) { name = ''; }
-        var newstruct = new Struct;
-        var offset = 0;
+        return new Struct(fields, name);
+    };
+    Struct.prototype.addFields = function (fields) {
         for (var _i = 0, fields_1 = fields; _i < fields_1.length; _i++) {
             var field = fields_1[_i];
-            var name = field[0], struct = field[1];
+            /* Inherit properties from another struct */
+            if (field instanceof Struct) {
+                var parent = field;
+                var parentfields = parent.fields.map(function (field) {
+                    return [field.name, field.type];
+                });
+                this.addFields(parentfields);
+                continue;
+            }
+            var fielddef = field;
+            var name = fielddef[0], struct = fielddef[1];
             var entry = {
                 type: struct,
-                offset: offset,
+                offset: this.size,
                 name: name
             };
-            newstruct.fields.push(entry);
-            newstruct.map[name] = entry;
-            offset += struct.size;
+            this.fields.push(entry);
+            this.map[name] = entry;
+            this.size += struct.size;
         }
-        newstruct.size = offset;
-        newstruct.name = name;
-        return newstruct;
     };
     Struct.prototype.pack = function (p, data) {
         var fp = p.clone();
@@ -213,7 +288,10 @@ var Variable = (function () {
     Variable.prototype.unpack = function (length) {
         return this.type.unpack(this.pointer, length);
     };
-    Variable.prototype.getField = function (name) {
+    Variable.prototype.cast = function (newtype) {
+        this.type = newtype;
+    };
+    Variable.prototype['get'] = function (name) {
         if (!(this.type instanceof Struct))
             throw Error('Variable is not a `Struct`.');
         var struct = this.type;
@@ -225,6 +303,8 @@ var Variable = (function () {
     return Variable;
 }());
 exports.Variable = Variable;
+// ## Basic Types
+//
 // Define basic types and export as part of the library.
 var bp = Buffer.prototype;
 exports.i8 = Primitive.define(1, bp.writeInt8, bp.readInt8);

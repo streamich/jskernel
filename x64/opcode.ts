@@ -7,15 +7,18 @@
 //     |......d
 //     |XXXXXX00 <--- Op-code = OP
 
-export const enum OP {
-    MOV     = 0x89,
-    MOVL    = 0xB8,
-    MOVQ    = 0xC7,
-    MOVABS  = 0xB8, // Lower 3 bits encode destination register.
-    INC     = 0xff,
-    DEC     = 0xff,
-    PUSH    = 0x50,
-    POP     = 0x58,
+export enum OP {
+    MOV         = 0x89,
+    MOVimm      = 0xC4,
+    // MOVL    = 0xB8,
+    // MOVQ    = 0xC7,
+    MOVABS      = 0xB8,
+    INC         = 0xFF,
+    DEC         = 0xFF,
+    PUSH        = 0x50,
+    POP         = 0x58,
+    INT         = 0xCD,
+    SYSCALL     = 0x0F05,
 }
 
 
@@ -26,7 +29,7 @@ export const enum OP {
 //      ..XXX <------ REG field = OPREG
 //      XX <--------- MOD field
 
-export const enum OPREG {
-    INC = 0,
-    DEC = 1,
+export enum OPREG {
+    INC = 0b000,
+    DEC = 0b001,
 }

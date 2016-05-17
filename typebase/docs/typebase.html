@@ -17,7 +17,7 @@
           <h1 id="typebase">Typebase</h1>
 <p><a href="http://www.npmjs.com/package/typebase">typebase</a> provides C-like Types, Structs and Pointers for JavaScript.</p>
 <p>Let’s jump straight into example. Consider the following <code>C/C++</code> <em>stuct</em>:</p>
-<pre><code class="lang-c"><span class="hljs-keyword">struct</span> address {
+<pre><code class="lang-c"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">struct</span> address {
     <span class="hljs-keyword">int</span> port,
     <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> ip[<span class="hljs-number">4</span>],
 }
@@ -32,9 +32,9 @@
 <p>You can use your <code>address</code> <em>struct</em> to pack binary data into <code>Buffer</code>. But, first
 we create a <em>pointer</em> to memory where data will be located. <code>Pointer</code> is defined as
 a tuple of <code>Buffer</code> and a <code>number</code> offset in the buffer:</p>
-<pre><code class="lang-js"><span class="hljs-keyword">var</span> p = <span class="hljs-keyword">new</span> t.Pointer(<span class="hljs-keyword">new</span> Buffer(address.size), <span class="hljs-number">0</span>);
+<pre><code class="lang-js"><span class="hljs-keyword">var</span> p = <span class="hljs-keyword">new</span> t.Pointer(<span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">100</span>), <span class="hljs-number">0</span>);
 </code></pre>
-<p>Finally, you can pack your data into the <code>Buffer</code>:</p>
+<p>Finally, you can pack your data into the <code>Buffer</code> specified by the pointer <code>p</code>:</p>
 <pre><code class="lang-js"><span class="hljs-keyword">var</span> host = {
     port: <span class="hljs-number">8080</span>,
     ip: [<span class="hljs-number">127</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>]
@@ -43,13 +43,54 @@ address.pack(p, host);
 </code></pre>
 <p>And unpack it back:</p>
 <pre><code class="lang-js"><span class="hljs-keyword">var</span> unpacked = address.unpack(p);
-<span class="hljs-built_in">console</span>.log(unpacked);
 </code></pre>
+<p>Or use <code>Variable</code> object to do the same thing:</p>
+<pre><code class="lang-js"><span class="hljs-keyword">var</span> v = <span class="hljs-keyword">new</span> t.Variable(address, p);
+v.pack(host);
+<span class="hljs-keyword">var</span> unpacked = v.unpack();
+</code></pre>
+<p>Now let’s say you want to <em>“extend”</em> your C struct with a <code>protocol</code> field:</p>
+<pre><code class="lang-c"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">struct</span> address_and_protocol {
+    <span class="hljs-keyword">int</span> port,
+    <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> ip[<span class="hljs-number">4</span>],
+    <span class="hljs-keyword">int</span> protocol,
+}
+</code></pre>
+<p>In <em>C11</em> you can actually do it like this:</p>
+<pre><code class="lang-c"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">struct</span> address_and_protocol {
+    <span class="hljs-keyword">struct</span> address,
+    <span class="hljs-keyword">int</span> protocol,
+}
+</code></pre>
+<p><code>typebase</code> also allows you to “extend” <code>Struct</code>s:</p>
+<pre><code class="lang-js"><span class="hljs-keyword">var</span> address_and_protocol = t.Struct.define([
+    address,
+    [<span class="hljs-string">'protocol'</span>, t.i32]
+]);
+</code></pre>
+<p>Now you can <em>“cast”</em> your <code>Variable</code> to the new type and write data to it:</p>
+<pre><code class="lang-js">v.cast(address_and_protocol);
+v.pack({
+    port: <span class="hljs-number">8080</span>,
+    ip: [<span class="hljs-number">127</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>],
+    protocol: <span class="hljs-number">4</span>
+});
+</code></pre>
+<p>When you pack and unpack <code>Variable</code>s, you don’t need to do it for the whole <code>Variable</code> at once, instead
+you can just pick the field you need:</p>
+<pre><code class="lang-js">v.get(<span class="hljs-string">'ip'</span>).pack([<span class="hljs-number">192</span>, <span class="hljs-number">168</span>, <span class="hljs-number">1</span>, <span class="hljs-number">100</span>]);
+<span class="hljs-built_in">console</span>.log(v.get(<span class="hljs-string">'ip'</span>).unpack());
+</code></pre>
+<p>One useful property all <code>typebase</code> types have is <code>size</code>, which is size of the type in bytes:</p>
+<pre><code class="lang-js"><span class="hljs-built_in">console</span>.log(address.size);
+</code></pre>
+<h2 id="tl-dr">TL;DR</h2>
 <p><code>typbase</code> defines five basic building blocks: <code>Pointer</code>, <code>Primitive</code>, <code>List</code>, <code>Struct</code>, <code>Variable</code>.</p>
-<p><code>Pointer</code> represents a location of data in memory, similar <code>C/C++</code> pointers. <code>Primitive</code> is a basic data type
-that knows how to pack and unpack itself into <code>Buffer</code>. <code>Struct</code> is a structure of data, similar to <code>struct</code> in C.
-<code>List</code> is an array of <code>Primitive</code>s, <code>Struct</code>s or other <code>List</code>s. And, finally, <code>Variable</code> is an object that has
-an address in memory represented by <code>Pointer</code> and a type represented by one of <code>Primitive</code>, <code>List</code> or <code>Struct</code>.</p>
+<p><code>Pointer</code> represents a location of data in memory, similar to <code>C/C++</code> pointers.</p>
+<p><code>Primitive</code> is a basic data type that knows how to pack and unpack itself into <code>Buffer</code>. <code>Struct</code> is a structure
+of data, similar to <code>struct</code> in C. <code>List</code> is an array of <code>Primitive</code>s, <code>Struct</code>s or other <code>List</code>s.</p>
+<p>And, finally, <code>Variable</code> is an object that has an <strong>address in memory</strong> represented by <code>Pointer</code> and a
+<strong>type</strong> represented by one of <code>Primitive</code>, <code>List</code> or <code>Struct</code>.</p>
 
           
         
@@ -202,7 +243,9 @@ and which know how to pack and unpack themselves into <code>Buffer</code>s.</p>
     <span class="hljs-keyword">type</span>: IType;
     offset: <span class="hljs-built_in">number</span>;
     name: <span class="hljs-built_in">string</span>;
-}</pre></div>
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">type</span> IFieldDefinition = [<span class="hljs-built_in">string</span>, IType] | Struct;</pre></div>
         
       
         
@@ -211,23 +254,8 @@ and which know how to pack and unpack themselves into <code>Buffer</code>s.</p>
         
           <div class='highlight'><pre><span class="hljs-keyword">export</span> <span class="hljs-keyword">class</span> Struct <span class="hljs-keyword">implements</span> IType {
 
-    <span class="hljs-keyword">static</span> define(fields: [<span class="hljs-built_in">string</span>, IType][], name: <span class="hljs-built_in">string</span> = <span class="hljs-string">''</span>) {
-        <span class="hljs-keyword">var</span> newstruct = <span class="hljs-keyword">new</span> Struct;
-        <span class="hljs-keyword">var</span> offset = <span class="hljs-number">0</span>;
-        <span class="hljs-keyword">for</span>(<span class="hljs-keyword">var</span> field of fields) {
-            <span class="hljs-keyword">var</span> [name, struct] = field;
-            <span class="hljs-keyword">var</span> entry: IStructField = {
-                <span class="hljs-keyword">type</span>: struct,
-                offset: offset,
-                name: name,
-            };
-            newstruct.fields.push(entry);
-            newstruct.map[name] = entry;
-            offset += struct.size;
-        }
-        newstruct.size = offset;
-        newstruct.name = name;
-        <span class="hljs-keyword">return</span> newstruct;
+    <span class="hljs-keyword">static</span> define(fields: IFieldDefinition[], name: <span class="hljs-built_in">string</span> = <span class="hljs-string">''</span>): Struct {
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Struct(fields, name);
     }
 
     size = <span class="hljs-number">0</span>;
@@ -236,6 +264,36 @@ and which know how to pack and unpack themselves into <code>Buffer</code>s.</p>
     fields: IStructField[] = [];
 
     map: {[s: <span class="hljs-built_in">string</span>]: IStructField} = {};
+
+    <span class="hljs-keyword">constructor</span>(fields: IFieldDefinition[], name: string) {
+        <span class="hljs-keyword">this</span>.addFields(fields);
+        <span class="hljs-keyword">this</span>.name = name;
+    }
+
+    <span class="hljs-keyword">protected</span> addFields(fields: IFieldDefinition[]) {
+        <span class="hljs-keyword">for</span>(<span class="hljs-keyword">var</span> field of fields) {
+            <span class="hljs-comment">/* Inherit properties from another struct */</span>
+            <span class="hljs-keyword">if</span>(field <span class="hljs-keyword">instanceof</span> Struct) {
+                <span class="hljs-keyword">var</span> parent = field as Struct;
+                <span class="hljs-keyword">var</span> parentfields = parent.fields.map(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">field: IStructField</span>) </span>{
+                    <span class="hljs-keyword">return</span> [field.name, field.type];
+                });
+                <span class="hljs-keyword">this</span>.addFields(parentfields as [<span class="hljs-built_in">string</span>, IType][]);
+                <span class="hljs-keyword">continue</span>;
+            }
+
+            <span class="hljs-keyword">var</span> fielddef = field as [<span class="hljs-built_in">string</span>, IType];
+            <span class="hljs-keyword">var</span> [name, struct] = fielddef;
+            <span class="hljs-keyword">var</span> entry: IStructField = {
+                <span class="hljs-keyword">type</span>: struct,
+                offset: <span class="hljs-keyword">this</span>.size,
+                name: name,
+            };
+            <span class="hljs-keyword">this</span>.fields.push(entry);
+            <span class="hljs-keyword">this</span>.map[name] = entry;
+            <span class="hljs-keyword">this</span>.size += struct.size;
+        }
+    }
 
     pack(p: Pointer, data: <span class="hljs-built_in">any</span>) {
         <span class="hljs-keyword">var</span> fp = p.clone();
@@ -279,7 +337,11 @@ and which know how to pack and unpack themselves into <code>Buffer</code>s.</p>
         <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.type.unpack(<span class="hljs-keyword">this</span>.pointer, length);
     }
 
-    getField(name: <span class="hljs-built_in">string</span>) {
+    cast(newtype: IType) {
+        <span class="hljs-keyword">this</span>.type = newtype;
+    }
+
+    <span class="hljs-string">'get'</span>(name: <span class="hljs-built_in">string</span>) {
         <span class="hljs-keyword">if</span>(!(<span class="hljs-keyword">this</span>.type <span class="hljs-keyword">instanceof</span> Struct)) <span class="hljs-keyword">throw</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Variable is not a `Struct`.'</span>);
         <span class="hljs-keyword">var</span> struct = <span class="hljs-keyword">this</span>.type as Struct;
         <span class="hljs-keyword">var</span> field = struct.map[name] as IStructField;
@@ -291,7 +353,8 @@ and which know how to pack and unpack themselves into <code>Buffer</code>s.</p>
         
       
         
-        <p>Define basic types and export as part of the library.</p>
+        <h2 id="basic-types">Basic Types</h2>
+<p>Define basic types and export as part of the library.</p>
 
         
           <div class='highlight'><pre><span class="hljs-keyword">var</span> bp = Buffer.prototype;

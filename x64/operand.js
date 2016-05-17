@@ -4,6 +4,7 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
+var ctypes_1 = require('./ctypes');
 // # General operand used in our assembly "language".
 var Operand = (function () {
     function Operand() {
@@ -14,15 +15,16 @@ var Operand = (function () {
     return Operand;
 }());
 exports.Operand = Operand;
-// ## Constant
-//
-// Constants are everything where we directly type in a `number` value.
 var Constant = (function (_super) {
     __extends(Constant, _super);
-    function Constant() {
-        _super.apply(this, arguments);
+    function Constant(value) {
+        _super.call(this);
         // Size in bits.
         this.size = 32;
+        this.value = 0;
+        // Each byte as a `number` in reverse order.
+        this.octets = [];
+        this.Value = value;
     }
     Constant.sizeClass = function (value) {
         if ((value <= 0x7f) && (value >= -0x80))
@@ -33,21 +35,93 @@ var Constant = (function (_super) {
             return 32 /* DOUBLE */;
         return 64 /* QUAD */;
     };
+    Object.defineProperty(Constant.prototype, "Value", {
+        set: function (value) {
+            if (value instanceof Array) {
+                if (value.length !== 2)
+                    throw TypeError('number64 must be a 2-tuple, given: ' + value);
+                this.setValue64(value);
+            }
+            else if (typeof value === 'number') {
+                /* JS integers are 53-bit, so split here `number`s over 32 bits into [number, number]. */
+                if (Constant.sizeClass(value) === 64 /* QUAD */)
+                    this.setValue64([ctypes_1.UInt64.lo(value), ctypes_1.UInt64.hi(value)]);
+                else
+                    this.setValue32(value);
+            }
+            else
+                throw TypeError('Constant value must be of type number|number64.');
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Constant.prototype.setValue32 = function (value) {
+        var size = Constant.sizeClass(value);
+        this.size = size;
+        this.value = value;
+        this.octets = [];
+        this.octets[0] = value & 0xFF;
+        if (size > 8 /* BYTE */)
+            this.octets[1] = (value >> 8) & 0xFF;
+        if (size > 16 /* WORD */) {
+            this.octets[2] = (value >> 16) & 0xFF;
+            this.octets[3] = (value >> 24) & 0xFF;
+        }
+    };
+    Constant.prototype.setValue64 = function (value) {
+        this.size = 64;
+        this.value = value;
+        this.octets = [];
+        var lo = value[0], hi = value[1];
+        this.octets[0] = (lo) & 0xFF;
+        this.octets[1] = (lo >> 8) & 0xFF;
+        this.octets[2] = (lo >> 16) & 0xFF;
+        this.octets[3] = (lo >> 24) & 0xFF;
+        this.octets[4] = (hi) & 0xFF;
+        this.octets[5] = (hi >> 8) & 0xFF;
+        this.octets[6] = (hi >> 16) & 0xFF;
+        this.octets[7] = (hi >> 24) & 0xFF;
+    };
+    Constant.prototype.zeroExtend = function (size) {
+        if (this.size > size)
+            throw Error("Already larger than " + size + " bits, cannot zero-extend.");
+        var missing_bytes = (size - this.size) / 8;
+        this.size = size;
+        for (var i = 0; i < missing_bytes; i++)
+            this.octets.push(0);
+    };
     Constant.prototype.toString = function () {
         return "const[" + this.size + "]: " + this.value;
     };
     return Constant;
 }(Operand));
 exports.Constant = Constant;
+var Immediate = (function (_super) {
+    __extends(Immediate, _super);
+    function Immediate() {
+        _super.apply(this, arguments);
+    }
+    return Immediate;
+}(Constant));
+exports.Immediate = Immediate;
 var Displacement = (function (_super) {
     __extends(Displacement, _super);
     function Displacement(value) {
-        _super.call(this);
+        _super.call(this, value);
         this.size = Displacement.SIZE.DISP8;
     }
+    Displacement.prototype.setValue32 = function (value) {
+        _super.prototype.setValue32.call(this, value);
+        /* Make sure `Displacement` is 1 or 4 bytes, not 2. */
+        if (this.size > Displacement.SIZE.DISP8)
+            this.zeroExtend(Displacement.SIZE.DISP32);
+    };
+    Displacement.prototype.setValue64 = function () {
+        throw TypeError("Displacement can be only of these sizes: " + Displacement.SIZE.DISP8 + " and " + Displacement.SIZE.DISP32 + ".");
+    };
     Displacement.SIZE = {
         DISP8: 8 /* BYTE */,
-        DISP32: 32 /* DOUBLE */
+        DISP32: 32 /* DOUBLE */,
     };
     return Displacement;
 }(Constant));
@@ -88,8 +162,10 @@ var Register = (function (_super) {
         this.isExtended = extended;
     }
     Register.prototype.ref = function () {
+        return (new Memory).ref(this);
     };
-    Register.prototype.disp = function () {
+    Register.prototype.disp = function (value) {
+        return (new Memory).ref(this).disp(value);
     };
     Register.prototype.toString = function () {
         return '%' + this.name;
@@ -107,16 +183,17 @@ var Memory = (function (_super) {
         this.base = null;
         this.index = null;
         this.scale = null;
-        this.disp = null;
+        this.displacement = null;
     }
     Memory.prototype.needsSib = function () {
         return !!this.index || !!this.scale;
     };
-    Memory.prototype.ref = function () {
+    Memory.prototype.ref = function (base) {
+        this.base = base;
         return this;
     };
     Memory.prototype.disp = function (value) {
-        this.disp = new Displacement(value);
+        this.displacement = new Displacement(value);
         return this;
     };
     Memory.prototype.toString = function () {

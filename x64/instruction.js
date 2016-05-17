@@ -5,6 +5,9 @@ var __extends = (this && this.__extends) || function (d, b) {
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
 var operand_1 = require('./operand');
+var o = require('./operand');
+var opcode_1 = require('./opcode');
+var code_1 = require('./code');
 // # x86_64 Instruction
 //
 // Each CPU instruction is encoded in the following form, where only
@@ -102,19 +105,28 @@ var Opcode = (function (_super) {
         this.isSizeWord = true;
     }
     Opcode.prototype.write = function (arr) {
-        arr.push(this.op);
+        // Op-code can be up to 4 bytes long, we support up to 3 bytes now, because JavaScript
+        // bit operations are performed on 32 bit signed ints, thus there are issues with the last
+        // byte because of the sign bit.
+        var op = this.op;
+        if (op > 0xFFFF)
+            arr.push((op & 0xFF0000) >> 16);
+        if (op > 0xFF)
+            arr.push((op & 0xFF00) >> 8);
+        arr.push(op & 0xFF);
         return arr;
     };
-    Opcode.MASK_SIZE = 254; // `s` bit
-    Opcode.MASK_DIRECTION = 253; // `d` bit
-    Opcode.MASK_OP = 248; // When register is encoded into op-code.
+    /* Now we support up to 3 byte instructions */
+    Opcode.MASK_SIZE = 16777214; // `s` bit
+    Opcode.MASK_DIRECTION = 16777213; // `d` bit
+    Opcode.MASK_OP = 16777208; // When register is encoded into op-code.
     Opcode.SIZE = {
         BYTE: 0,
-        WORD: 1
+        WORD: 1,
     };
     Opcode.DIRECTION = {
         REG_IS_SRC: 0,
-        REG_IS_DST: 2
+        REG_IS_DST: 2,
     };
     return Opcode;
 }(InstructionPart));
@@ -149,7 +161,7 @@ var Modrm = (function (_super) {
         INDIRECT: 0,
         DISP8: 1,
         DISP32: 2,
-        REG_TO_REG: 3
+        REG_TO_REG: 3,
     };
     // When this value is encoded in R/M field, SIB byte has to follow Mod-R/M byte.
     Modrm.RM_NEEDS_SIB = 4;
@@ -218,17 +230,33 @@ var Sib = (function (_super) {
     return Sib;
 }(InstructionPart));
 exports.Sib = Sib;
+// ## Displacement
+var Displacement = (function (_super) {
+    __extends(Displacement, _super);
+    function Displacement(value) {
+        _super.call(this);
+        this.value = value;
+    }
+    Displacement.prototype.write = function (arr) {
+        if (arr === void 0) { arr = []; }
+        this.value.octets.forEach(function (octet) { arr.push(octet); });
+        return arr;
+    };
+    return Displacement;
+}(InstructionPart));
+exports.Displacement = Displacement;
 // ## Immediate
 //
-// Immediate constant value that follows other instructio bytes.
+// Immediate constant value that follows other instruction bytes.
 var Immediate = (function (_super) {
     __extends(Immediate, _super);
-    function Immediate() {
-        _super.apply(this, arguments);
+    function Immediate(value) {
+        _super.call(this);
+        this.value = value;
     }
     Immediate.prototype.write = function (arr) {
         if (arr === void 0) { arr = []; }
-        arr.push(0);
+        this.value.octets.forEach(function (octet) { arr.push(octet); });
         return arr;
     };
     return Immediate;
@@ -265,7 +293,10 @@ var Instruction = (function () {
         this.opcode = new Opcode; // required
         this.modrm = null;
         this.sib = null;
+        this.displacement = null;
         this.immediate = null;
+        // Instruction is bound to some code object.
+        this.code = null;
         // Direction for register-to-register `MOV` operations, whether REG field of Mod-R/M byte is destination.
         this.regToRegDirectionRegIsDst = true;
         // Index where instruction was inserted in `Code`s buffer.
@@ -290,6 +321,11 @@ var Instruction = (function () {
             this.immediate.write(arr);
         return arr;
     };
+    // http://wiki.osdev.org/X86-64_Instruction_Encoding#Operand-size_and_address-size_override_prefix
+    Instruction.prototype.getOperandSize = function () {
+    };
+    Instruction.prototype.getAddressSize = function () {
+    };
     Instruction.prototype.create = function () {
         var op = this.op;
         var dstreg = null;
@@ -301,7 +337,7 @@ var Instruction = (function () {
             dstreg = op.dst;
         else if (op.dst instanceof operand_1.Memory)
             dstmem = op.dst;
-        else
+        else if (op.dst)
             throw TypeError("Destination operand should be Register or Memory; given: " + op.dst.toString());
         // Source
         if (op.src) {
@@ -314,14 +350,18 @@ var Instruction = (function () {
         }
         // Create instruction parts.
         this.createPrefixes(dstreg, dstmem, srcreg, srcmem);
-        this.createOpcode(dstreg, dstmem, srcreg, srcmem);
+        this.createOpcode(dstreg, srcreg);
         this.createModrm(dstreg, dstmem, srcreg, srcmem);
-        this.createSib(dstreg, dstmem, srcreg, srcmem);
-        this.createImmediate(dstreg, dstmem, srcreg, srcmem);
+        this.createSib(dstmem, srcmem);
+        this.createDisplacement(dstmem, srcmem);
+        this.createImmediate();
     };
     Instruction.prototype.createPrefixes = function (dstreg, dstmem, srcreg, srcmem) {
-        if (this.def.mandatoryRex || dstreg.isExtended)
-            this.prefixes.push(this.createRex(dstreg, dstmem, srcreg, srcmem));
+        if (this.code.mode = code_1.MODE.LONG) {
+            if (this.def.mandatoryRex || (dstreg && dstreg.isExtended)) {
+                this.prefixes.push(this.createRex(dstreg, dstmem, srcreg, srcmem));
+            }
+        }
     };
     Instruction.prototype.createRex = function (dstreg, dstmem, srcreg, srcmem) {
         var W = 0, R = 0, X = 0, B = 0;
@@ -345,7 +385,7 @@ var Instruction = (function () {
         }
         return new PrefixRex(W, R, X, B);
     };
-    Instruction.prototype.createOpcode = function (dstreg, dstmem, srcreg, srcmem) {
+    Instruction.prototype.createOpcode = function (dstreg, srcreg) {
         var def = this.def;
         var opcode = this.opcode;
         opcode.op = def.op;
@@ -361,7 +401,7 @@ var Instruction = (function () {
             if (dstreg) {
                 direction = Opcode.DIRECTION.REG_IS_DST;
                 // *reg-to-reg* `MOV` operation
-                if (srcreg && (opcode.op == 137 /* MOV */)) {
+                if (srcreg && (opcode.op == opcode_1.OP.MOV)) {
                     if (this.regToRegDirectionRegIsDst)
                         direction = Opcode.DIRECTION.REG_IS_DST;
                     else
@@ -382,7 +422,7 @@ var Instruction = (function () {
             if (srcreg && dstreg) {
                 mod = Modrm.MOD.REG_TO_REG;
                 // Remove `d` and `s` bits.
-                var is_mov = (137 /* MOV */ >> 2) === (this.opcode.op >> 2);
+                var is_mov = (opcode_1.OP.MOV >> 2) === (this.opcode.op >> 2);
                 if (!is_mov) {
                     reg = dstreg.id;
                     rm = srcreg.id;
@@ -404,8 +444,8 @@ var Instruction = (function () {
                 var mem = srcmem || dstmem;
                 reg = r.id;
                 rm = mem.base ? mem.base.id : Modrm.RM_NEEDS_SIB;
-                if (mem.disp) {
-                    if (mem.disp.size === operand_1.Displacement.SIZE.DISP8)
+                if (mem.displacement) {
+                    if (mem.displacement.size === o.Displacement.SIZE.DISP8)
                         mod = Modrm.MOD.DISP8;
                     else
                         mod = Modrm.MOD.DISP32;
@@ -416,7 +456,7 @@ var Instruction = (function () {
             this.modrm = new Modrm(mod, reg, rm);
         }
     };
-    Instruction.prototype.createSib = function (dstreg, dstmem, srcreg, srcmem) {
+    Instruction.prototype.createSib = function (dstmem, srcmem) {
         if (!this.modrm || (this.modrm.rm != Modrm.RM_NEEDS_SIB))
             return;
         var mem = srcmem || dstmem;
@@ -429,7 +469,15 @@ var Instruction = (function () {
             B = mem.base.id;
         this.sib = new Sib(userscale, I, B);
     };
-    Instruction.prototype.createImmediate = function (dstreg, dstmem, srcreg, srcmem) {
+    Instruction.prototype.createDisplacement = function (dstmem, srcmem) {
+        var mem = dstmem || srcmem;
+        if (mem && mem.displacement) {
+            this.displacement = new Displacement(mem.displacement);
+        }
+    };
+    Instruction.prototype.createImmediate = function () {
+        if (this.op.imm)
+            this.immediate = new Immediate(this.op.imm);
     };
     return Instruction;
 }());

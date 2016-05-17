@@ -2,6 +2,11 @@
 
 .global main
 main:
+        syscall
+        int $80
+        int $13
+        int $10
+        movq $1, %rax
 
 test2:
         dec %r10d

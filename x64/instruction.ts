@@ -1,7 +1,9 @@
 import {extend} from './util';
-import {Operand, Constant, Displacement, Register, Memory} from './operand';
+import {Operand, Constant, Register, Memory} from './operand';
+import * as o from './operand';
 import {Definition} from './def';
 import {OP} from './opcode';
+import {Code, MODE} from './code';
 
 
 // # x86_64 Instruction
@@ -91,9 +93,10 @@ export class PrefixRex extends Prefix {
 
 export class Opcode extends InstructionPart {
 
-    static MASK_SIZE        = 0b11111110;   // `s` bit
-    static MASK_DIRECTION   = 0b11111101;   // `d` bit
-    static MASK_OP          = 0b11111000;   // When register is encoded into op-code.
+    /* Now we support up to 3 byte instructions */
+    static MASK_SIZE        = 0b111111111111111111111110;   // `s` bit
+    static MASK_DIRECTION   = 0b111111111111111111111101;   // `d` bit
+    static MASK_OP          = 0b111111111111111111111000;   // When register is encoded into op-code.
     static SIZE = { // `s` bit
         BYTE: 0b0,
         WORD: 0b1,
@@ -117,7 +120,13 @@ export class Opcode extends InstructionPart {
     isSizeWord: boolean = true;
 
     write(arr: number[]): number[] {
-        arr.push(this.op);
+        // Op-code can be up to 4 bytes long, we support up to 3 bytes now, because JavaScript
+        // bit operations are performed on 32 bit signed ints, thus there are issues with the last
+        // byte because of the sign bit.
+        var op = this.op;
+        if(op > 0xFFFF) arr.push((op & 0xFF0000) >> 16);
+        if(op > 0xFF) arr.push((op & 0xFF00) >> 8);
+        arr.push(op & 0xFF);
         return arr;
     }
 }
@@ -220,15 +229,37 @@ export class Sib extends InstructionPart {
 }
 
 
+// ## Displacement
+
+export class Displacement extends InstructionPart {
+    value: Constant;
+
+    constructor(value: Constant) {
+        super();
+        this.value = value;
+    }
+
+    write(arr: number[] = []): number[] {
+        this.value.octets.forEach((octet) => { arr.push(octet); });
+        return arr;
+    }
+}
+
+
 // ## Immediate
 //
-// Immediate constant value that follows other instructio bytes.
+// Immediate constant value that follows other instruction bytes.
 
 export class Immediate extends InstructionPart {
     value: Constant;
 
+    constructor(value: Constant) {
+        super();
+        this.value = value;
+    }
+
     write(arr: number[] = []): number[] {
-        arr.push(0);
+        this.value.octets.forEach((octet) => { arr.push(octet); });
         return arr;
     }
 }
@@ -241,7 +272,7 @@ export class Operands {
     src: Operand = null;    // Source
     imm: Constant = null;   // Immediate
 
-    constructor(dst = null, src = null, imm = null) {
+    constructor(dst: Operand = null, src: Operand = null, imm: Constant = null) {
         this.dst = dst;
         this.src = src;
         this.imm = imm;
@@ -263,7 +294,11 @@ export class Instruction {
     opcode: Opcode = new Opcode; // required
     modrm: Modrm = null;
     sib: Sib = null;
+    displacement: Displacement = null;
     immediate: Immediate = null;
+
+    // Instruction is bound to some code object.
+    code: Code = null;
 
     // Direction for register-to-register `MOV` operations, whether REG field of Mod-R/M byte is destination.
     protected regToRegDirectionRegIsDst: boolean = true;
@@ -289,6 +324,15 @@ export class Instruction {
         return arr;
     }
 
+    // http://wiki.osdev.org/X86-64_Instruction_Encoding#Operand-size_and_address-size_override_prefix
+    getOperandSize() {
+        
+    }
+
+    getAddressSize() {
+
+    }
+
     protected create() {
         var op = this.op;
         var dstreg: Register = null;
@@ -299,7 +343,7 @@ export class Instruction {
         // Destination
         if(op.dst instanceof Register)    dstreg = op.dst as Register;
         else if(op.dst instanceof Memory) dstmem = op.dst as Memory;
-        else throw TypeError(`Destination operand should be Register or Memory; given: ${op.dst.toString()}`);
+        else if(op.dst) throw TypeError(`Destination operand should be Register or Memory; given: ${op.dst.toString()}`);
 
         // Source
         if(op.src) {
@@ -310,16 +354,20 @@ export class Instruction {
         }
 
         // Create instruction parts.
-        this.createPrefixes (dstreg, dstmem, srcreg, srcmem);
-        this.createOpcode   (dstreg, dstmem, srcreg, srcmem);
-        this.createModrm    (dstreg, dstmem, srcreg, srcmem);
-        this.createSib      (dstreg, dstmem, srcreg, srcmem);
-        this.createImmediate(dstreg, dstmem, srcreg, srcmem);
+        this.createPrefixes     (dstreg, dstmem, srcreg, srcmem);
+        this.createOpcode       (dstreg, srcreg);
+        this.createModrm        (dstreg, dstmem, srcreg, srcmem);
+        this.createSib          (dstmem, srcmem);
+        this.createDisplacement (dstmem, srcmem);
+        this.createImmediate    ();
     }
 
     protected createPrefixes(dstreg: Register, dstmem: Memory, srcreg: Register, srcmem: Memory) {
-        if(this.def.mandatoryRex || dstreg.isExtended)
-            this.prefixes.push(this.createRex(dstreg, dstmem, srcreg, srcmem));
+        if(this.code.mode = MODE.LONG) { // REX prefix defined only in `LONG` mode.
+            if(this.def.mandatoryRex || (dstreg && dstreg.isExtended)) {
+                this.prefixes.push(this.createRex(dstreg, dstmem, srcreg, srcmem));
+            }
+        }
     }
 
     protected createRex(dstreg: Register, dstmem: Memory, srcreg: Register, srcmem: Memory): PrefixRex {
@@ -341,7 +389,7 @@ export class Instruction {
         return new PrefixRex(W, R, X, B);
     }
 
-    protected createOpcode(dstreg: Register, dstmem: Memory, srcreg: Register, srcmem: Memory) {
+    protected createOpcode(dstreg: Register, srcreg: Register) {
         var def = this.def;
         var opcode = this.opcode;
         opcode.op = def.op;
@@ -402,16 +450,16 @@ export class Instruction {
                 reg = r.id;
                 rm = mem.base ? mem.base.id : Modrm.RM_NEEDS_SIB;
 
-                if(mem.disp) {
-                    if(mem.disp.size === Displacement.SIZE.DISP8)   mod = Modrm.MOD.DISP8;
-                    else                                            mod = Modrm.MOD.DISP32;
-                } else                                              mod = Modrm.MOD.INDIRECT;
+                if(mem.displacement) {
+                    if(mem.displacement.size === o.Displacement.SIZE.DISP8)   mod = Modrm.MOD.DISP8;
+                    else                                                    mod = Modrm.MOD.DISP32;
+                } else                                                      mod = Modrm.MOD.INDIRECT;
             }
             this.modrm = new Modrm(mod, reg, rm);
         }
     }
 
-    protected createSib(dstreg: Register, dstmem: Memory, srcreg: Register, srcmem: Memory) {
+    protected createSib(dstmem: Memory, srcmem: Memory) {
         if(!this.modrm || (this.modrm.rm != Modrm.RM_NEEDS_SIB)) return;
 
         var mem: Memory = srcmem || dstmem;
@@ -424,8 +472,16 @@ export class Instruction {
         this.sib = new Sib(userscale, I, B);
     }
 
-    protected createImmediate(dstreg: Register, dstmem: Memory, srcreg: Register, srcmem: Memory) {
+    protected createDisplacement(dstmem: Memory, srcmem: Memory) {
+        var mem: Memory = dstmem || srcmem;
+        if(mem && mem.displacement) {
+            this.displacement = new Displacement(mem.displacement);
+        }
+    }
 
+    protected createImmediate() {
+        if(this.op.imm)
+            this.immediate = new Immediate(this.op.imm);
     }
 }
 

@@ -1,13 +1,17 @@
 import * as i from './instruction';
 import {extend} from './util';
-import {Encoder} from './encoder';
-import {rax, r8} from './regfile';
+import {rax, rsi} from './regfile';
 import * as def from './def';
 import {Code} from './code';
 
 
+
+
 var _ = new Code;
-_.movq(rax, rax);
+_.mov(rax, 1);
+// _.mov(rsi, rax);
+// _.syscall();
+// _.movq(rax, rax);
 // _.push(rax);
 // _.push(r8);
 // _.pop(rax);

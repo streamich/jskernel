@@ -5,11 +5,12 @@ var __extends = (this && this.__extends) || function (d, b) {
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
 var i = require('./instruction');
+var o = require('./operand');
 var d = require('./def');
 (function (MODE) {
-    MODE[MODE["REAL"] = 0] = "REAL";
-    MODE[MODE["COMPAT"] = 1] = "COMPAT";
-    MODE[MODE["LONG"] = 2] = "LONG";
+    MODE[MODE["REAL"] = 16] = "REAL";
+    MODE[MODE["COMPAT"] = 17] = "COMPAT";
+    MODE[MODE["LONG"] = 18] = "LONG";
 })(exports.MODE || (exports.MODE = {}));
 var MODE = exports.MODE;
 var Code = (function () {
@@ -18,11 +19,54 @@ var Code = (function () {
         this.ins = [];
         this.ClassInstruction = i.Instruction;
     }
-    Code.prototype.insert = function (def, op) {
-        var ins = new this.ClassInstruction(def, op);
+    Code.prototype.insert = function (def, o1, o2, o3) {
+        var ins = new this.ClassInstruction(def, this.createOperands(o1, o2, o3));
         ins.index = this.ins.length;
         this.ins.push(ins);
         return ins;
+    };
+    Code.prototype.createOperand = function (operand) {
+        if (operand instanceof o.Operand)
+            return operand;
+        if (typeof operand === 'number') {
+            var imm = new o.Constant(operand);
+            if (imm.size < 32 /* DOUBLE */)
+                imm.zeroExtend(32 /* DOUBLE */);
+            return imm;
+        }
+        if (operand instanceof Array)
+            return new o.Constant(operand);
+        throw TypeError("Not a valid TOperand type: " + operand);
+    };
+    Code.prototype.createOperands = function (o1, o2, o3) {
+        if (!o1)
+            return new i.Operands();
+        else {
+            var first, second, third;
+            first = this.createOperand(o1);
+            if (first instanceof o.Constant)
+                return new i.Operands(null, null, first);
+            else {
+                if (!o2)
+                    return new i.Operands(first);
+                else {
+                    second = this.createOperand(o2);
+                    if (second instanceof o.Constant)
+                        return new i.Operands(first, null, second);
+                    else {
+                        if (!o3)
+                            return new i.Operands(first, second);
+                        else {
+                            third = this.createOperand(o3);
+                            if (third instanceof o.Constant)
+                                new i.Operands(first, second, third);
+                            else
+                                throw TypeError('Third operand must be immediate.');
+                        }
+                    }
+                }
+            }
+        }
     };
     Code.prototype.compile = function () {
         var code = [];
@@ -33,13 +77,19 @@ var Code = (function () {
         return code;
     };
     Code.prototype.push = function (what) {
-        return this.insert(d.PUSH, new i.Operands(what));
+        return this.insert(d.PUSH, what);
     };
     Code.prototype.pop = function (what) {
-        return this.insert(d.POP, new i.Operands(what));
+        return this.insert(d.POP, what);
     };
-    Code.prototype.movq = function (dst, src) {
-        return this.insert(d.MOVQ, new i.Operands(dst, src));
+    Code.prototype.movq = function (o1, o2) {
+        return this.insert(d.MOVQ, o1, o2);
+    };
+    Code.prototype.mov = function (o1, o2) {
+        return this.movq(o1, o2);
+    };
+    Code.prototype.syscall = function () {
+        return this.insert(d.SYSCALL, new i.Operands());
     };
     Code.prototype.nop = function (size) {
         if (size === void 0) { size = 1; }
