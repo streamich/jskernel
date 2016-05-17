@@ -19,8 +19,10 @@ var Code = (function () {
         this.ins = [];
         this.ClassInstruction = i.Instruction;
     }
-    Code.prototype.insert = function (def, o1, o2, o3) {
-        var ins = new this.ClassInstruction(def, this.createOperands(o1, o2, o3));
+    Code.prototype.insert = function (def, operands) {
+        // protected insert(def: d.Definition, o1?: o.Operand, o2?: o.Operand, o3?: o.Operand) {
+        // var ins = new this.ClassInstruction(this, def, this.createOperands(o1, o2, o3));
+        var ins = new this.ClassInstruction(def, operands, this.mode);
         ins.index = this.ins.length;
         this.ins.push(ins);
         return ins;
@@ -91,6 +93,11 @@ var Code = (function () {
     Code.prototype.syscall = function () {
         return this.insert(d.SYSCALL, new i.Operands());
     };
+    Code.prototype.add = function (o1, o2) {
+        var ops = this.createOperands(o1, o2);
+        if (!(ops.dst instanceof o.Register))
+            throw TypeError("Destination operand must be a register.");
+    };
     Code.prototype.nop = function (size) {
         if (size === void 0) { size = 1; }
     };
@@ -103,15 +110,30 @@ var Code = (function () {
     return Code;
 }());
 exports.Code = Code;
-var FuzzyCode = (function (_super) {
-    __extends(FuzzyCode, _super);
-    function FuzzyCode() {
+var Code64 = (function (_super) {
+    __extends(Code64, _super);
+    function Code64() {
+        _super.apply(this, arguments);
+        this.mode = MODE.LONG;
+    }
+    Code64.prototype.incq = function (operand) {
+        return this.insert(new d.Definition({ op: 0xFF, opreg: 0 }), this.createOperands(operand));
+    };
+    Code64.prototype.decq = function (operand) {
+        return this.insert(new d.Definition({ op: 0xFF, opreg: 1 }), this.createOperands(operand));
+    };
+    return Code64;
+}(Code));
+exports.Code64 = Code64;
+var FuzzyCode64 = (function (_super) {
+    __extends(FuzzyCode64, _super);
+    function FuzzyCode64() {
         _super.apply(this, arguments);
         this.ClassInstruction = i.FuzzyInstruction;
     }
-    FuzzyCode.prototype.nop = function (size) {
+    FuzzyCode64.prototype.nop = function (size) {
         if (size === void 0) { size = 1; }
     };
-    return FuzzyCode;
-}(Code));
-exports.FuzzyCode = FuzzyCode;
+    return FuzzyCode64;
+}(Code64));
+exports.FuzzyCode64 = FuzzyCode64;

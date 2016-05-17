@@ -1,4 +1,4 @@
-# g++ -Wall -g -c asm.S -nostdlib -o asm.o && g++ -Wall -g asm.o -o asm && objdump -d asm > asm.dump
+# g++ -Wall -g -c notes/asm.S -nostdlib -o notes/asm.o && g++ -Wall -g notes/asm.o -o notes/asm && objdump -d notes/asm > notes/asm.dump
 
 .global main
 main:
@@ -7,6 +7,12 @@ main:
         int $13
         int $10
         movq $1, %rax
+        incq (%eax)
+        incq (%r12)
+        incq (%rax)
+        decq (%rax)
+        LOCK incq (%r14)
+        LOCK decq (%rax)
 
 test2:
         dec %r10d

@@ -4,7 +4,7 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
-var ctypes_1 = require('./ctypes');
+var util_1 = require('./util');
 // # General operand used in our assembly "language".
 var Operand = (function () {
     function Operand() {
@@ -45,7 +45,7 @@ var Constant = (function (_super) {
             else if (typeof value === 'number') {
                 /* JS integers are 53-bit, so split here `number`s over 32 bits into [number, number]. */
                 if (Constant.sizeClass(value) === 64 /* QUAD */)
-                    this.setValue64([ctypes_1.UInt64.lo(value), ctypes_1.UInt64.hi(value)]);
+                    this.setValue64([util_1.UInt64.lo(value), util_1.UInt64.hi(value)]);
                 else
                     this.setValue32(value);
             }
@@ -96,36 +96,36 @@ var Constant = (function (_super) {
     return Constant;
 }(Operand));
 exports.Constant = Constant;
-var Immediate = (function (_super) {
-    __extends(Immediate, _super);
-    function Immediate() {
+var ImmediateValue = (function (_super) {
+    __extends(ImmediateValue, _super);
+    function ImmediateValue() {
         _super.apply(this, arguments);
     }
-    return Immediate;
+    return ImmediateValue;
 }(Constant));
-exports.Immediate = Immediate;
-var Displacement = (function (_super) {
-    __extends(Displacement, _super);
-    function Displacement(value) {
+exports.ImmediateValue = ImmediateValue;
+var DisplacementValue = (function (_super) {
+    __extends(DisplacementValue, _super);
+    function DisplacementValue(value) {
         _super.call(this, value);
-        this.size = Displacement.SIZE.DISP8;
+        this.size = DisplacementValue.SIZE.DISP8;
     }
-    Displacement.prototype.setValue32 = function (value) {
+    DisplacementValue.prototype.setValue32 = function (value) {
         _super.prototype.setValue32.call(this, value);
         /* Make sure `Displacement` is 1 or 4 bytes, not 2. */
-        if (this.size > Displacement.SIZE.DISP8)
-            this.zeroExtend(Displacement.SIZE.DISP32);
+        if (this.size > DisplacementValue.SIZE.DISP8)
+            this.zeroExtend(DisplacementValue.SIZE.DISP32);
     };
-    Displacement.prototype.setValue64 = function () {
-        throw TypeError("Displacement can be only of these sizes: " + Displacement.SIZE.DISP8 + " and " + Displacement.SIZE.DISP32 + ".");
+    DisplacementValue.prototype.setValue64 = function () {
+        throw TypeError("Displacement can be only of these sizes: " + DisplacementValue.SIZE.DISP8 + " and " + DisplacementValue.SIZE.DISP32 + ".");
     };
-    Displacement.SIZE = {
+    DisplacementValue.SIZE = {
         DISP8: 8 /* BYTE */,
         DISP32: 32 /* DOUBLE */,
     };
-    return Displacement;
+    return DisplacementValue;
 }(Constant));
-exports.Displacement = Displacement;
+exports.DisplacementValue = DisplacementValue;
 // # Scale
 //
 // `Scale` used in SIB byte in two bit `SCALE` field.
@@ -193,7 +193,7 @@ var Memory = (function (_super) {
         return this;
     };
     Memory.prototype.disp = function (value) {
-        this.displacement = new Displacement(value);
+        this.displacement = new DisplacementValue(value);
         return this;
     };
     Memory.prototype.toString = function () {

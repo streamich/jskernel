@@ -1,6 +1,5 @@
 import {extend} from './util';
-import {Operand, Constant, Register, Memory} from './operand';
-import * as o from './operand';
+import {Operand, Constant, DisplacementValue, ImmediateValue, Register, Memory, SIZE} from './operand';
 import {Definition} from './def';
 import {OP} from './opcode';
 import {Code, MODE} from './code';
@@ -20,7 +19,6 @@ import {Code, MODE} from './code';
 //     |---------|---------|---------|---------|---------|                     ...
 //     |optional |required |optional |optional |optional |
 //     |-------------------------------------------------|
-
 export abstract class InstructionPart {
     // ins: Instruction;
     abstract write(arr: number[]): number[];
@@ -46,7 +44,6 @@ export abstract class Prefix extends InstructionPart {}
 //     .....R <----- REG field in Mod-R/M byte addresses one of the extended registers.
 //     ....W <------ Used instruction needs REX prefix.
 //     .1 <--------- 0x40 identifies the REX prefix.
-
 export class PrefixRex extends Prefix {
     W: number; // 0 or 1
     R: number; // 0 or 1
@@ -64,6 +61,19 @@ export class PrefixRex extends Prefix {
     write(arr: number[]): number[] {
         if(this.W || this.R || this.X || this.B)
             arr.push(0b01000000 | (this.W << 3) | (this.R << 2) | (this.X << 1) | this.B);
+        return arr;
+    }
+}
+
+
+// ## LOCK
+//
+// Prefix for performing atomic memory operations.
+export class PrefixLock extends Prefix {
+    value = 0xF0;
+
+    write(arr: number[]): number[] {
+        arr.push(this.value);
         return arr;
     }
 }
@@ -90,7 +100,6 @@ export class PrefixRex extends Prefix {
 //
 //     76543210
 //     .....000 = RAX
-
 export class Opcode extends InstructionPart {
 
     /* Now we support up to 3 byte instructions */
@@ -120,9 +129,7 @@ export class Opcode extends InstructionPart {
     isSizeWord: boolean = true;
 
     write(arr: number[]): number[] {
-        // Op-code can be up to 4 bytes long, we support up to 3 bytes now, because JavaScript
-        // bit operations are performed on 32 bit signed ints, thus there are issues with the last
-        // byte because of the sign bit.
+        // Op-code can be up to 3 bytes long.
         var op = this.op;
         if(op > 0xFFFF) arr.push((op & 0xFF0000) >> 16);
         if(op > 0xFF) arr.push((op & 0xFF00) >> 8);
@@ -141,7 +148,6 @@ export class Opcode extends InstructionPart {
 //     .....XXX <--- R/M field: Register or Memory
 //     ..XXX <------ REG field: Register or op-code extension
 //     XX <--------- MOD field: mode of operation
-
 export class Modrm extends InstructionPart {
 
     // Two bits of `MOD` field in `Mod-R/M` byte.
@@ -199,7 +205,6 @@ export class Modrm extends InstructionPart {
 //     .....XXX <--- BASE field: base register address
 //     ..XXX <------ INDEX field: address of register used as scale
 //     XX <--------- SCALE field: specifies multiple of INDEX: USERSCALE * INDEX
-
 export class Sib extends InstructionPart {
     S: number = 0;
     I: number = 0;
@@ -230,11 +235,10 @@ export class Sib extends InstructionPart {
 
 
 // ## Displacement
-
 export class Displacement extends InstructionPart {
-    value: Constant;
+    value: DisplacementValue;
 
-    constructor(value: Constant) {
+    constructor(value: DisplacementValue) {
         super();
         this.value = value;
     }
@@ -249,11 +253,10 @@ export class Displacement extends InstructionPart {
 // ## Immediate
 //
 // Immediate constant value that follows other instruction bytes.
-
 export class Immediate extends InstructionPart {
-    value: Constant;
+    value: ImmediateValue;
 
-    constructor(value: Constant) {
+    constructor(value: ImmediateValue) {
         super();
         this.value = value;
     }
@@ -267,6 +270,11 @@ export class Immediate extends InstructionPart {
 
 // Collection of operands an instruction might have. It might
 // have *destination* and *source* operands and a possible *immediate* constant.
+//
+// Each x86 instruction can have up to up to 5 operands: 3 registers, displacement and immediate.
+// 3 registers means: 1 register, and 2 registers that specify the base and index for memory
+// dereferencing, however all operands necessary for memory dereferencing are held in `o.Memory`
+// class so we need only these three operands.
 export class Operands {
     dst: Operand = null;    // Destination
     src: Operand = null;    // Source
@@ -280,16 +288,23 @@ export class Operands {
 }
 
 
+export interface InstructionUserInterface {
+    /* Adds `LOCK` prefix to instructoins, throws `TypeError` on error. */
+    lock(): this;
+}
+
+
 // ## x86_64 `Instruction`
 //
 // `Instruction` object is created using instruction `Definition` and `Operands` provided by the user,
 // out of those `Instruction` generates `InstructionPart`s, which then can be packaged into machine
 // code using `.write()` method.
-export class Instruction {
+export class Instruction implements InstructionUserInterface{
     def: Definition = null;
     op: Operands = null;
 
     // Instruction parts.
+    prefixLock: PrefixLock = null;
     prefixes: Prefix[] = [];
     opcode: Opcode = new Opcode; // required
     modrm: Modrm = null;
@@ -298,7 +313,8 @@ export class Instruction {
     immediate: Immediate = null;
 
     // Instruction is bound to some code object.
-    code: Code = null;
+    // code: Code = null;
+    mode: MODE = MODE.LONG;
 
     // Direction for register-to-register `MOV` operations, whether REG field of Mod-R/M byte is destination.
     protected regToRegDirectionRegIsDst: boolean = true;
@@ -309,24 +325,34 @@ export class Instruction {
     // Byte offset of the instruction in compiled machine code.
     offset: number = 0;
 
-    constructor(def: Definition, op: Operands) {
+    // constructor(code: Code, def: Definition, op: Operands) {
+    constructor(def: Definition, op: Operands, mode = MODE.LONG) {
+        // this.code = code;
+        this.mode = mode;
         this.def = def;
         this.op = op;
         this.create();
     }
 
     write(arr: number[]): number[] {
+        if(this.prefixLock)     this.prefixLock.write(arr);
         for(var pfx of this.prefixes) pfx.write(arr);
         this.opcode.write(arr);
-        if(this.modrm)      this.modrm.write(arr);
-        if(this.sib)        this.sib.write(arr);
-        if(this.immediate)  this.immediate.write(arr);
+        if(this.modrm)          this.modrm.write(arr);
+        if(this.sib)            this.sib.write(arr);
+        if(this.displacement)   this.displacement.write(arr);
+        if(this.immediate)      this.immediate.write(arr);
         return arr;
+    }
+
+    lock(): this {
+        this.prefixLock = new PrefixLock;
+        return this;
     }
 
     // http://wiki.osdev.org/X86-64_Instruction_Encoding#Operand-size_and_address-size_override_prefix
     getOperandSize() {
-        
+
     }
 
     getAddressSize() {
@@ -363,7 +389,7 @@ export class Instruction {
     }
 
     protected createPrefixes(dstreg: Register, dstmem: Memory, srcreg: Register, srcmem: Memory) {
-        if(this.code.mode = MODE.LONG) { // REX prefix defined only in `LONG` mode.
+        if(this.mode = MODE.LONG) { // REX prefix defined only in `LONG` mode.
             if(this.def.mandatoryRex || (dstreg && dstreg.isExtended)) {
                 this.prefixes.push(this.createRex(dstreg, dstmem, srcreg, srcmem));
             }
@@ -386,8 +412,13 @@ export class Instruction {
             if(srcmem.index && srcmem.index.isExtended) X = 1;
         }
 
+        if(!this.regToRegDirectionRegIsDst) [R, B] = [B, R];
         return new PrefixRex(W, R, X, B);
     }
+
+    // protected createPrefixLock() {
+    //
+    // }
 
     protected createOpcode(dstreg: Register, srcreg: Register) {
         var def = this.def;
@@ -422,9 +453,21 @@ export class Instruction {
     }
 
     protected createModrm(dstreg: Register, dstmem: Memory, srcreg: Register, srcmem: Memory) {
-        if(srcreg || srcmem || dstmem) {
+        // TODO: 2.2.1.6 RIP-Relative Addressing
+
+        if(srcreg || srcmem || dstmem || (this.def.opreg > -1)) {
+
             var mod = 0, reg = 0, rm = 0;
-            if(srcreg && dstreg) {
+
+            if(this.def.opreg > -1) {
+                mod = Modrm.MOD.INDIRECT;
+                reg = this.def.opreg;
+                if(!dstreg && !dstmem)
+                    throw TypeError('Need destination operand for instructions with opreg.');
+                if(dstreg) rm = dstreg.id;
+                else if(dstmem && dstmem.base) rm = dstmem.base.id;
+                else throw TypeError(`No base register form destination address.`);
+            } else if(srcreg && dstreg) {
                 mod = Modrm.MOD.REG_TO_REG;
 
                 // Remove `d` and `s` bits.
@@ -451,9 +494,9 @@ export class Instruction {
                 rm = mem.base ? mem.base.id : Modrm.RM_NEEDS_SIB;
 
                 if(mem.displacement) {
-                    if(mem.displacement.size === o.Displacement.SIZE.DISP8)   mod = Modrm.MOD.DISP8;
-                    else                                                    mod = Modrm.MOD.DISP32;
-                } else                                                      mod = Modrm.MOD.INDIRECT;
+                    if(mem.displacement.size === DisplacementValue.SIZE.DISP8)  mod = Modrm.MOD.DISP8;
+                    else                                                        mod = Modrm.MOD.DISP32;
+                } else                                                          mod = Modrm.MOD.INDIRECT;
             }
             this.modrm = new Modrm(mod, reg, rm);
         }
@@ -463,6 +506,8 @@ export class Instruction {
         if(!this.modrm || (this.modrm.rm != Modrm.RM_NEEDS_SIB)) return;
 
         var mem: Memory = srcmem || dstmem;
+        if(!mem) return; // Could be that we have Mod-R/M byte because of `opreg`, but no SIB needed.
+
         var userscale = 0, I = 0, B = 0;
 
         if(mem.scale) userscale = mem.scale.value; // TODO: what about 0?
@@ -480,8 +525,11 @@ export class Instruction {
     }
 
     protected createImmediate() {
-        if(this.op.imm)
+        if(this.op.imm) {
+            if (this.displacement && (this.displacement.value.size === SIZE.QUAD))
+                throw TypeError(`Cannot have Immediate with ${SIZE.QUAD} bit Displacement.`);
             this.immediate = new Immediate(this.op.imm);
+        }
     }
 }
 
@@ -498,7 +546,6 @@ export class Instruction {
 //
 //     mov %rax, %rax
 //     add $0, %rax
-
 export class FuzzyInstruction extends Instruction {
 
     protected regToRegDirectionRegIsDst = !(Math.random() > 0.5);

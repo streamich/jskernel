@@ -1,14 +1,11 @@
-import * as i from './instruction';
-import {extend} from './util';
-import {rax, rsi} from './regfile';
-import * as def from './def';
-import {Code} from './code';
-
-
-
-
-var _ = new Code;
-_.mov(rax, 1);
+"use strict";
+var regfile_1 = require('../regfile');
+var code_1 = require('../code');
+var _ = new code_1.Code64;
+var ins = _.incq(regfile_1.rax).lock();
+var ins = _.decq(regfile_1.rax).lock();
+// console.log(ins);
+// _.mov(rax, 1);
 // _.mov(rsi, rax);
 // _.syscall();
 // _.movq(rax, rax);
@@ -17,19 +14,12 @@ _.mov(rax, 1);
 // _.pop(rax);
 // _.push(r8);
 console.log(new Buffer(_.compile()));
-
-
 // console.log(_.push(rax).write([]));
 // console.log(_.push(r8).write([]));
 // console.log(_.pop(rax).write([]));
 // console.log(_.push(r8).write([]));
-
-
-
 // var ops = new i.Operands(r8);
 // var encoder = new Encoder;
 // var ins = encoder.createInstruction(def.PUSH, ops);
 // console.log(ins);
 // var code = ins.write([]);
-
-

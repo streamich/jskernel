@@ -20,8 +20,10 @@ export class Code {
 
     protected ClassInstruction = i.Instruction;
 
-    protected insert(def: d.Definition, o1?: o.Operand, o2?: o.Operand, o3?: o.Operand) {
-        var ins = new this.ClassInstruction(def, this.createOperands(o1, o2, o3));
+    protected insert(def: d.Definition, operands: i.Operands) {
+    // protected insert(def: d.Definition, o1?: o.Operand, o2?: o.Operand, o3?: o.Operand) {
+        // var ins = new this.ClassInstruction(this, def, this.createOperands(o1, o2, o3));
+        var ins = new this.ClassInstruction(def, operands, this.mode);
         ins.index = this.ins.length;
         this.ins.push(ins);
         return ins;
@@ -38,7 +40,7 @@ export class Code {
         throw TypeError(`Not a valid TOperand type: ${operand}`);
     }
 
-    protected createOperands(o1?: TOperand, o2?: TOperand, o3?: TOperand) {
+    protected createOperands(o1?: TOperand, o2?: TOperand, o3?: TOperand): i.Operands {
         if(!o1) return new i.Operands();
         else {
             var first: o.Operand, second: o.Operand, third: o.Operand;
@@ -91,6 +93,14 @@ export class Code {
         return this.insert(d.SYSCALL, new i.Operands());
     }
 
+    add(o1: o.Operand, o2: o.Operand) {
+        var ops = this.createOperands(o1, o2);
+        if(!(ops.dst instanceof o.Register))
+            throw TypeError(`Destination operand must be a register.`);
+    }
+    
+
+
     nop(size = 1) {
 
     }
@@ -105,7 +115,20 @@ export class Code {
 }
 
 
-export class FuzzyCode extends Code {
+export class Code64 extends Code {
+    mode = MODE.LONG;
+    
+    incq(operand: o.Register|o.Memory) {
+        return this.insert(new d.Definition({op: 0xFF, opreg: 0b000}), this.createOperands(operand));
+    }
+
+    decq(operand: o.Register|o.Memory) {
+        return this.insert(new d.Definition({op: 0xFF, opreg: 0b001}), this.createOperands(operand));
+    }
+}
+
+
+export class FuzzyCode64 extends Code64 {
     protected ClassInstruction = i.FuzzyInstruction;
 
     nop(size = 1) {

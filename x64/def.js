@@ -1,31 +1,36 @@
 "use strict";
-var opcode_1 = require('./opcode');
+var util_1 = require('./util');
+exports.definitionDefaults = {
+    opreg: -1,
+    regInOp: false,
+    operands: 0,
+    hasImmediate: false,
+    immediateSizes: [],
+    size: 64,
+};
 var Definition = (function () {
-    function Definition(op, rex, reg_in_op, opreg, imm, reg_is_dst, word_size) {
-        if (rex === void 0) { rex = false; }
-        if (reg_in_op === void 0) { reg_in_op = false; }
-        if (opreg === void 0) { opreg = -1; }
-        if (imm === void 0) { imm = false; }
-        if (reg_is_dst === void 0) { reg_is_dst = true; }
-        if (word_size === void 0) { word_size = true; }
-        this.op = op;
-        this.opreg = opreg;
-        this.regInOp = reg_in_op;
-        this.regIsDest = reg_is_dst;
-        this.isSizeWord = word_size;
-        this.mandatoryRex = rex;
-        this.hasImmediate = imm;
+    // constructor(op: number, rex = false, reg_in_op = false, opreg = -1, imm = false, reg_is_dst = true, word_size = true) {
+    //     this.op = op;
+    //     this.opreg = opreg;
+    //     this.regInOp = reg_in_op;
+    //     this.regIsDest = reg_is_dst;
+    //     this.isSizeWord = word_size;
+    //     this.mandatoryRex = rex;
+    //     this.hasImmediate = imm;
+    // }
+    function Definition(defs) {
+        util_1.extend(this, exports.definitionDefaults, defs);
     }
     return Definition;
 }());
 exports.Definition = Definition;
-//                                      Op-code    REX     reg in op   opreg       immediate    reg is dst  word_size
-// _____________________________________|__________|_______|___________|___________|____________|___________|___________________
-exports.PUSH = new Definition(opcode_1.OP.PUSH, false, true, -1, false, true, true);
-exports.POP = new Definition(opcode_1.OP.POP, false, true);
-exports.MOVQ = new Definition(opcode_1.OP.MOV, true);
-exports.MOVimm = new Definition(opcode_1.OP.MOVimm, false);
-exports.INC = new Definition(opcode_1.OP.INC, false, false, opcode_1.OPREG.INC);
-exports.DEC = new Definition(opcode_1.OP.DEC, false, false, opcode_1.OPREG.DEC);
-exports.INT = new Definition(opcode_1.OP.INT, false, false, -1, true, true, false);
-exports.SYSCALL = new Definition(opcode_1.OP.SYSCALL);
+//                                       Op-code    REX     reg in op   opreg       immediate   reg is dst  word_size
+// ______________________________________|__________|_______|___________|___________|___________|___________|___________________
+// export const PUSH       = new Definition(OP.PUSH,   false,  true,       -1,         false,      true,       true);
+// export const POP        = new Definition(OP.POP,    false,  true);
+// export const MOVQ       = new Definition(OP.MOV,    true);
+// export const MOVimm     = new Definition(OP.MOVimm, false);
+// export const INC        = new Definition(OP.INC,    false,  false,      OPREG.INC);
+// export const DEC        = new Definition(OP.DEC,    false,  false,      OPREG.DEC);
+// export const INT        = new Definition(OP.INT,    false,  false,      -1,         true,       true,       false);
+// export const SYSCALL    = new Definition(OP.SYSCALL);

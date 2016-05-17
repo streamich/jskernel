@@ -1,4 +1,4 @@
-import {UInt64} from './ctypes';
+import {UInt64} from './util';
 
 
 export const enum SIZE {
@@ -98,15 +98,15 @@ export class Constant extends Operand {
     }
 }
 
-export class Immediate extends Constant {}
+export class ImmediateValue extends Constant {}
 
-export class Displacement extends Constant {
+export class DisplacementValue extends Constant {
     static SIZE = {
         DISP8:  SIZE.BYTE,
         DISP32: SIZE.DOUBLE,
     };
 
-    size = Displacement.SIZE.DISP8;
+    size = DisplacementValue.SIZE.DISP8;
 
     constructor(value: number) {
         super(value);
@@ -115,11 +115,11 @@ export class Displacement extends Constant {
     protected setValue32(value: number) {
         super.setValue32(value);
         /* Make sure `Displacement` is 1 or 4 bytes, not 2. */
-        if(this.size > Displacement.SIZE.DISP8) this.zeroExtend(Displacement.SIZE.DISP32);
+        if(this.size > DisplacementValue.SIZE.DISP8) this.zeroExtend(DisplacementValue.SIZE.DISP32);
     }
 
     protected setValue64() {
-        throw TypeError(`Displacement can be only of these sizes: ${Displacement.SIZE.DISP8} and ${Displacement.SIZE.DISP32}.`);
+        throw TypeError(`Displacement can be only of these sizes: ${DisplacementValue.SIZE.DISP8} and ${DisplacementValue.SIZE.DISP32}.`);
     }
 }
 
@@ -183,7 +183,7 @@ export class Memory extends Operand {
     base: Register = null;
     index: Register = null;
     scale: Scale = null;
-    displacement: Displacement = null;
+    displacement: DisplacementValue = null;
 
     needsSib() {
         return !!this.index || !!this.scale;
@@ -195,7 +195,7 @@ export class Memory extends Operand {
     }
 
     disp(value: number): this {
-        this.displacement = new Displacement(value);
+        this.displacement = new DisplacementValue(value);
         return this;
     }
 

@@ -56,6 +56,11 @@ export const enum R8 {
     DIL = 7,
     BPL = 5,
     SPL = 4,
+
+    AH = 0,
+    BH = 3,
+    CH = 1,
+    DH = 2,
 }
 
 export const enum RE8 {
@@ -116,6 +121,11 @@ export var sil  = new Register('sil', R8.SIL, SIZE.BYTE, false);
 export var dil  = new Register('dil', R8.DIL, SIZE.BYTE, false);
 export var bpl  = new Register('bpl', R8.BPL, SIZE.BYTE, false);
 export var spl  = new Register('spl', R8.SPL, SIZE.BYTE, false);
+
+export var ah   = new Register('ah',  R8.AH, SIZE.BYTE, false);
+export var bh   = new Register('bh',  R8.BH, SIZE.BYTE, false);
+export var ch   = new Register('ch',  R8.CH, SIZE.BYTE, false);
+export var dh   = new Register('dh',  R8.DH, SIZE.BYTE, false);
 
 export var r8b  = new Register('r8b',  RE8.R8B, SIZE.BYTE, true);
 export var r9b  = new Register('r9b',  RE8.R9B, SIZE.BYTE, true);

@@ -5,7 +5,6 @@ var __extends = (this && this.__extends) || function (d, b) {
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
 var operand_1 = require('./operand');
-var o = require('./operand');
 var opcode_1 = require('./opcode');
 var code_1 = require('./code');
 // # x86_64 Instruction
@@ -69,6 +68,22 @@ var PrefixRex = (function (_super) {
     return PrefixRex;
 }(Prefix));
 exports.PrefixRex = PrefixRex;
+// ## LOCK
+//
+// Prefix for performing atomic memory operations.
+var PrefixLock = (function (_super) {
+    __extends(PrefixLock, _super);
+    function PrefixLock() {
+        _super.apply(this, arguments);
+        this.value = 0xF0;
+    }
+    PrefixLock.prototype.write = function (arr) {
+        arr.push(this.value);
+        return arr;
+    };
+    return PrefixLock;
+}(Prefix));
+exports.PrefixLock = PrefixLock;
 // ## Op-code
 //
 // Primary op-code of the instruction. Often the lower 2 or 3 bits of the
@@ -105,9 +120,7 @@ var Opcode = (function (_super) {
         this.isSizeWord = true;
     }
     Opcode.prototype.write = function (arr) {
-        // Op-code can be up to 4 bytes long, we support up to 3 bytes now, because JavaScript
-        // bit operations are performed on 32 bit signed ints, thus there are issues with the last
-        // byte because of the sign bit.
+        // Op-code can be up to 3 bytes long.
         var op = this.op;
         if (op > 0xFFFF)
             arr.push((op & 0xFF0000) >> 16);
@@ -264,6 +277,11 @@ var Immediate = (function (_super) {
 exports.Immediate = Immediate;
 // Collection of operands an instruction might have. It might
 // have *destination* and *source* operands and a possible *immediate* constant.
+//
+// Each x86 instruction can have up to up to 5 operands: 3 registers, displacement and immediate.
+// 3 registers means: 1 register, and 2 registers that specify the base and index for memory
+// dereferencing, however all operands necessary for memory dereferencing are held in `o.Memory`
+// class so we need only these three operands.
 var Operands = (function () {
     function Operands(dst, src, imm) {
         if (dst === void 0) { dst = null; }
@@ -285,10 +303,13 @@ exports.Operands = Operands;
 // out of those `Instruction` generates `InstructionPart`s, which then can be packaged into machine
 // code using `.write()` method.
 var Instruction = (function () {
-    function Instruction(def, op) {
+    // constructor(code: Code, def: Definition, op: Operands) {
+    function Instruction(def, op, mode) {
+        if (mode === void 0) { mode = code_1.MODE.LONG; }
         this.def = null;
         this.op = null;
         // Instruction parts.
+        this.prefixLock = null;
         this.prefixes = [];
         this.opcode = new Opcode; // required
         this.modrm = null;
@@ -296,18 +317,23 @@ var Instruction = (function () {
         this.displacement = null;
         this.immediate = null;
         // Instruction is bound to some code object.
-        this.code = null;
+        // code: Code = null;
+        this.mode = code_1.MODE.LONG;
         // Direction for register-to-register `MOV` operations, whether REG field of Mod-R/M byte is destination.
         this.regToRegDirectionRegIsDst = true;
         // Index where instruction was inserted in `Code`s buffer.
         this.index = 0;
         // Byte offset of the instruction in compiled machine code.
         this.offset = 0;
+        // this.code = code;
+        this.mode = mode;
         this.def = def;
         this.op = op;
         this.create();
     }
     Instruction.prototype.write = function (arr) {
+        if (this.prefixLock)
+            this.prefixLock.write(arr);
         for (var _i = 0, _a = this.prefixes; _i < _a.length; _i++) {
             var pfx = _a[_i];
             pfx.write(arr);
@@ -317,9 +343,15 @@ var Instruction = (function () {
             this.modrm.write(arr);
         if (this.sib)
             this.sib.write(arr);
+        if (this.displacement)
+            this.displacement.write(arr);
         if (this.immediate)
             this.immediate.write(arr);
         return arr;
+    };
+    Instruction.prototype.lock = function () {
+        this.prefixLock = new PrefixLock;
+        return this;
     };
     // http://wiki.osdev.org/X86-64_Instruction_Encoding#Operand-size_and_address-size_override_prefix
     Instruction.prototype.getOperandSize = function () {
@@ -357,7 +389,7 @@ var Instruction = (function () {
         this.createImmediate();
     };
     Instruction.prototype.createPrefixes = function (dstreg, dstmem, srcreg, srcmem) {
-        if (this.code.mode = code_1.MODE.LONG) {
+        if (this.mode = code_1.MODE.LONG) {
             if (this.def.mandatoryRex || (dstreg && dstreg.isExtended)) {
                 this.prefixes.push(this.createRex(dstreg, dstmem, srcreg, srcmem));
             }
@@ -383,8 +415,14 @@ var Instruction = (function () {
             if (srcmem.index && srcmem.index.isExtended)
                 X = 1;
         }
+        if (!this.regToRegDirectionRegIsDst)
+            _a = [B, R], R = _a[0], B = _a[1];
         return new PrefixRex(W, R, X, B);
+        var _a;
     };
+    // protected createPrefixLock() {
+    //
+    // }
     Instruction.prototype.createOpcode = function (dstreg, srcreg) {
         var def = this.def;
         var opcode = this.opcode;
@@ -417,9 +455,22 @@ var Instruction = (function () {
         opcode.regInOp = def.regInOp;
     };
     Instruction.prototype.createModrm = function (dstreg, dstmem, srcreg, srcmem) {
-        if (srcreg || srcmem || dstmem) {
+        // TODO: 2.2.1.6 RIP-Relative Addressing
+        if (srcreg || srcmem || dstmem || (this.def.opreg > -1)) {
             var mod = 0, reg = 0, rm = 0;
-            if (srcreg && dstreg) {
+            if (this.def.opreg > -1) {
+                mod = Modrm.MOD.INDIRECT;
+                reg = this.def.opreg;
+                if (!dstreg && !dstmem)
+                    throw TypeError('Need destination operand for instructions with opreg.');
+                if (dstreg)
+                    rm = dstreg.id;
+                else if (dstmem && dstmem.base)
+                    rm = dstmem.base.id;
+                else
+                    throw TypeError("No base register form destination address.");
+            }
+            else if (srcreg && dstreg) {
                 mod = Modrm.MOD.REG_TO_REG;
                 // Remove `d` and `s` bits.
                 var is_mov = (opcode_1.OP.MOV >> 2) === (this.opcode.op >> 2);
@@ -445,7 +496,7 @@ var Instruction = (function () {
                 reg = r.id;
                 rm = mem.base ? mem.base.id : Modrm.RM_NEEDS_SIB;
                 if (mem.displacement) {
-                    if (mem.displacement.size === o.Displacement.SIZE.DISP8)
+                    if (mem.displacement.size === operand_1.DisplacementValue.SIZE.DISP8)
                         mod = Modrm.MOD.DISP8;
                     else
                         mod = Modrm.MOD.DISP32;
@@ -460,6 +511,8 @@ var Instruction = (function () {
         if (!this.modrm || (this.modrm.rm != Modrm.RM_NEEDS_SIB))
             return;
         var mem = srcmem || dstmem;
+        if (!mem)
+            return; // Could be that we have Mod-R/M byte because of `opreg`, but no SIB needed.
         var userscale = 0, I = 0, B = 0;
         if (mem.scale)
             userscale = mem.scale.value; // TODO: what about 0?
@@ -476,8 +529,11 @@ var Instruction = (function () {
         }
     };
     Instruction.prototype.createImmediate = function () {
-        if (this.op.imm)
+        if (this.op.imm) {
+            if (this.displacement && (this.displacement.value.size === 64 /* QUAD */))
+                throw TypeError("Cannot have Immediate with " + 64 /* QUAD */ + " bit Displacement.");
             this.immediate = new Immediate(this.op.imm);
+        }
     };
     return Instruction;
 }());
