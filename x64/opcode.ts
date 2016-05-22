@@ -19,6 +19,8 @@ export enum OP {
     POP         = 0x58,
     INT         = 0xCD,
     SYSCALL     = 0x0F05,
+    SYSENTER    = 0x0F34,
+    SYSEXIT     = 0x0F35,
 }
 
 

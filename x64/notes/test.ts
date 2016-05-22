@@ -1,21 +1,15 @@
-import {rax, rsi} from '../regfile';
-import {Code64} from '../code';
+import {x64, rax, eax, r13, r10d} from '../index';
 
 
 
 
-var _ = new Code64;
-var ins = _.incq(rax).lock();
-var ins = _.decq(rax).lock();
-// console.log(ins);
-// _.mov(rax, 1);
-// _.mov(rsi, rax);
-// _.syscall();
-// _.movq(rax, rax);
-// _.push(rax);
-// _.push(r8);
-// _.pop(rax);
-// _.push(r8);
+var _ = new x64.Code;
+var ins = _.incq(0x11);
+// var ins = _.incq(rax.ref());
+// var ins = _.incq(rax.ref().disp(0x11));
+// var ins = _.incq(rax);
+// var ins = _.sysenter();
+// var ins = _.int(0x80);
 console.log(new Buffer(_.compile()));
 
 

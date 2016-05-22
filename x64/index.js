@@ -4,7 +4,7 @@ function __export(m) {
 }
 __export(require('./operand'));
 __export(require('./opcode'));
-__export(require('./regfile'));
 __export(require('./def'));
 __export(require('./instruction'));
 __export(require('./code'));
+__export(require('./x64'));

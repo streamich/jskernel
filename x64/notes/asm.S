@@ -2,17 +2,14 @@
 
 .global main
 main:
-        syscall
-        int $80
-        int $13
-        int $10
-        movq $1, %rax
-        incq (%eax)
-        incq (%r12)
+        sysexit
+        incq 0x11
+        incq %rax
         incq (%rax)
-        decq (%rax)
-        LOCK incq (%r14)
-        LOCK decq (%rax)
+        incq 0x11(%rax)
+        incq (%rax, %rbp, 2)
+        incq (%rax, %rbx, 2)
+        incq 0x11(%rax, %rbx, 2)
 
 test2:
         dec %r10d

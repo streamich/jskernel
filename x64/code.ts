@@ -1,7 +1,7 @@
 import * as i from './instruction';
 import * as o from './operand';
 import * as d from './def';
-import {Immediate} from "./instruction";
+import {number64} from './operand';
 
 
 export enum MODE {
@@ -10,128 +10,93 @@ export enum MODE {
     LONG,
 }
 
-export type TOperand = o.Operand|number|o.number64;
 
-export class Code {
+export abstract class Code {
     
     mode: MODE = MODE.LONG;
 
-    protected ins: i.Instruction[] = [];
+    protected instructions: i.Instruction[] = [];
 
     protected ClassInstruction = i.Instruction;
 
-    protected insert(def: d.Definition, operands: i.Operands) {
-    // protected insert(def: d.Definition, o1?: o.Operand, o2?: o.Operand, o3?: o.Operand) {
-        // var ins = new this.ClassInstruction(this, def, this.createOperands(o1, o2, o3));
-        var ins = new this.ClassInstruction(def, operands, this.mode);
+    protected ins(def: d.Definition, operands: i.Operands): i.Instruction {
+        var ins = new this.ClassInstruction(def, operands);
+        ins.create();
         ins.index = this.ins.length;
-        this.ins.push(ins);
+        this.instructions.push(ins);
         return ins;
     }
 
-    protected createOperand(operand: TOperand): o.Operand {
-        if(operand instanceof o.Operand) return operand;
-        if(typeof operand === 'number') {
-            var imm = new o.Constant(operand as number);
-            if(imm.size < o.SIZE.DOUBLE) imm.zeroExtend(o.SIZE.DOUBLE);
-            return imm;
-        }
-        if(operand instanceof Array) return new o.Constant(operand as o.number64);
-        throw TypeError(`Not a valid TOperand type: ${operand}`);
+    protected toRegOrMem(operand: o.Register|o.Memory|number|number64): o.Register|o.Memory {
+        if(operand instanceof o.Register) return operand;
+        if(operand instanceof o.Memory) return operand;
+
+        // Displacement is up to 4 bytes in size, and 8 bytes for some specific MOV instructions, AMD64 Vol.2 p.24:
+        //
+        // > The size of a displacement is 1, 2, or 4 bytes.
+        //
+        // > Also, in 64-bit mode, support is provided for some 64-bit displacement
+        // > and immediate forms of the MOV instruction. See “Immediate Operand Size” in Volume 1 for more
+        // > information on this.
+        if(typeof operand === 'number')
+            return (new o.Memory).disp(operand as number);
+        else if((operand instanceof Array) && (operand.length == 2))
+            return (new o.Memory).disp(operand as number64);
+        else
+            throw TypeError('Displacement value must be of type number or number64.');
     }
 
-    protected createOperands(o1?: TOperand, o2?: TOperand, o3?: TOperand): i.Operands {
-        if(!o1) return new i.Operands();
-        else {
-            var first: o.Operand, second: o.Operand, third: o.Operand;
-            first = this.createOperand(o1);
-            if(first instanceof o.Constant) return new i.Operands(null, null, first);
-            else {
-                if(!o2) return new i.Operands(first);
-                else {
-                    second = this.createOperand(o2);
-                    if(second instanceof o.Constant) return new i.Operands(first, null, second);
-                    else {
-                        if(!o3) return new i.Operands(first, second);
-                        else {
-                            third = this.createOperand(o3);
-                            if(third instanceof o.Constant) new i.Operands(first, second, third);
-                            else throw TypeError('Third operand must be immediate.');
-                        }
-                    }
-                }
-            }
+    protected insZeroOperands(def: d.Definition): i.Instruction {
+        return this.ins(def, this.createOperands());
+    }
+
+    protected insImmediate(def: d.Definition, num: number|number64, signed = true): i.Instruction {
+        var imm = new o.ImmediateValue(num, signed);
+        return this.ins(def, this.createOperands(null, null, imm));
+    }
+
+    protected insOneOperand(def: d.Definition, dst: o.Register|o.Memory|number|number64, num: number|number64 = null): i.Instruction {
+        var imm = num === null ? null : new o.ImmediateValue(num);
+        return this.ins(def, this.createOperands(dst, null, imm));
+    }
+
+    protected insTwoOperands(def: d.Definition, dst: o.Register|o.Memory|number, src: o.Register|o.Memory|number, num: number|number64 = null): i.Instruction {
+        var imm = num === null ? null : new o.ImmediateValue(num);
+        return this.ins(def, this.createOperands(dst, src, imm));
+    }
+
+    // protected createOperand(operand: TOperand): o.Operand {
+    //     if(operand instanceof o.Operand) return operand;
+    //     if(typeof operand === 'number') {
+    //         var imm = new o.Constant(operand as number);
+    //         if(imm.size < o.SIZE.DOUBLE) imm.zeroExtend(o.SIZE.DOUBLE);
+    //         return imm;
+    //     }
+    //     if(operand instanceof Array) return new o.Constant(operand as o.number64);
+    //     throw TypeError(`Not a valid TOperand type: ${operand}`);
+    // }
+
+    protected createOperands(dst: o.Register|o.Memory|number|number64 = null, src: o.Register|o.Memory|number = null, imm: o.Constant = null): i.Operands {
+        var xdst: o.Register|o.Memory = null;
+        var xsrc: o.Register|o.Memory = null;
+        if(dst) {
+            xdst = this.toRegOrMem(dst);
+            if(!(xdst instanceof o.Register) && !(xdst instanceof o.Memory))
+                throw TypeError('Destination operand must be of type Register or Memory.');
         }
+        if(src) {
+            xsrc = this.toRegOrMem(src);
+            if(!(xsrc instanceof o.Register) && !(xsrc instanceof o.Memory))
+                throw TypeError('Source operand must be of type Register or Memory.');
+        }
+        if(imm && !(imm instanceof o.Constant))
+            throw TypeError('Immediate operand must be of type Constant.');
+        return new i.Operands(xdst, xsrc, imm);
     }
 
     compile() {
         var code: number[] = [];
-        for(var ins of this.ins) {
-            ins.write(code);
-        }
+        for(var ins of this.instructions) ins.write(code);
         return code;
-    }
-
-    push(what: o.Operand) {
-        return this.insert(d.PUSH, what);
-    }
-
-
-    pop(what: o.Operand) {
-        return this.insert(d.POP, what);
-    }
-    
-    movq(o1: o.Operand, o2: o.Operand) {
-        return this.insert(d.MOVQ, o1, o2);
-    }
-
-    mov(o1: o.Operand, o2: o.Operand) {
-        return this.movq(o1, o2);
-    }
-
-    syscall() {
-        return this.insert(d.SYSCALL, new i.Operands());
-    }
-
-    add(o1: o.Operand, o2: o.Operand) {
-        var ops = this.createOperands(o1, o2);
-        if(!(ops.dst instanceof o.Register))
-            throw TypeError(`Destination operand must be a register.`);
-    }
-    
-
-
-    nop(size = 1) {
-
-    }
-
-    nopw() {
-        return this.nop(2);
-    }
-
-    nopl() {
-        return this.nop(4);
-    }
-}
-
-
-export class Code64 extends Code {
-    mode = MODE.LONG;
-    
-    incq(operand: o.Register|o.Memory) {
-        return this.insert(new d.Definition({op: 0xFF, opreg: 0b000}), this.createOperands(operand));
-    }
-
-    decq(operand: o.Register|o.Memory) {
-        return this.insert(new d.Definition({op: 0xFF, opreg: 0b001}), this.createOperands(operand));
-    }
-}
-
-
-export class FuzzyCode64 extends Code64 {
-    protected ClassInstruction = i.FuzzyInstruction;
-
-    nop(size = 1) {
-
     }
 }
