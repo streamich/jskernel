@@ -1,7 +1,9 @@
+import {R64, R32, R8} from './regfile';
 import {UInt64} from './util';
+import * as p from './parts';
 
 
-export const enum SIZE {
+export enum SIZE {
     BYTE = 8,
     WORD = 16,
     DOUBLE = 32,
@@ -9,8 +11,7 @@ export const enum SIZE {
 }
 
 
-// # General operand used in our assembly "language".
-
+// General operand used in our assembly "language".
 export abstract class Operand {
 
     // Convenience method to get `Register` associated with `Register` or `Memory`.
@@ -35,7 +36,6 @@ export abstract class Operand {
 // ## Constant
 //
 // Constants are everything where we directly type in a `number` value.
-
 export type number64 = [number, number];
 
 export class Constant extends Operand {
@@ -157,8 +157,6 @@ export class DisplacementValue extends Constant {
         DISP32: SIZE.DOUBLE,
     };
 
-    size = DisplacementValue.SIZE.DISP8;
-
     constructor(value: number|number64) {
         super(value, true);
     }
@@ -178,63 +176,6 @@ export class DisplacementValue extends Constant {
 // ## Registers
 //
 // `Register` represents one of `%rax`, `%rbx`, etc. registers.
-export enum R64 {
-    RAX = 0,
-    RCX,
-    RDX,
-    RBX,
-    RSP,
-    RBP,
-    RSI,
-    RDI,
-    R8,
-    R9,
-    R10,
-    R11,
-    R12,
-    R13,
-    R14,
-    R15,
-}
-
-export enum R32 {
-    EAX = 0,
-    ECX,
-    EDX,
-    EBX,
-    ESP,
-    EBP,
-    ESI,
-    EDI,
-    R8D,
-    R9D,
-    R10D,
-    R11D,
-    R12D,
-    R13D,
-    R14D,
-    R15D,
-}
-
-export enum R8 {
-    AL = 0,
-    CL,
-    DL,
-    BL,
-    SPL,
-    BPL,
-    SIL,
-    DIL,
-    R8B,
-    R9B,
-    R10B,
-    R11B,
-    R12B,
-    R13B,
-    R14B,
-    R15B,
-}
-
 export class Register extends Operand {
     id: number = 0;                 // Number value of register.
     size: SIZE = SIZE.QUAD;         // Size in bits
@@ -272,15 +213,15 @@ export class Register extends Operand {
 
     getName() {
         switch(this.size) {
-            case SIZE.QUAD:     return R64[this.id].toLowerCase();
-            case SIZE.DOUBLE:   return R32[this.id].toLowerCase();
-            case SIZE.BYTE:     return R8[this.id].toLowerCase();
-            default:            return 'unknown';
+            case SIZE.QUAD:     return R64[this.id];
+            case SIZE.DOUBLE:   return R32[this.id];
+            case SIZE.BYTE:     return R8[this.id];
+            default:            return 'REG';
         }
     }
 
     toString() {
-        return '%' + this.getName();
+        return this.getName().toLowerCase();
     }
 }
 
@@ -417,6 +358,11 @@ export class Memory extends Operand {
     }
 
     ref(base: Register): this {
+        // RBP, EBP etc.. always need displacement for ModRM and SIB bytes.
+        var is_ebp = (R64.RBP & 0b111) === base.get3bitId();
+        if(is_ebp && !this.displacement)
+            this.displacement = new DisplacementValue(0);
+
         this.base = base;
         return this;
     }
@@ -424,6 +370,11 @@ export class Memory extends Operand {
     ind(index: Register, scale_factor: number = 1): this {
         if(!(index instanceof Register))
             throw TypeError('Index must by of type Register.');
+
+        var esp = (R64.RSP & 0b111);
+        if(index.get3bitId() === esp)
+            throw TypeError('%esp, %rsp or other 0b100 registers cannot be used as addressing index.');
+
         this.index = index;
         this.scale = new Scale(scale_factor);
         return this;
@@ -435,10 +386,11 @@ export class Memory extends Operand {
     }
 
     toString() {
-        var base = this.base ? this.base.toString() : '';
-        var index = this.index ? this.index.toString() : '';
-        var scale = this.scale ? this.scale.toString() : '';
-        var disp = this.disp ? this.disp.toString() : '';
-        return `[%${base} + %{index} * ${scale} + ${disp}]`;
+        var parts = [];
+        if(this.base) parts.push(this.base.toString());
+        if(this.index) parts.push(this.index.toString() + ' * ' + this.scale.toString());
+        if(this.displacement) parts.push(this.displacement.toString());
+
+        return `[${parts.join(' + ')}]`;
     }
 }

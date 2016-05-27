@@ -1,13 +1,14 @@
 "use strict";
 var util_1 = require('./util');
 exports.definitionDefaults = {
+    name: '',
     op: 0,
     opreg: -1,
     regInOp: false,
     operands: 0,
     hasImmediate: false,
     immediateSizes: [],
-    mandatoryRex: false,
+    needsRex: false,
     size: 32,
     addrSize: 64,
     maxDisplacementSize: 32,

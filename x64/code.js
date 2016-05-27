@@ -49,8 +49,8 @@ var Code = (function () {
     };
     Code.prototype.insOneOperand = function (def, dst, num) {
         if (num === void 0) { num = null; }
-        var imm = num === null ? null : new o.ImmediateValue(num);
-        return this.ins(def, this.createOperands(dst, null, imm));
+        var disp = num === null ? null : new o.DisplacementValue(num);
+        return this.ins(def, this.createOperands(dst, null, disp));
     };
     Code.prototype.insTwoOperands = function (def, dst, src, num) {
         if (num === void 0) { num = null; }
@@ -87,13 +87,24 @@ var Code = (function () {
             throw TypeError('Immediate operand must be of type Constant.');
         return new i.Operands(xdst, xsrc, imm);
     };
+    Code.prototype.label = function (name) {
+        if ((typeof name !== 'string') || !name)
+            throw TypeError('Label name must be a non-empty string.');
+        var label = new i.Label(name);
+        this.instructions.push(label);
+        return label;
+    };
     Code.prototype.compile = function () {
         var code = [];
         for (var _i = 0, _a = this.instructions; _i < _a.length; _i++) {
             var ins = _a[_i];
-            ins.write(code);
+            if (ins instanceof i.Instruction)
+                ins.write(code);
         }
         return code;
+    };
+    Code.prototype.toString = function () {
+        return this.instructions.map(function (ins) { return ins.toString(); }).join('\n');
     };
     return Code;
 }());

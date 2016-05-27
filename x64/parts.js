@@ -4,7 +4,9 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
+var regfile_1 = require('./regfile');
 var o = require('./operand');
+var opcode_1 = require('./opcode');
 // # x86_64 Instruction
 //
 // Each CPU instruction is encoded in the following form, where only
@@ -33,6 +35,43 @@ var Prefix = (function (_super) {
     return Prefix;
 }(InstructionPart));
 exports.Prefix = Prefix;
+(function (PREFIX) {
+    PREFIX[PREFIX["LOCK"] = 240] = "LOCK";
+    PREFIX[PREFIX["CS"] = 46] = "CS";
+    PREFIX[PREFIX["SS"] = 54] = "SS";
+    PREFIX[PREFIX["DS"] = 62] = "DS";
+    PREFIX[PREFIX["ES"] = 38] = "ES";
+    PREFIX[PREFIX["FS"] = 100] = "FS";
+    PREFIX[PREFIX["GS"] = 101] = "GS";
+    PREFIX[PREFIX["REX"] = 64] = "REX";
+})(exports.PREFIX || (exports.PREFIX = {}));
+var PREFIX = exports.PREFIX;
+// Prefixes that consist of a single static byte.
+var PrefixStatic = (function (_super) {
+    __extends(PrefixStatic, _super);
+    function PrefixStatic(value) {
+        _super.call(this);
+        this.value = value;
+    }
+    PrefixStatic.prototype.write = function (arr) {
+        arr.push(this.value);
+        return arr;
+    };
+    PrefixStatic.prototype.toString = function () {
+        return PREFIX[this.value].toLowerCase();
+    };
+    return PrefixStatic;
+}(Prefix));
+exports.PrefixStatic = PrefixStatic;
+// Lock prefix for performing atomic memory operations.
+var PrefixLock = (function (_super) {
+    __extends(PrefixLock, _super);
+    function PrefixLock() {
+        _super.call(this, PREFIX.LOCK);
+    }
+    return PrefixLock;
+}(PrefixStatic));
+exports.PrefixLock = PrefixLock;
 // ## REX
 //
 // REX is an optional prefix used for two reasons:
@@ -60,28 +99,12 @@ var PrefixRex = (function (_super) {
     }
     PrefixRex.prototype.write = function (arr) {
         if (this.W || this.R || this.X || this.B)
-            arr.push(64 | (this.W << 3) | (this.R << 2) | (this.X << 1) | this.B);
+            arr.push(PREFIX.REX | (this.W << 3) | (this.R << 2) | (this.X << 1) | this.B);
         return arr;
     };
     return PrefixRex;
 }(Prefix));
 exports.PrefixRex = PrefixRex;
-// ## LOCK
-//
-// Prefix for performing atomic memory operations.
-var PrefixLock = (function (_super) {
-    __extends(PrefixLock, _super);
-    function PrefixLock() {
-        _super.apply(this, arguments);
-        this.value = 0xF0;
-    }
-    PrefixLock.prototype.write = function (arr) {
-        arr.push(this.value);
-        return arr;
-    };
-    return PrefixLock;
-}(Prefix));
-exports.PrefixLock = PrefixLock;
 // ## Op-code
 //
 // Primary op-code of the instruction. Often the lower 2 or 3 bits of the
@@ -127,6 +150,9 @@ var Opcode = (function (_super) {
         arr.push(op & 0xFF);
         return arr;
     };
+    Opcode.prototype.toString = function () {
+        return opcode_1.OP[this.op] ? opcode_1.OP[this.op].toLowerCase() : 'xxx';
+    };
     /* Now we support up to 3 byte instructions */
     Opcode.MASK_SIZE = 16777214; // `s` bit
     Opcode.MASK_DIRECTION = 16777213; // `d` bit
@@ -162,19 +188,15 @@ var Modrm = (function (_super) {
         this.reg = reg;
         this.rm = rm;
     }
-    Modrm.getMod = function (mem) {
-        // Modrm.mod = 0b00 + Sib.base = 0b101, means SIB.base = 0.
-        if (!mem.base)
-            return Modrm.MOD.INDIRECT;
+    Modrm.getModDispSize = function (mem) {
         if (!mem.displacement)
             return Modrm.MOD.INDIRECT;
         else if (mem.displacement.size === o.DisplacementValue.SIZE.DISP8)
             return Modrm.MOD.DISP8;
-        else
+        else if (mem.displacement.size <= o.DisplacementValue.SIZE.DISP32)
             return Modrm.MOD.DISP32;
-    };
-    Modrm.getRm = function (mem) {
-        return mem.base ? mem.base.get3bitId() : Modrm.RM_NEEDS_SIB;
+        else
+            throw Error('64-bit displacement not supported yet.');
     };
     Modrm.prototype.write = function (arr) {
         if (arr === void 0) { arr = []; }
@@ -188,11 +210,14 @@ var Modrm = (function (_super) {
         DISP32: 2,
         REG_TO_REG: 3,
     };
-    // When this value is encoded in R/M field, SIB byte has to follow Mod-R/M byte.
-    Modrm.RM_NEEDS_SIB = 4;
-    // When this value is encoded in R/M field, and MOD is 0b00 = INDIRECT, SIB byte has to follow Mod-R/M byte.
-    // But not in long-mode, in long-mode it is used for RIP-relative adressing.
-    Modrm.RM_INDIRECT_SIB = 5;
+    Modrm.RM = {
+        // When this value is encoded in R/M field, SIB byte has to follow Mod-R/M byte.
+        NEEDS_SIB: regfile_1.R64.RSP & 7,
+        // When this value is encoded in R/M field, and MOD is 0b00 = INDIRECT,
+        // disp32 bytes have to follow Mod-R/M byte. But not in long-mode,
+        // in long-mode it is used for RIP-relative adressing.
+        INDIRECT_DISP: regfile_1.R64.RBP & 7,
+    };
     return Modrm;
 }(InstructionPart));
 exports.Modrm = Modrm;
@@ -224,17 +249,17 @@ exports.Modrm = Modrm;
 //     XX <--------- SCALE field: specifies multiple of INDEX: USERSCALE * INDEX
 var Sib = (function (_super) {
     __extends(Sib, _super);
-    function Sib(userscale, I, B) {
+    function Sib(scalefactor, I, B) {
         _super.call(this);
         this.S = 0;
         this.I = 0;
         this.B = 0;
-        this.setScale(userscale);
+        this.setScale(scalefactor);
         this.I = I;
         this.B = B;
     }
-    Sib.prototype.setScale = function (userscale) {
-        switch (userscale) {
+    Sib.prototype.setScale = function (scalefactor) {
+        switch (scalefactor) {
             case 1:
                 this.S = 0;
                 break;
@@ -256,10 +281,10 @@ var Sib = (function (_super) {
         return arr;
     };
     // When index set to 0b100 it means INDEX = 0 and SCALE = 0.
-    Sib.INDEX_NONE = 4;
+    Sib.INDEX_NONE = regfile_1.R64.RSP & 7;
     // If Modrm.mod = 0b00, BASE = 0b101, means no BASE.
     // if Modrm.mod is 0b01 or 0b10, use RBP + disp8 or RBP + disp32, respectively.
-    Sib.BASE_NONE = 5;
+    Sib.BASE_NONE = regfile_1.R64.RBP & 7;
     return Sib;
 }(InstructionPart));
 exports.Sib = Sib;

@@ -1,4 +1,6 @@
+import {R64, R32, R8} from './regfile';
 import * as o from './operand';
+import {OP} from './opcode';
 
 
 // # x86_64 Instruction
@@ -23,6 +25,42 @@ export abstract class InstructionPart {
 
 export abstract class Prefix extends InstructionPart {}
 
+export enum PREFIX {
+    LOCK    = 0xF0,
+    CS      = 0x2E,
+    SS      = 0x36,
+    DS      = 0x3E,
+    ES      = 0x26,
+    FS      = 0x64,
+    GS      = 0x65,
+    REX     = 0b01000000,
+}
+
+// Prefixes that consist of a single static byte.
+export class PrefixStatic extends Prefix {
+    value: PREFIX;
+
+    constructor(value: number) {
+        super();
+        this.value = value;
+    }
+
+    write(arr: number[]): number[] {
+        arr.push(this.value);
+        return arr;
+    }
+
+    toString() {
+        return PREFIX[this.value].toLowerCase();
+    }
+}
+
+// Lock prefix for performing atomic memory operations.
+export class PrefixLock extends PrefixStatic {
+    constructor() {
+        super(PREFIX.LOCK);
+    }
+}
 
 // ## REX
 //
@@ -56,20 +94,7 @@ export class PrefixRex extends Prefix {
 
     write(arr: number[]): number[] {
         if(this.W || this.R || this.X || this.B)
-            arr.push(0b01000000 | (this.W << 3) | (this.R << 2) | (this.X << 1) | this.B);
-        return arr;
-    }
-}
-
-
-// ## LOCK
-//
-// Prefix for performing atomic memory operations.
-export class PrefixLock extends Prefix {
-    value = 0xF0;
-
-    write(arr: number[]): number[] {
-        arr.push(this.value);
+            arr.push(PREFIX.REX | (this.W << 3) | (this.R << 2) | (this.X << 1) | this.B);
         return arr;
     }
 }
@@ -102,17 +127,19 @@ export class Opcode extends InstructionPart {
     static MASK_SIZE        = 0b111111111111111111111110;   // `s` bit
     static MASK_DIRECTION   = 0b111111111111111111111101;   // `d` bit
     static MASK_OP          = 0b111111111111111111111000;   // When register is encoded into op-code.
+
     static SIZE = { // `s` bit
         BYTE: 0b0,
         WORD: 0b1,
     };
+
     static DIRECTION = { // `d` bit
         REG_IS_SRC: 0b00,
         REG_IS_DST: 0b10,
     };
 
     // Main op-code value.
-    op: number = 0;
+    op: OP = 0;
 
     // Whether lower 3 bits of op-code should hold register address.
     regInOp: boolean = false;
@@ -131,6 +158,10 @@ export class Opcode extends InstructionPart {
         if(op > 0xFF) arr.push((op & 0xFF00) >> 8);
         arr.push(op & 0xFF);
         return arr;
+    }
+
+    toString() {
+        return OP[this.op] ? OP[this.op].toLowerCase() : 'xxx';
     }
 }
 
@@ -154,24 +185,21 @@ export class Modrm extends InstructionPart {
         REG_TO_REG: 0b11,
     };
 
-    // When this value is encoded in R/M field, SIB byte has to follow Mod-R/M byte.
-    static RM_NEEDS_SIB = 0b100;
+    static RM = {
+        // When this value is encoded in R/M field, SIB byte has to follow Mod-R/M byte.
+        NEEDS_SIB: R64.RSP & 0b111,
 
-    // When this value is encoded in R/M field, and MOD is 0b00 = INDIRECT, SIB byte has to follow Mod-R/M byte.
-    // But not in long-mode, in long-mode it is used for RIP-relative adressing.
-    static RM_INDIRECT_SIB = 0b101;
+        // When this value is encoded in R/M field, and MOD is 0b00 = INDIRECT,
+        // disp32 bytes have to follow Mod-R/M byte. But not in long-mode,
+        // in long-mode it is used for RIP-relative adressing.
+        INDIRECT_DISP: R64.RBP & 0b111,
+    };
 
-    static getMod(mem: o.Memory) {
-        // Modrm.mod = 0b00 + Sib.base = 0b101, means SIB.base = 0.
-        if(!mem.base)                                                       return Modrm.MOD.INDIRECT;
-
+    static getModDispSize(mem: o.Memory) {
         if(!mem.displacement)                                               return Modrm.MOD.INDIRECT;
         else if(mem.displacement.size === o.DisplacementValue.SIZE.DISP8)   return Modrm.MOD.DISP8;
-        else                                                                return Modrm.MOD.DISP32;
-    }
-
-    static getRm(mem: o.Memory) {
-        return mem.base ? mem.base.get3bitId() : Modrm.RM_NEEDS_SIB;
+        else if(mem.displacement.size <= o.DisplacementValue.SIZE.DISP32)   return Modrm.MOD.DISP32;
+        else throw Error('64-bit displacement not supported yet.');
     }
 
     mod: number     = 0;
@@ -220,25 +248,25 @@ export class Modrm extends InstructionPart {
 //     XX <--------- SCALE field: specifies multiple of INDEX: USERSCALE * INDEX
 export class Sib extends InstructionPart {
     // When index set to 0b100 it means INDEX = 0 and SCALE = 0.
-    static INDEX_NONE = 0b100;
+    static INDEX_NONE = R64.RSP & 0b111;
 
     // If Modrm.mod = 0b00, BASE = 0b101, means no BASE.
     // if Modrm.mod is 0b01 or 0b10, use RBP + disp8 or RBP + disp32, respectively.
-    static BASE_NONE = 0b101;
+    static BASE_NONE = R64.RBP & 0b111;
 
     S: number = 0;
     I: number = 0;
     B: number = 0;
 
-    constructor(userscale, I, B) {
+    constructor(scalefactor, I, B) {
         super();
-        this.setScale(userscale);
+        this.setScale(scalefactor);
         this.I = I;
         this.B = B;
     }
 
-    setScale(userscale) {
-        switch(userscale) {
+    setScale(scalefactor) {
+        switch(scalefactor) {
             case 1: this.S = 0b00; break;
             case 2: this.S = 0b01; break;
             case 4: this.S = 0b10; break;

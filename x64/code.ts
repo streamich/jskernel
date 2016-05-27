@@ -15,7 +15,7 @@ export abstract class Code {
     
     mode: MODE = MODE.LONG;
 
-    protected instructions: i.Instruction[] = [];
+    protected instructions: (i.CodeElement)[] = [];
 
     protected ClassInstruction = i.Instruction;
 
@@ -56,8 +56,8 @@ export abstract class Code {
     }
 
     protected insOneOperand(def: d.Definition, dst: o.Register|o.Memory|number|number64, num: number|number64 = null): i.Instruction {
-        var imm = num === null ? null : new o.ImmediateValue(num);
-        return this.ins(def, this.createOperands(dst, null, imm));
+        var disp = num === null ? null : new o.DisplacementValue(num);
+        return this.ins(def, this.createOperands(dst, null, disp));
     }
 
     protected insTwoOperands(def: d.Definition, dst: o.Register|o.Memory|number, src: o.Register|o.Memory|number, num: number|number64 = null): i.Instruction {
@@ -94,9 +94,24 @@ export abstract class Code {
         return new i.Operands(xdst, xsrc, imm);
     }
 
+    label(name: string): i.Label {
+        if((typeof name !== 'string') || !name)
+            throw TypeError('Label name must be a non-empty string.');
+        var label = new i.Label(name);
+
+        this.instructions.push(label);
+        return label;
+    }
+
     compile() {
         var code: number[] = [];
-        for(var ins of this.instructions) ins.write(code);
+        for(var ins of this.instructions)
+            if(ins instanceof i.Instruction)
+                (ins as i.Instruction).write(code);
         return code;
+    }
+
+    toString() {
+        return this.instructions.map((ins) => { return ins.toString(); }).join('\n');
     }
 }

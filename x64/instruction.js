@@ -1,4 +1,9 @@
 "use strict";
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
 var o = require('./operand');
 var p = require('./parts');
 // Collection of operands an instruction might have. It might
@@ -20,21 +25,83 @@ var Operands = (function () {
         this.src = src;
         this.imm = imm;
     }
+    Operands.prototype.hasOperands = function () {
+        return !!this.dst || !!this.src || !!this.imm;
+    };
+    Operands.prototype.getRegisterOperand = function (dst_first) {
+        if (dst_first === void 0) { dst_first = true; }
+        var first, second;
+        if (dst_first) {
+            first = this.dst;
+            second = this.src;
+        }
+        else {
+            first = this.src;
+            second = this.dst;
+        }
+        if (first instanceof o.Register)
+            return first;
+        if (second instanceof o.Register)
+            return second;
+        return null;
+    };
+    Operands.prototype.getMemoryOperand = function () {
+        if (this.dst instanceof o.Memory)
+            return this.dst;
+        if (this.src instanceof o.Memory)
+            return this.src;
+        return null;
+    };
+    Operands.prototype.toString = function () {
+        var parts = [];
+        if (this.dst)
+            parts.push(this.dst.toString());
+        if (this.src)
+            parts.push(this.src.toString());
+        if (this.imm)
+            parts.push(this.imm.toString());
+        return parts.join(', ');
+    };
     return Operands;
 }());
 exports.Operands = Operands;
+var CodeElement = (function () {
+    function CodeElement() {
+        // Index where instruction was inserted in `Code`s buffer.
+        this.index = 0;
+        // Byte offset of the instruction in compiled machine code.
+        this.offset = 0;
+    }
+    return CodeElement;
+}());
+exports.CodeElement = CodeElement;
+var Label = (function (_super) {
+    __extends(Label, _super);
+    function Label(name) {
+        _super.call(this);
+        this.name = name;
+    }
+    Label.prototype.toString = function () {
+        return this.name + ':';
+    };
+    return Label;
+}(CodeElement));
+exports.Label = Label;
 // ## x86_64 `Instruction`
 //
 // `Instruction` object is created using instruction `Definition` and `Operands` provided by the user,
 // out of those `Instruction` generates `InstructionPart`s, which then can be packaged into machine
 // code using `.write()` method.
-var Instruction = (function () {
+var Instruction = (function (_super) {
+    __extends(Instruction, _super);
     // constructor(code: Code, def: Definition, op: Operands) {
     function Instruction(def, op) {
+        _super.call(this);
         this.def = null;
         this.op = null;
         // Instruction parts.
         this.prefixLock = null;
+        this.prefixSegment = null;
         this.opcode = new p.Opcode; // required
         this.modrm = null;
         this.sib = null;
@@ -42,24 +109,14 @@ var Instruction = (function () {
         this.immediate = null;
         // Direction for register-to-register `MOV` operations, whether REG field of Mod-R/M byte is destination.
         this.regToRegDirectionRegIsDst = true;
-        // Index where instruction was inserted in `Code`s buffer.
-        this.index = 0;
-        // Byte offset of the instruction in compiled machine code.
-        this.offset = 0;
         this.def = def;
         this.op = op;
     }
-    Instruction.prototype.getMemoryOperand = function () {
-        if (this.op.dst instanceof o.Memory)
-            return this.op.dst;
-        if (this.op.src instanceof o.Memory)
-            return this.op.src;
-        return null;
-    };
     Instruction.prototype.writePrefixes = function (arr) {
         if (this.prefixLock)
             this.prefixLock.write(arr);
-        // for(var pfx of this.prefixes) pfx.write(arr);
+        if (this.prefixSegment)
+            this.prefixSegment.write(arr);
     };
     Instruction.prototype.write = function (arr) {
         this.writePrefixes(arr);
@@ -77,6 +134,30 @@ var Instruction = (function () {
     Instruction.prototype.lock = function () {
         this.prefixLock = new p.PrefixLock;
         // TODO: check LOCK is allowed for this instruction.
+        return this;
+    };
+    Instruction.prototype.cs = function () {
+        this.prefixSegment = new p.PrefixStatic(p.PREFIX.CS);
+        return this;
+    };
+    Instruction.prototype.ss = function () {
+        this.prefixSegment = new p.PrefixStatic(p.PREFIX.SS);
+        return this;
+    };
+    Instruction.prototype.ds = function () {
+        this.prefixSegment = new p.PrefixStatic(p.PREFIX.DS);
+        return this;
+    };
+    Instruction.prototype.es = function () {
+        this.prefixSegment = new p.PrefixStatic(p.PREFIX.ES);
+        return this;
+    };
+    Instruction.prototype.fs = function () {
+        this.prefixSegment = new p.PrefixStatic(p.PREFIX.FS);
+        return this;
+    };
+    Instruction.prototype.gs = function () {
+        this.prefixSegment = new p.PrefixStatic(p.PREFIX.GS);
         return this;
     };
     // http://wiki.osdev.org/X86-64_Instruction_Encoding#Operand-size_and_address-size_override_prefix
@@ -110,9 +191,24 @@ var Instruction = (function () {
         this.createPrefixes();
         this.createOpcode();
         this.createModrm();
-        this.createSib(dstmem, srcmem);
-        this.createDisplacement(dstmem, srcmem);
+        this.createSib();
+        this.createDisplacement();
         this.createImmediate();
+    };
+    Instruction.prototype.toString = function (margin) {
+        if (margin === void 0) { margin = '    '; }
+        var parts = [];
+        if (this.prefixLock)
+            parts.push(this.prefixLock.toString());
+        if (this.prefixSegment)
+            parts.push(this.prefixSegment.toString());
+        var mnemonic = this.def.name ? this.def.name : this.opcode.toString();
+        parts.push(mnemonic);
+        if ((parts.join(' ')).length < 8)
+            parts.push((new Array(7 - (parts.join(' ')).length)).join(' '));
+        if (this.op.hasOperands())
+            parts.push(this.op.toString());
+        return margin + parts.join(' ');
     };
     Instruction.prototype.hasExtendedRegister = function () {
         var _a = this.op, dst = _a.dst, src = _a.src;
@@ -130,8 +226,7 @@ var Instruction = (function () {
             return true;
         return false;
     };
-    Instruction.prototype.createPrefixes = function () {
-    };
+    Instruction.prototype.createPrefixes = function () { };
     Instruction.prototype.createOpcode = function () {
         var def = this.def;
         var opcode = this.opcode;
@@ -149,141 +244,133 @@ var Instruction = (function () {
         opcode.isSizeWord = def.isSizeWord;
         opcode.regInOp = def.regInOp;
     };
-    Instruction.prototype.getModrmMod = function (mem) {
-        if (!mem.displacement)
-            return p.Modrm.MOD.INDIRECT;
-        else if (mem.displacement.size === o.DisplacementValue.SIZE.DISP8)
-            return p.Modrm.MOD.DISP8;
-        else
-            return p.Modrm.MOD.DISP32;
-    };
-    // B -> modrm.mod = 00; modrm.rm = B;
-    // B + disp8 -> modrm.mod = 01; modrm.rm = B; disp8
-    // B + disp32 -> modrm.mod = 10; modrm.rm = B; disp32
-    // B + I*S -> modrm.mod = 00; modrm.rm = 100; sib.scale = I; sib.index = S; sib.base = B;
-    // B + I*S + disp8 -> modrm.mod = 01; modrm.rm = 100; sib.scale = S; sib.index = I; sib.base = B; disp8
-    // B + I*S + disp32 -> modrm.mod = 01; modrm.rm = 100; sib.scale = S; sib.index = I;
-    // RBP
-    // RSP
     Instruction.prototype.createModrm = function () {
-        // TODO: 2.2.1.6 RIP-Relative Addressing
         var _a = this.op, dst = _a.dst, src = _a.src;
         var has_opreg = (this.def.opreg > -1);
-        var dst_in_modrm = !this.def.regInOp && dst;
-        if (has_opreg || src || dst_in_modrm) {
+        var dst_in_modrm = !this.def.regInOp; // Destination operand is NOT encoded in main op-code byte.
+        if (has_opreg || dst_in_modrm) {
             var mod = 0, reg = 0, rm = 0;
-            // opreg reg
-            // opreg mem
             if (has_opreg) {
+                // If we have `opreg`, then instruction has up to one operand.
                 reg = this.def.opreg;
-                if (dst.isRegister()) {
+                var r = this.op.getRegisterOperand();
+                if (r) {
                     mod = p.Modrm.MOD.REG_TO_REG;
-                    rm = dst.get3bitId();
-                }
-                else if (dst.isMemory()) {
-                    var mem = dst;
-                    mod = p.Modrm.getMod(mem);
-                    rm = p.Modrm.getRm(mem);
-                }
-                else {
-                    throw TypeError('Destination must be Register or Memory.');
+                    rm = r.get3bitId();
+                    this.modrm = new p.Modrm(mod, reg, rm);
+                    return;
                 }
             }
-            else if (!dst)
-                throw TypeError('No destination operand.');
-            else if (dst.isRegister()) {
-                reg = dst.get3bitId();
-                if (!src) {
-                    mod = p.Modrm.MOD.REG_TO_REG;
-                }
-                else if (src) {
-                    if (src.isRegister()) {
-                        mod = p.Modrm.MOD.REG_TO_REG;
-                        rm = src.get3bitId();
-                    }
-                    else if (src.isMemory()) {
-                        var mem = src;
-                        mod = p.Modrm.getMod(mem);
-                        rm = p.Modrm.getRm(mem);
-                    }
-                    else
-                        throw TypeError('Source must be Register or Memory.');
-                }
+            else {
+                var r = this.op.getRegisterOperand(this.regToRegDirectionRegIsDst);
+                if (r)
+                    reg = r.get3bitId();
             }
-            else if (dst.isMemory()) {
-                var mem = dst;
-                mod = p.Modrm.getMod(mem);
-                rm = p.Modrm.getRm(mem);
-                if (!src) {
-                    reg = 0; // TODO: ?!?!
-                }
-                else if (src.isRegister()) {
-                    reg = src.get3bitId();
-                }
-                else if (src.isMemory())
-                    throw TypeError('Cannot do Memory to Memory operation.');
-                else {
-                    // TODO: other operand = o.Constant
-                    throw TypeError('Not supported yet.');
-                }
+            if (!dst) {
+                this.modrm = new p.Modrm(mod, reg, rm);
+                return;
             }
-            this.modrm = new p.Modrm(mod, reg, rm);
+            // Reg-to-reg instruction;
+            if ((dst instanceof o.Register) && (src instanceof o.Register)) {
+                mod = p.Modrm.MOD.REG_TO_REG;
+                var rmreg = (this.regToRegDirectionRegIsDst ? src : dst);
+                rm = rmreg.get3bitId();
+                this.modrm = new p.Modrm(mod, reg, rm);
+                return;
+            }
+            // `o.Memory` class makes sure that ESP cannot be a SIB index register and
+            // that EBP always has displacement value even if 0x00.
+            var m = this.op.getMemoryOperand();
+            if (!m)
+                throw Error('No Memory reference for Modrm byte.');
+            if (!m.base && !m.index && !m.displacement)
+                throw TypeError('Invalid Memory reference.');
+            if (m.index && !m.scale)
+                throw TypeError('Memory Index reference needs Scale factor.');
+            // dispX
+            // We use `disp32` with SIB byte version because the version without SIB byte
+            // will be used for RIP-relative addressing.
+            if (!m.base && !m.index && m.displacement) {
+                m.displacement.signExtend(o.DisplacementValue.SIZE.DISP32);
+                mod = p.Modrm.MOD.INDIRECT;
+                rm = p.Modrm.RM.NEEDS_SIB; // SIB byte follows
+                this.modrm = new p.Modrm(mod, reg, rm);
+                return;
+            }
+            // [BASE]
+            // [BASE] + dispX
+            // `o.Memory` class makes sure that EBP always has displacement value even if 0x00,
+            // so EBP will not appear here.
+            if (m.base && !m.index) {
+                mod = p.Modrm.getModDispSize(m);
+                if (mod === p.Modrm.MOD.DISP32)
+                    m.displacement.signExtend(o.DisplacementValue.SIZE.DISP32);
+                // SIB byte follows in `[RSP]` case, and `[RBP]` is impossible as RBP
+                // always has a displacement, [RBP] case is used for RIP-relative addressing.
+                rm = m.base.get3bitId();
+                this.modrm = new p.Modrm(mod, reg, rm);
+                return;
+            }
+            // [BASE + INDEX x SCALE]
+            if ((m.base || m.index) && !m.displacement) {
+                mod = p.Modrm.MOD.INDIRECT;
+                rm = p.Modrm.RM.NEEDS_SIB; // SIB byte follows
+                this.modrm = new p.Modrm(mod, reg, rm);
+                return;
+            }
+            // [BASE + INDEX * SCALE] + dispX
+            if (m.base && m.index && m.displacement) {
+                mod = p.Modrm.getModDispSize(m);
+                if (mod === p.Modrm.MOD.DISP32)
+                    m.displacement.signExtend(o.DisplacementValue.SIZE.DISP32);
+                rm = p.Modrm.RM.NEEDS_SIB;
+                this.modrm = new p.Modrm(mod, reg, rm);
+                return;
+            }
+            throw Error('Fatal error, unreachable code.');
         }
     };
-    Instruction.prototype.sibNeeded = function () {
-        if (!this.modrm)
-            return false;
-        if (this.modrm.rm !== p.Modrm.RM_NEEDS_SIB)
-            return true;
-        if ((this.modrm.mod === p.Modrm.MOD.INDIRECT) && (this.modrm.rm === p.Modrm.RM_INDIRECT_SIB))
-            return true;
-        return false;
-    };
     Instruction.prototype.createSib = function () {
-        if (!this.sibNeeded())
+        if (!this.modrm || (this.modrm.rm !== p.Modrm.RM.NEEDS_SIB))
             return;
-        var mem = this.getMemoryOperand();
-        if (!mem)
+        var m = this.op.getMemoryOperand();
+        if (!m)
             throw Error('No Memory operand to encode SIB.');
-        var userscale = 0, I = 0, B = 0;
-        if (mem.scale)
-            userscale = mem.scale.value;
-        if (mem.index) {
-            I = mem.index.get3bitId();
+        var scalefactor = 0, I = 0, B = 0;
+        if (m.scale)
+            scalefactor = m.scale.value;
+        if (m.index) {
+            I = m.index.get3bitId();
+            // RSP register cannot be used as index, `o.Memory` class already ensures it
+            // if used in normal way.
             if (I === p.Sib.INDEX_NONE)
-                throw Error("Register " + mem.index.toString() + " cannot be used as SIB index.");
+                throw Error("Register " + m.index.toString() + " cannot be used as SIB index.");
         }
         else {
             I = p.Sib.INDEX_NONE;
         }
-        if (mem.base) {
-            B = mem.base.get3bitId();
+        if (m.base) {
+            B = m.base.get3bitId();
         }
         else
             B = p.Sib.BASE_NONE;
-        this.sib = new p.Sib(userscale, I, B);
+        this.sib = new p.Sib(scalefactor, I, B);
     };
     Instruction.prototype.createDisplacement = function () {
-        var mem = this.getMemoryOperand();
-        if (!mem)
+        var m = this.op.getMemoryOperand();
+        if (!m)
             return;
-        if (mem.displacement) {
-            this.displacement = new p.Displacement(mem.displacement);
-        }
-        else if (mem.base && (mem.base.get3bitId() === p.Sib.BASE_DISP)) {
-            // RBP always has displacement, because RBP without displacement is used
-            // to encode disp32 without SIB.base.
-            if (!mem.displacement)
-                this.displacement = new p.Displacement(new o.DisplacementValue(0));
+        if (m.displacement) {
+            this.displacement = new p.Displacement(m.displacement);
         }
     };
     Instruction.prototype.createImmediate = function () {
         if (this.op.imm) {
-            if (this.displacement && (this.displacement.value.size === 64 /* QUAD */))
-                throw TypeError("Cannot have Immediate with " + 64 /* QUAD */ + " bit Displacement.");
+            if (this.displacement && (this.displacement.value.size === o.SIZE.QUAD))
+                throw TypeError("Cannot have Immediate with " + o.SIZE.QUAD + " bit Displacement.");
             this.immediate = new p.Immediate(this.op.imm);
         }
     };
     return Instruction;
-}());
+}(CodeElement));
 exports.Instruction = Instruction;

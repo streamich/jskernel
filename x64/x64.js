@@ -20,8 +20,8 @@ var x64;
     function insdef(defs) {
         return new def_1.Definition(util_1.extend({}, defDefaults, defs));
     }
-    var INC = insdef({ op: opcode_1.OP.INC, opreg: opcode_1.OPREG.INC });
-    var DEC = insdef({ op: opcode_1.OP.DEC, opreg: opcode_1.OPREG.DEC });
+    var INC = insdef({ op: opcode_1.OP.INC, opreg: opcode_1.OPREG.INC, name: 'inc' });
+    var DEC = insdef({ op: opcode_1.OP.DEC, opreg: opcode_1.OPREG.DEC, name: 'dec' });
     var INT = insdef({ op: opcode_1.OP.INT, hasImmediate: true });
     var SYSCALL = insdef({ op: opcode_1.OP.SYSCALL });
     var SYSENTER = insdef({ op: opcode_1.OP.SYSENTER });
@@ -31,18 +31,22 @@ var x64;
         function Instruction() {
             _super.apply(this, arguments);
             this.prefixRex = null;
+            this.operandSize = o.SIZE.QUAD;
         }
+        Instruction.prototype.getOperandSize = function () {
+            return this.operandSize;
+        };
         Instruction.prototype.writePrefixes = function (arr) {
             _super.prototype.writePrefixes.call(this, arr);
             if (this.prefixRex)
                 this.prefixRex.write(arr);
         };
         Instruction.prototype.needsOperandSizeChange = function () {
-            return (this.def.size == 32 /* DOUBLE */) && this.hasRegisterOfSize(64 /* QUAD */);
+            return (this.def.size === o.SIZE.DOUBLE) && (this.getOperandSize() === o.SIZE.QUAD);
         };
         Instruction.prototype.createPrefixes = function () {
             _super.prototype.createPrefixes.call(this);
-            if (this.def.mandatoryRex || this.needsOperandSizeChange() || this.hasExtendedRegister())
+            if (this.def.needsRex || this.needsOperandSizeChange() || this.hasExtendedRegister())
                 this.prefixRex = this.createRex();
         };
         Instruction.prototype.createRex = function () {
@@ -50,16 +54,28 @@ var x64;
             if (this.needsOperandSizeChange())
                 W = 1;
             var _a = this.op, dst = _a.dst, src = _a.src;
-            if (dst && dst.reg() && dst.reg().isExtended())
-                R = 1;
-            if (src && src.reg() && src.reg().isExtended())
-                B = 1;
-            var mem = this.getMemoryOperand();
-            if (mem) {
-                if (mem.base && mem.base.isExtended())
+            if ((dst instanceof o.Register) && (src instanceof o.Register)) {
+                if (dst.isExtended())
+                    R = 1;
+                if (src.isExtended())
                     B = 1;
-                if (mem.index && mem.index.isExtended())
-                    X = 1;
+            }
+            else {
+                var r = this.op.getRegisterOperand();
+                var mem = this.op.getMemoryOperand();
+                if (r) {
+                    if (r.isExtended())
+                        if (mem)
+                            R = 1;
+                        else
+                            B = 1;
+                }
+                if (mem) {
+                    if (mem.base && mem.base.isExtended())
+                        B = 1;
+                    if (mem.index && mem.index.isExtended())
+                        X = 1;
+                }
             }
             // if(!this.regToRegDirectionRegIsDst) [R, B] = [B, R];
             return new p.PrefixRex(W, R, X, B);
@@ -72,25 +88,29 @@ var x64;
         // > addressing, ModRM instructions can address memory relative to the 64-bit RIP using a signed
         // > 32-bit displacement.
         Instruction.prototype.createModrm = function () {
-            var mem = this.getMemoryOperand();
+            var mem = this.op.getMemoryOperand();
             if (mem && mem.base && (mem.base instanceof o.RegisterRip)) {
+                if (mem.index || mem.scale)
+                    throw TypeError('RIP-relative addressing does not support index and scale addressing.');
                 var disp = mem.displacement;
                 if (!disp)
                     throw TypeError('RIP-relative addressing requires 4-byte displacement.');
-                if (mem.index || mem.scale)
-                    throw TypeError('RIP-relative addressing does not support index and scale addressing.');
-                if (disp.size < 32 /* DOUBLE */)
-                    disp.zeroExtend(32 /* DOUBLE */);
+                if (disp.size < o.SIZE.DOUBLE)
+                    disp.zeroExtend(o.SIZE.DOUBLE);
+                // Encode `Modrm.reg` field.
+                var reg = 0;
+                if (this.def.opreg > -1) {
+                    reg = this.def.opreg;
+                }
+                else {
+                    var r = this.op.getRegisterOperand();
+                    if (r)
+                        reg = r.get3bitId();
+                }
+                this.modrm = new p.Modrm(p.Modrm.MOD.INDIRECT, reg, p.Modrm.RM.INDIRECT_DISP);
             }
             else
                 _super.prototype.createModrm.call(this);
-        };
-        // Adding RIP-relative addressing in long mode.
-        Instruction.prototype.sibNeeded = function () {
-            // RIP-relative addressing overwrites this case, uses it without SIB byte to specify RIP + disp32.
-            if ((this.modrm.mod === p.Modrm.MOD.INDIRECT) && (this.modrm.rm === p.Modrm.RM_INDIRECT_SIB))
-                return false;
-            return _super.prototype.sibNeeded.call(this);
         };
         return Instruction;
     }(i.Instruction));

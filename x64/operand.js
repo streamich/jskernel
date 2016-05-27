@@ -4,8 +4,16 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
+var regfile_1 = require('./regfile');
 var util_1 = require('./util');
-// # General operand used in our assembly "language".
+(function (SIZE) {
+    SIZE[SIZE["BYTE"] = 8] = "BYTE";
+    SIZE[SIZE["WORD"] = 16] = "WORD";
+    SIZE[SIZE["DOUBLE"] = 32] = "DOUBLE";
+    SIZE[SIZE["QUAD"] = 64] = "QUAD";
+})(exports.SIZE || (exports.SIZE = {}));
+var SIZE = exports.SIZE;
+// General operand used in our assembly "language".
 var Operand = (function () {
     function Operand() {
     }
@@ -41,21 +49,21 @@ var Constant = (function (_super) {
     }
     Constant.sizeClass = function (value) {
         if ((value <= 0x7f) && (value >= -0x80))
-            return 8 /* BYTE */;
+            return SIZE.BYTE;
         if ((value <= 0x7fff) && (value >= -0x8000))
-            return 16 /* WORD */;
+            return SIZE.WORD;
         if ((value <= 0x7fffffff) && (value >= -0x80000000))
-            return 32 /* DOUBLE */;
-        return 64 /* QUAD */;
+            return SIZE.DOUBLE;
+        return SIZE.QUAD;
     };
     Constant.sizeClassUnsigned = function (value) {
         if (value <= 0xff)
-            return 8 /* BYTE */;
+            return SIZE.BYTE;
         if (value <= 0xffff)
-            return 16 /* WORD */;
+            return SIZE.WORD;
         if (value <= 0xffffffff)
-            return 32 /* DOUBLE */;
-        return 64 /* QUAD */;
+            return SIZE.DOUBLE;
+        return SIZE.QUAD;
     };
     Object.defineProperty(Constant.prototype, "Value", {
         set: function (value) {
@@ -67,7 +75,7 @@ var Constant = (function (_super) {
             else if (typeof value === 'number') {
                 var clazz = this.signed ? Constant.sizeClass(value) : Constant.sizeClassUnsigned(value);
                 /* JS integers are 53-bit, so split here `number`s over 32 bits into [number, number]. */
-                if (clazz === 64 /* QUAD */)
+                if (clazz === SIZE.QUAD)
                     this.setValue64([util_1.UInt64.lo(value), util_1.UInt64.hi(value)]);
                 else
                     this.setValue32(value);
@@ -83,9 +91,9 @@ var Constant = (function (_super) {
         this.size = size;
         this.value = value;
         this.octets = [value & 0xFF];
-        if (size > 8 /* BYTE */)
+        if (size > SIZE.BYTE)
             this.octets[1] = (value >> 8) & 0xFF;
-        if (size > 16 /* WORD */) {
+        if (size > SIZE.WORD) {
             this.octets[2] = (value >> 16) & 0xFF;
             this.octets[3] = (value >> 24) & 0xFF;
         }
@@ -122,15 +130,15 @@ var Constant = (function (_super) {
         // We know it is not number64, because we don't deal with number larger than 64-bit,
         // and if it was 64-bit already there would be nothing to extend.
         var value = this.value;
-        if (size === 64 /* QUAD */) {
+        if (size === SIZE.QUAD) {
             this.setValue64([util_1.UInt64.lo(value), util_1.UInt64.hi(value)]);
             return;
         }
         this.size = size;
         this.octets = [value & 0xFF];
-        if (size > 8 /* BYTE */)
+        if (size > SIZE.BYTE)
             this.octets[1] = (value >> 8) & 0xFF;
-        if (size > 16 /* WORD */) {
+        if (size > SIZE.WORD) {
             this.octets[2] = (value >> 16) & 0xFF;
             this.octets[3] = (value >> 24) & 0xFF;
         }
@@ -157,7 +165,6 @@ var DisplacementValue = (function (_super) {
     __extends(DisplacementValue, _super);
     function DisplacementValue(value) {
         _super.call(this, value, true);
-        this.size = DisplacementValue.SIZE.DISP8;
     }
     DisplacementValue.prototype.setValue32 = function (value) {
         _super.prototype.setValue32.call(this, value);
@@ -165,8 +172,8 @@ var DisplacementValue = (function (_super) {
         // if(this.size > DisplacementValue.SIZE.DISP8) this.zeroExtend(DisplacementValue.SIZE.DISP32);
     };
     DisplacementValue.SIZE = {
-        DISP8: 8 /* BYTE */,
-        DISP32: 32 /* DOUBLE */,
+        DISP8: SIZE.BYTE,
+        DISP32: SIZE.DOUBLE,
     };
     return DisplacementValue;
 }(Constant));
@@ -174,69 +181,12 @@ exports.DisplacementValue = DisplacementValue;
 // ## Registers
 //
 // `Register` represents one of `%rax`, `%rbx`, etc. registers.
-(function (R64) {
-    R64[R64["RAX"] = 0] = "RAX";
-    R64[R64["RCX"] = 1] = "RCX";
-    R64[R64["RDX"] = 2] = "RDX";
-    R64[R64["RBX"] = 3] = "RBX";
-    R64[R64["RSP"] = 4] = "RSP";
-    R64[R64["RBP"] = 5] = "RBP";
-    R64[R64["RSI"] = 6] = "RSI";
-    R64[R64["RDI"] = 7] = "RDI";
-    R64[R64["R8"] = 8] = "R8";
-    R64[R64["R9"] = 9] = "R9";
-    R64[R64["R10"] = 10] = "R10";
-    R64[R64["R11"] = 11] = "R11";
-    R64[R64["R12"] = 12] = "R12";
-    R64[R64["R13"] = 13] = "R13";
-    R64[R64["R14"] = 14] = "R14";
-    R64[R64["R15"] = 15] = "R15";
-})(exports.R64 || (exports.R64 = {}));
-var R64 = exports.R64;
-(function (R32) {
-    R32[R32["EAX"] = 0] = "EAX";
-    R32[R32["ECX"] = 1] = "ECX";
-    R32[R32["EDX"] = 2] = "EDX";
-    R32[R32["EBX"] = 3] = "EBX";
-    R32[R32["ESP"] = 4] = "ESP";
-    R32[R32["EBP"] = 5] = "EBP";
-    R32[R32["ESI"] = 6] = "ESI";
-    R32[R32["EDI"] = 7] = "EDI";
-    R32[R32["R8D"] = 8] = "R8D";
-    R32[R32["R9D"] = 9] = "R9D";
-    R32[R32["R10D"] = 10] = "R10D";
-    R32[R32["R11D"] = 11] = "R11D";
-    R32[R32["R12D"] = 12] = "R12D";
-    R32[R32["R13D"] = 13] = "R13D";
-    R32[R32["R14D"] = 14] = "R14D";
-    R32[R32["R15D"] = 15] = "R15D";
-})(exports.R32 || (exports.R32 = {}));
-var R32 = exports.R32;
-(function (R8) {
-    R8[R8["AL"] = 0] = "AL";
-    R8[R8["CL"] = 1] = "CL";
-    R8[R8["DL"] = 2] = "DL";
-    R8[R8["BL"] = 3] = "BL";
-    R8[R8["SPL"] = 4] = "SPL";
-    R8[R8["BPL"] = 5] = "BPL";
-    R8[R8["SIL"] = 6] = "SIL";
-    R8[R8["DIL"] = 7] = "DIL";
-    R8[R8["R8B"] = 8] = "R8B";
-    R8[R8["R9B"] = 9] = "R9B";
-    R8[R8["R10B"] = 10] = "R10B";
-    R8[R8["R11B"] = 11] = "R11B";
-    R8[R8["R12B"] = 12] = "R12B";
-    R8[R8["R13B"] = 13] = "R13B";
-    R8[R8["R14B"] = 14] = "R14B";
-    R8[R8["R15B"] = 15] = "R15B";
-})(exports.R8 || (exports.R8 = {}));
-var R8 = exports.R8;
 var Register = (function (_super) {
     __extends(Register, _super);
     function Register(id, size) {
         _super.call(this);
         this.id = 0; // Number value of register.
-        this.size = 64 /* QUAD */; // Size in bits
+        this.size = SIZE.QUAD; // Size in bits
         this.id = id;
         this.size = size;
     }
@@ -261,14 +211,14 @@ var Register = (function (_super) {
     };
     Register.prototype.getName = function () {
         switch (this.size) {
-            case 64 /* QUAD */: return R64[this.id].toLowerCase();
-            case 32 /* DOUBLE */: return R32[this.id].toLowerCase();
-            case 8 /* BYTE */: return R8[this.id].toLowerCase();
-            default: return 'unknown';
+            case SIZE.QUAD: return regfile_1.R64[this.id];
+            case SIZE.DOUBLE: return regfile_1.R32[this.id];
+            case SIZE.BYTE: return regfile_1.R8[this.id];
+            default: return 'REG';
         }
     };
     Register.prototype.toString = function () {
-        return '%' + this.getName();
+        return this.getName().toLowerCase();
     };
     return Register;
 }(Operand));
@@ -276,7 +226,7 @@ exports.Register = Register;
 var Register64 = (function (_super) {
     __extends(Register64, _super);
     function Register64(id) {
-        _super.call(this, id, 64 /* QUAD */);
+        _super.call(this, id, SIZE.QUAD);
     }
     return Register64;
 }(Register));
@@ -284,7 +234,7 @@ exports.Register64 = Register64;
 var Register32 = (function (_super) {
     __extends(Register32, _super);
     function Register32(id) {
-        _super.call(this, id, 32 /* DOUBLE */);
+        _super.call(this, id, SIZE.DOUBLE);
     }
     return Register32;
 }(Register));
@@ -292,7 +242,7 @@ exports.Register32 = Register32;
 var Register16 = (function (_super) {
     __extends(Register16, _super);
     function Register16(id) {
-        _super.call(this, id, 16 /* WORD */);
+        _super.call(this, id, SIZE.WORD);
     }
     return Register16;
 }(Register));
@@ -300,7 +250,7 @@ exports.Register16 = Register16;
 var Register8 = (function (_super) {
     __extends(Register8, _super);
     function Register8(id) {
-        _super.call(this, id, 8 /* BYTE */);
+        _super.call(this, id, SIZE.BYTE);
     }
     return Register8;
 }(Register));
@@ -316,55 +266,55 @@ var RegisterRip = (function (_super) {
     return RegisterRip;
 }(Register64));
 exports.RegisterRip = RegisterRip;
-exports.rax = new Register64(R64.RAX);
-exports.rbx = new Register64(R64.RBX);
-exports.rcx = new Register64(R64.RCX);
-exports.rdx = new Register64(R64.RDX);
-exports.rsi = new Register64(R64.RSI);
-exports.rdi = new Register64(R64.RDI);
-exports.rbp = new Register64(R64.RBP);
-exports.rsp = new Register64(R64.RSP);
-exports.r8 = new Register64(R64.R8);
-exports.r9 = new Register64(R64.R9);
-exports.r10 = new Register64(R64.R10);
-exports.r11 = new Register64(R64.R11);
-exports.r12 = new Register64(R64.R12);
-exports.r13 = new Register64(R64.R13);
-exports.r14 = new Register64(R64.R14);
-exports.r15 = new Register64(R64.R15);
+exports.rax = new Register64(regfile_1.R64.RAX);
+exports.rbx = new Register64(regfile_1.R64.RBX);
+exports.rcx = new Register64(regfile_1.R64.RCX);
+exports.rdx = new Register64(regfile_1.R64.RDX);
+exports.rsi = new Register64(regfile_1.R64.RSI);
+exports.rdi = new Register64(regfile_1.R64.RDI);
+exports.rbp = new Register64(regfile_1.R64.RBP);
+exports.rsp = new Register64(regfile_1.R64.RSP);
+exports.r8 = new Register64(regfile_1.R64.R8);
+exports.r9 = new Register64(regfile_1.R64.R9);
+exports.r10 = new Register64(regfile_1.R64.R10);
+exports.r11 = new Register64(regfile_1.R64.R11);
+exports.r12 = new Register64(regfile_1.R64.R12);
+exports.r13 = new Register64(regfile_1.R64.R13);
+exports.r14 = new Register64(regfile_1.R64.R14);
+exports.r15 = new Register64(regfile_1.R64.R15);
 exports.rip = new RegisterRip;
-exports.eax = new Register32(R32.EAX);
-exports.ebx = new Register32(R32.EBX);
-exports.ecx = new Register32(R32.ECX);
-exports.edx = new Register32(R32.EDX);
-exports.esi = new Register32(R32.ESI);
-exports.edi = new Register32(R32.EDI);
-exports.ebp = new Register32(R32.EBP);
-exports.esp = new Register32(R32.ESP);
-exports.r8d = new Register32(R32.R8D);
-exports.r9d = new Register32(R32.R9D);
-exports.r10d = new Register32(R32.R10D);
-exports.r11d = new Register32(R32.R11D);
-exports.r12d = new Register32(R32.R12D);
-exports.r13d = new Register32(R32.R13D);
-exports.r14d = new Register32(R32.R14D);
-exports.r15d = new Register32(R32.R15D);
-exports.al = new Register8(R8.AL);
-exports.bl = new Register8(R8.BL);
-exports.cl = new Register8(R8.CL);
-exports.dl = new Register8(R8.DL);
-exports.sil = new Register8(R8.SIL);
-exports.dil = new Register8(R8.DIL);
-exports.bpl = new Register8(R8.BPL);
-exports.spl = new Register8(R8.SPL);
-exports.r8b = new Register8(R8.R8B);
-exports.r9b = new Register8(R8.R9B);
-exports.r10b = new Register8(R8.R10B);
-exports.r11b = new Register8(R8.R11B);
-exports.r12b = new Register8(R8.R12B);
-exports.r13b = new Register8(R8.R13B);
-exports.r14b = new Register8(R8.R14B);
-exports.r15b = new Register8(R8.R15B);
+exports.eax = new Register32(regfile_1.R32.EAX);
+exports.ebx = new Register32(regfile_1.R32.EBX);
+exports.ecx = new Register32(regfile_1.R32.ECX);
+exports.edx = new Register32(regfile_1.R32.EDX);
+exports.esi = new Register32(regfile_1.R32.ESI);
+exports.edi = new Register32(regfile_1.R32.EDI);
+exports.ebp = new Register32(regfile_1.R32.EBP);
+exports.esp = new Register32(regfile_1.R32.ESP);
+exports.r8d = new Register32(regfile_1.R32.R8D);
+exports.r9d = new Register32(regfile_1.R32.R9D);
+exports.r10d = new Register32(regfile_1.R32.R10D);
+exports.r11d = new Register32(regfile_1.R32.R11D);
+exports.r12d = new Register32(regfile_1.R32.R12D);
+exports.r13d = new Register32(regfile_1.R32.R13D);
+exports.r14d = new Register32(regfile_1.R32.R14D);
+exports.r15d = new Register32(regfile_1.R32.R15D);
+exports.al = new Register8(regfile_1.R8.AL);
+exports.bl = new Register8(regfile_1.R8.BL);
+exports.cl = new Register8(regfile_1.R8.CL);
+exports.dl = new Register8(regfile_1.R8.DL);
+exports.sil = new Register8(regfile_1.R8.SIL);
+exports.dil = new Register8(regfile_1.R8.DIL);
+exports.bpl = new Register8(regfile_1.R8.BPL);
+exports.spl = new Register8(regfile_1.R8.SPL);
+exports.r8b = new Register8(regfile_1.R8.R8B);
+exports.r9b = new Register8(regfile_1.R8.R9B);
+exports.r10b = new Register8(regfile_1.R8.R10B);
+exports.r11b = new Register8(regfile_1.R8.R11B);
+exports.r12b = new Register8(regfile_1.R8.R12B);
+exports.r13b = new Register8(regfile_1.R8.R13B);
+exports.r14b = new Register8(regfile_1.R8.R14B);
+exports.r15b = new Register8(regfile_1.R8.R15B);
 // # Scale
 //
 // `Scale` used in SIB byte in two bit `SCALE` field.
@@ -408,6 +358,10 @@ var Memory = (function (_super) {
         return !!this.index || !!this.scale;
     };
     Memory.prototype.ref = function (base) {
+        // RBP, EBP etc.. always need displacement for ModRM and SIB bytes.
+        var is_ebp = (regfile_1.R64.RBP & 7) === base.get3bitId();
+        if (is_ebp && !this.displacement)
+            this.displacement = new DisplacementValue(0);
         this.base = base;
         return this;
     };
@@ -415,6 +369,9 @@ var Memory = (function (_super) {
         if (scale_factor === void 0) { scale_factor = 1; }
         if (!(index instanceof Register))
             throw TypeError('Index must by of type Register.');
+        var esp = (regfile_1.R64.RSP & 7);
+        if (index.get3bitId() === esp)
+            throw TypeError('%esp, %rsp or other 0b100 registers cannot be used as addressing index.');
         this.index = index;
         this.scale = new Scale(scale_factor);
         return this;
@@ -424,11 +381,14 @@ var Memory = (function (_super) {
         return this;
     };
     Memory.prototype.toString = function () {
-        var base = this.base ? this.base.toString() : '';
-        var index = this.index ? this.index.toString() : '';
-        var scale = this.scale ? this.scale.toString() : '';
-        var disp = this.disp ? this.disp.toString() : '';
-        return "[%" + base + " + %{index} * " + scale + " + " + disp + "]";
+        var parts = [];
+        if (this.base)
+            parts.push(this.base.toString());
+        if (this.index)
+            parts.push(this.index.toString() + ' * ' + this.scale.toString());
+        if (this.displacement)
+            parts.push(this.displacement.toString());
+        return "[" + parts.join(' + ') + "]";
     };
     return Memory;
 }(Operand));

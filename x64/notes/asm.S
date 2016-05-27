@@ -2,9 +2,27 @@
 
 .global main
 main:
-        sysexit
-#        incq 0x11223344(%rax, %rbx, 4)
-        incq (%rax, %rbx, 4)
+        syscall
+inc:
+        incq %rbx
+        incq (%rax)
+        incq (%rbx)
+        incq (%rbx, %rcx)
+        incq (%rbx, %rcx, 8)
+        incq (%rbx, %rcx, 8)
+        incq 0x11(%rax, %rbx, 8)
+        incq -0x11223344(%rax, %rbx, 8)
+        incq -0x123(%rbx, %r15, 8)
+        incq (%rbp, %rbp, 8)
+        incq (%rbp)
+        incq (%rsp)
+        incq (%r12)
+        incq (%r13)
+        incq %r15
+        incq 0x11
+        incq 0x11223344
+dec:
+        decq %rax
 
 test2:
         dec %r10d

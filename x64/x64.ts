@@ -18,8 +18,8 @@ export namespace x64 {
         return new Definition(extend<IDefinition>({}, defDefaults, defs));
     }
 
-    const INC = insdef({op: OP.INC, opreg: OPREG.INC});
-    const DEC = insdef({op: OP.DEC, opreg: OPREG.DEC});
+    const INC = insdef({op: OP.INC, opreg: OPREG.INC, name: 'inc'});
+    const DEC = insdef({op: OP.DEC, opreg: OPREG.DEC, name: 'dec'});
     const INT = insdef({op: OP.INT, hasImmediate: true});
     const SYSCALL = insdef({op: OP.SYSCALL});
     const SYSENTER = insdef({op: OP.SYSENTER});
@@ -30,18 +30,24 @@ export namespace x64 {
 
         prefixRex: p.PrefixRex = null;
 
+        operandSize = o.SIZE.QUAD;
+
+        getOperandSize() {
+            return this.operandSize;
+        }
+
         protected writePrefixes(arr: number[]) {
             super.writePrefixes(arr);
             if(this.prefixRex) this.prefixRex.write(arr);
         }
 
         protected needsOperandSizeChange() {
-            return (this.def.size == o.SIZE.DOUBLE) && this.hasRegisterOfSize(o.SIZE.QUAD);
+            return (this.def.size === o.SIZE.DOUBLE) && (this.getOperandSize() === o.SIZE.QUAD);
         }
 
         protected createPrefixes() {
             super.createPrefixes();
-            if(this.def.mandatoryRex || this.needsOperandSizeChange() || this.hasExtendedRegister())
+            if(this.def.needsRex || this.needsOperandSizeChange() || this.hasExtendedRegister())
                 this.prefixRex = this.createRex();
         }
 
@@ -51,13 +57,25 @@ export namespace x64 {
             if(this.needsOperandSizeChange()) W = 1;
 
             var {dst, src} = this.op;
-            if(dst && dst.reg() && (dst.reg() as o.Register).isExtended()) R = 1;
-            if(src && src.reg() && (src.reg() as o.Register).isExtended()) B = 1;
 
-            var mem: o.Memory = this.getMemoryOperand();
-            if(mem) {
-                if(mem.base && mem.base.isExtended()) B = 1;
-                if(mem.index && mem.index.isExtended()) X = 1;
+            if((dst instanceof o.Register) && (src instanceof o.Register)) {
+                if((dst as o.Register).isExtended()) R = 1;
+                if((src as o.Register).isExtended()) B = 1;
+            } else {
+
+                var r: o.Register = this.op.getRegisterOperand();
+                var mem: o.Memory = this.op.getMemoryOperand();
+
+                if(r) {
+                    if(r.isExtended())
+                        if(mem) R = 1;
+                        else    B = 1;
+                }
+
+                if(mem) {
+                    if(mem.base && mem.base.isExtended()) B = 1;
+                    if(mem.index && mem.index.isExtended()) X = 1;
+                }
             }
 
             // if(!this.regToRegDirectionRegIsDst) [R, B] = [B, R];
@@ -72,26 +90,29 @@ export namespace x64 {
         // > addressing, ModRM instructions can address memory relative to the 64-bit RIP using a signed
         // > 32-bit displacement.
         protected createModrm() {
-            var mem: o.Memory = this.getMemoryOperand();
+            var mem: o.Memory = this.op.getMemoryOperand();
             if(mem && mem.base && (mem.base instanceof o.RegisterRip)) {
-                var disp = mem.displacement;
-                if(!disp)
-                    throw TypeError('RIP-relative addressing requires 4-byte displacement.');
                 if(mem.index || mem.scale)
                     throw TypeError('RIP-relative addressing does not support index and scale addressing.');
 
-                if(disp.size < o.SIZE.DOUBLE) disp.zeroExtend(o.SIZE.DOUBLE);
+                var disp = mem.displacement;
+                if(!disp)
+                    throw TypeError('RIP-relative addressing requires 4-byte displacement.');
+                if(disp.size < o.SIZE.DOUBLE) // Maybe this should go to `.createDisplacement()`?
+                    disp.zeroExtend(o.SIZE.DOUBLE);
 
+                // Encode `Modrm.reg` field.
+                var reg = 0;
+                if(this.def.opreg > -1) {
+                    reg = this.def.opreg;
+                } else {
+                    var r: o.Register = this.op.getRegisterOperand();
+                    if (r) reg = r.get3bitId();
+                }
+
+                this.modrm = new p.Modrm(p.Modrm.MOD.INDIRECT, reg, p.Modrm.RM.INDIRECT_DISP);
 
             } else super.createModrm();
-        }
-
-        // Adding RIP-relative addressing in long mode.
-        protected sibNeeded() {
-            // RIP-relative addressing overwrites this case, uses it without SIB byte to specify RIP + disp32.
-            if((this.modrm.mod === p.Modrm.MOD.INDIRECT) && (this.modrm.rm === p.Modrm.RM_INDIRECT_SIB))
-                return false;
-            return super.sibNeeded();
         }
     }
 

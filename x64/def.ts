@@ -2,13 +2,14 @@ import {extend} from './util';
 
 
 export interface IDefinition {
+    name?: string;
     op?: number;
     opreg?: number;
     regInOp?: boolean;
     operands?: number;
     hasImmediate?: boolean;
     immediateSizes?: number[];
-    mandatoryRex?: boolean;
+    needsRex?: boolean;
     size?: number;
     addrSize?: number;
     maxDisplacementSize?: number;
@@ -16,13 +17,14 @@ export interface IDefinition {
 
 
 export var definitionDefaults = {
+    name: '',
     op: 0,
     opreg: -1,  // -1 means "does not required"
     regInOp: false,
     operands: 0,
     hasImmediate: false,
     immediateSizes: [],
-    mandatoryRex: false,
+    needsRex: false,
     size: 32,
     addrSize: 64,
     maxDisplacementSize: 32,
@@ -30,6 +32,8 @@ export var definitionDefaults = {
 
 
 export class Definition implements IDefinition {
+
+    name: string;
 
     // Primary op-code of the instructions. Often the lower 2 or 3 bits of the
     // instruction op-code may be set independently.
@@ -69,7 +73,7 @@ export class Definition implements IDefinition {
     isSizeWord: boolean;
 
     // Whether `REX` prefix is mandatory for this instruction.
-    mandatoryRex: boolean;
+    needsRex: boolean;
 
     // Whether this instruction supports *immediate* value.
     hasImmediate: boolean;
