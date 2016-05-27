@@ -73,7 +73,7 @@ export namespace x64 {
         // > 32-bit displacement.
         protected createModrm() {
             var mem: o.Memory = this.getMemoryOperand();
-            if(mem && mem.base && (mem.base === o.rip)) {
+            if(mem && mem.base && (mem.base instanceof o.RegisterRip)) {
                 var disp = mem.displacement;
                 if(!disp)
                     throw TypeError('RIP-relative addressing requires 4-byte displacement.');

@@ -157,6 +157,14 @@ var Instruction = (function () {
         else
             return p.Modrm.MOD.DISP32;
     };
+    // B -> modrm.mod = 00; modrm.rm = B;
+    // B + disp8 -> modrm.mod = 01; modrm.rm = B; disp8
+    // B + disp32 -> modrm.mod = 10; modrm.rm = B; disp32
+    // B + I*S -> modrm.mod = 00; modrm.rm = 100; sib.scale = I; sib.index = S; sib.base = B;
+    // B + I*S + disp8 -> modrm.mod = 01; modrm.rm = 100; sib.scale = S; sib.index = I; sib.base = B; disp8
+    // B + I*S + disp32 -> modrm.mod = 01; modrm.rm = 100; sib.scale = S; sib.index = I;
+    // RBP
+    // RSP
     Instruction.prototype.createModrm = function () {
         // TODO: 2.2.1.6 RIP-Relative Addressing
         var _a = this.op, dst = _a.dst, src = _a.src;
