@@ -20,12 +20,13 @@ var x64;
     function insdef(defs) {
         return new def_1.Definition(util_1.extend({}, defDefaults, defs));
     }
-    var INC = insdef({ op: opcode_1.OP.INC, opreg: opcode_1.OPREG.INC, name: 'inc' });
-    var DEC = insdef({ op: opcode_1.OP.DEC, opreg: opcode_1.OPREG.DEC, name: 'dec' });
-    var INT = insdef({ op: opcode_1.OP.INT, hasImmediate: true });
-    var SYSCALL = insdef({ op: opcode_1.OP.SYSCALL });
-    var SYSENTER = insdef({ op: opcode_1.OP.SYSENTER });
-    var SYSEXIT = insdef({ op: opcode_1.OP.SYSEXIT });
+    var INC = insdef({ op: opcode_1.OP.INC, opreg: opcode_1.OPREG.INC });
+    var DEC = insdef({ op: opcode_1.OP.DEC, opreg: opcode_1.OPREG.DEC });
+    var MOV = insdef({ op: opcode_1.OP.MOV, opDirectionBit: true });
+    var INT = insdef({ op: opcode_1.OP.INT, hasImmediate: true, size: 64 });
+    var SYSCALL = insdef({ op: opcode_1.OP.SYSCALL, size: 64 });
+    var SYSENTER = insdef({ op: opcode_1.OP.SYSENTER, size: 64 });
+    var SYSEXIT = insdef({ op: opcode_1.OP.SYSEXIT, size: 64 });
     var Instruction = (function (_super) {
         __extends(Instruction, _super);
         function Instruction() {
@@ -126,6 +127,9 @@ var x64;
         };
         Code.prototype.decq = function (dst) {
             return this.insOneOperand(DEC, dst);
+        };
+        Code.prototype.movq = function (dst, src) {
+            return this.insTwoOperands(MOV, dst, src);
         };
         Code.prototype.int = function (num) {
             if (typeof num !== 'number')

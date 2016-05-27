@@ -3,6 +3,7 @@ var util_1 = require('./util');
 exports.definitionDefaults = {
     name: '',
     op: 0,
+    opDirectionBit: false,
     opreg: -1,
     regInOp: false,
     operands: 0,

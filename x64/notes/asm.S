@@ -3,6 +3,12 @@
 .global main
 main:
         syscall
+system:
+        syscall
+        sysenter
+        sysexit
+        int $0x80
+
 inc:
         incq %rbx
         incq (%rax)
@@ -23,6 +29,25 @@ inc:
         incq 0x11223344
 dec:
         decq %rax
+
+mov:
+        movq %rax, %rax
+        movq %rax, %rbx
+        movq %rax, (%rax)
+        movq %rbx, (%rcx)
+        movq (%rbx), %rdx
+        movq %r8, %r9
+        movq %r10, (%r11)
+        movq (%r12), %r13
+        movq 0x11(%rbx), %rcx
+        movq (%rcx, %rdx, 1), %rsi
+        movq 0x1234(%rax, %rbx, 4), %rcx
+        movq 0x01, %rbp
+        movq 0x01, %rsp
+        movq %rbx, (%rsp)
+        movq %rbx, (%rbp)
+        movq %rbx, (%rsp, %rbp, 2)
+        movq (%rbp, %rax, 8), %rbx
 
 test2:
         dec %r10d

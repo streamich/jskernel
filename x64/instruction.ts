@@ -1,7 +1,7 @@
 import * as o from './operand';
 import * as p from './parts';
 import {Definition} from './def';
-import {OP} from './opcode';
+import {OP, OPREG} from './opcode';
 
 
 // Collection of operands an instruction might have. It might
@@ -56,18 +56,19 @@ export class Operands {
 }
 
 
-export abstract class CodeElement {
+export abstract class Expression {
     // Index where instruction was inserted in `Code`s buffer.
     index: number = 0;
 
     // Byte offset of the instruction in compiled machine code.
-    offset: number = 0;
+    offset: number = -1;
 
+    abstract write(arr: number[]): number[];
     abstract toString(): string;
 }
 
 
-export class Label extends CodeElement {
+export class Label extends Expression {
 
     name: string;
 
@@ -76,8 +77,49 @@ export class Label extends CodeElement {
         this.name = name;
     }
 
+    write(arr: number[]): number[] {
+        return arr;
+    }
+
     toString() {
         return this.name + ':';
+    }
+}
+
+
+export class Data extends Expression {
+    octets: number[] = [];
+
+    write(arr: number[]): number[] {
+        this.offset = arr.length;
+
+        arr = arr.concat(this.octets);
+        return arr;
+    }
+
+    toString(margin = '    ') {
+        return margin + 'db';
+    }
+}
+
+
+export class DataUninitialized extends Expression {
+    length: number;
+
+    constructor(length: number) {
+        super();
+        this.length = length;
+    }
+
+    write(arr: number[]): number[] {
+        this.offset = arr.length;
+
+        arr = arr.concat(new Array(this.length));
+        return arr;
+    }
+
+    toString(margin = '    ') {
+        return margin + 'resb ' + this.length;
     }
 }
 
@@ -99,7 +141,7 @@ export interface InstructionUserInterface {
 // `Instruction` object is created using instruction `Definition` and `Operands` provided by the user,
 // out of those `Instruction` generates `InstructionPart`s, which then can be packaged into machine
 // code using `.write()` method.
-export class Instruction extends CodeElement implements InstructionUserInterface{
+export class Instruction extends Expression implements InstructionUserInterface{
     def: Definition = null;
     op: Operands = null;
 
@@ -113,7 +155,8 @@ export class Instruction extends CodeElement implements InstructionUserInterface
     immediate: p.Immediate = null;
 
     // Direction for register-to-register `MOV` operations, whether REG field of Mod-R/M byte is destination.
-    protected regToRegDirectionRegIsDst: boolean = true;
+    // We set this to `false` to be compatible with GAS assembly, which we use for testing.
+    protected regToRegDirectionRegIsDst: boolean = false;
 
     // constructor(code: Code, def: Definition, op: Operands) {
     constructor(def: Definition, op: Operands) {
@@ -128,6 +171,8 @@ export class Instruction extends CodeElement implements InstructionUserInterface
     }
 
     write(arr: number[]): number[] {
+        this.offset = arr.length;
+
         this.writePrefixes(arr);
         this.opcode.write(arr);
         if(this.modrm)          this.modrm.write(arr);
@@ -216,7 +261,11 @@ export class Instruction extends CodeElement implements InstructionUserInterface
         if(this.prefixLock) parts.push(this.prefixLock.toString());
         if(this.prefixSegment) parts.push(this.prefixSegment.toString());
 
-        var mnemonic = this.def.name ? this.def.name : this.opcode.toString();
+        var mnemonic = this.def.name ? this.def.name : '';
+        if(this.def.opreg > -1)
+            mnemonic = OPREG[this.def.opreg].toLowerCase();
+        else
+            mnemonic = this.opcode.toString();
         parts.push(mnemonic);
 
         if((parts.join(' ')).length < 8) parts.push((new Array(7 - (parts.join(' ')).length)).join(' '));
@@ -255,17 +304,21 @@ export class Instruction extends CodeElement implements InstructionUserInterface
             opcode.op = (opcode.op & p.Opcode.MASK_OP) | (dst as o.Register).get3bitId();
         } else {
             // Direction bit `d`
-            // var direction = p.Opcode.DIRECTION.REG_IS_SRC;
-            // if(dstreg) {
-            //     direction = p.Opcode.DIRECTION.REG_IS_DST;
-            //
-            //     *reg-to-reg* `MOV` operation
-                // if(srcreg && (opcode.op == OP.MOV)) {
-                //     if(this.regToRegDirectionRegIsDst)  direction = p.Opcode.DIRECTION.REG_IS_DST;
-                //     else                                direction = p.Opcode.DIRECTION.REG_IS_SRC;
-                // }
-            // }
-            // opcode.op = (opcode.op & p.Opcode.MASK_DIRECTION) | direction;
+            if(this.def.opDirectionBit) {
+                var direction = p.Opcode.DIRECTION.REG_IS_DST;
+
+                if(src instanceof o.Register) {
+                    direction = p.Opcode.DIRECTION.REG_IS_SRC;
+                }
+
+                // *reg-to-reg* operation
+                if((dst instanceof o.Register) && (src instanceof o.Register)) {
+                    if(this.regToRegDirectionRegIsDst)  direction = p.Opcode.DIRECTION.REG_IS_DST;
+                    else                                direction = p.Opcode.DIRECTION.REG_IS_SRC;
+                }
+
+                opcode.op = (opcode.op & p.Opcode.MASK_DIRECTION) | direction;
+            }
 
             // Size bit `s`
             // opcode.op = (opcode.op & p.Opcode.MASK_SIZE) | (p.Opcode.SIZE.WORD);
@@ -279,7 +332,7 @@ export class Instruction extends CodeElement implements InstructionUserInterface
     protected createModrm() {
         var {dst, src} = this.op;
         var has_opreg = (this.def.opreg > -1);
-        var dst_in_modrm = !this.def.regInOp; // Destination operand is NOT encoded in main op-code byte.
+        var dst_in_modrm = !this.def.regInOp && !!dst; // Destination operand is NOT encoded in main op-code byte.
         if(has_opreg || dst_in_modrm) {
             var mod = 0, reg = 0, rm = 0;
 

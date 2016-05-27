@@ -4,6 +4,7 @@ import {extend} from './util';
 export interface IDefinition {
     name?: string;
     op?: number;
+    opDirectionBit?: boolean;
     opreg?: number;
     regInOp?: boolean;
     operands?: number;
@@ -19,6 +20,7 @@ export interface IDefinition {
 export var definitionDefaults = {
     name: '',
     op: 0,
+    opDirectionBit: false,
     opreg: -1,  // -1 means "does not required"
     regInOp: false,
     operands: 0,
@@ -55,6 +57,9 @@ export class Definition implements IDefinition {
     //     76543210
     //     .....000 = RAX
     op: number;
+
+    // Whether we should change the instruction direction `d` bit if needed.
+    opDirectionBit: boolean;
 
     // Part of the op-code that goes into the 3-bit REG field
     // of Mod-R/M byte, which is used as an extension of op-code for

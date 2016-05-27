@@ -8,7 +8,7 @@
 //     |XXXXXX00 <--- Op-code = OP
 
 export enum OP {
-    MOV         = 0x89,
+    MOV         = 0x8B,
     MOVimm      = 0xC4,
     // MOVL    = 0xB8,
     // MOVQ    = 0xC7,

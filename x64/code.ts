@@ -11,11 +11,14 @@ export enum MODE {
 }
 
 
+export type TOperand = o.Register|o.Memory|number;
+
+
 export abstract class Code {
     
     mode: MODE = MODE.LONG;
 
-    protected instructions: (i.CodeElement)[] = [];
+    protected expr: i.Expression[] = [];
 
     protected ClassInstruction = i.Instruction;
 
@@ -23,7 +26,7 @@ export abstract class Code {
         var ins = new this.ClassInstruction(def, operands);
         ins.create();
         ins.index = this.ins.length;
-        this.instructions.push(ins);
+        this.expr.push(ins);
         return ins;
     }
 
@@ -99,19 +102,78 @@ export abstract class Code {
             throw TypeError('Label name must be a non-empty string.');
         var label = new i.Label(name);
 
-        this.instructions.push(label);
+        this.expr.push(label);
         return label;
+    }
+
+    db(str: string, encoding?: string): i.Data;
+    db(octets: number[]): i.Data;
+    db(a: string|number[], b?: string): i.Data {
+        var octets: number[];
+
+        if(a instanceof Array) {
+            octets = a as number[];
+        } else if(typeof a === 'string') {
+            var encoding = typeof b === 'string' ? b : 'ascii';
+            // var buf = Buffer.from(a, encoding);
+            var buf = new Buffer(a, encoding);
+            octets = Array.prototype.slice.call(buf, 0);
+        } else
+            throw TypeError('Data must be an array of octets or a string.');
+
+        var data = new i.Data;
+        data.index = this.expr.length;
+        data.octets = octets;
+        this.expr.push(data);
+        return data;
+    }
+
+    dw() {
+
+    }
+
+    dd() {
+
+    }
+
+    dq() {
+
+    }
+
+    dt() {
+
+    }
+
+    resb(length: number): i.DataUninitialized {
+        var data = new i.DataUninitialized(length);
+        data.index = this.expr.length;
+        this.expr.push(data);
+        return data;
+    }
+
+    resw(length: number): i.DataUninitialized {
+        return this.resb(length * 2);
+    }
+
+    resd(length: number): i.DataUninitialized {
+        return this.resb(length * 4);
+    }
+
+    resq(length: number): i.DataUninitialized {
+        return this.resb(length * 8);
+    }
+
+    rest(length: number): i.DataUninitialized {
+        return this.resb(length * 10);
     }
 
     compile() {
         var code: number[] = [];
-        for(var ins of this.instructions)
-            if(ins instanceof i.Instruction)
-                (ins as i.Instruction).write(code);
+        for(var ins of this.expr) code = ins.write(code);
         return code;
     }
 
     toString() {
-        return this.instructions.map((ins) => { return ins.toString(); }).join('\n');
+        return this.expr.map((ins) => { return ins.toString(); }).join('\n');
     }
 }

@@ -18,12 +18,13 @@ export namespace x64 {
         return new Definition(extend<IDefinition>({}, defDefaults, defs));
     }
 
-    const INC = insdef({op: OP.INC, opreg: OPREG.INC, name: 'inc'});
-    const DEC = insdef({op: OP.DEC, opreg: OPREG.DEC, name: 'dec'});
-    const INT = insdef({op: OP.INT, hasImmediate: true});
-    const SYSCALL = insdef({op: OP.SYSCALL});
-    const SYSENTER = insdef({op: OP.SYSENTER});
-    const SYSEXIT = insdef({op: OP.SYSEXIT});
+    const INC = insdef({op: OP.INC, opreg: OPREG.INC});
+    const DEC = insdef({op: OP.DEC, opreg: OPREG.DEC});
+    const MOV = insdef({op: OP.MOV, opDirectionBit: true});
+    const INT = insdef({op: OP.INT, hasImmediate: true, size: 64});
+    const SYSCALL = insdef({op: OP.SYSCALL, size: 64});
+    const SYSENTER = insdef({op: OP.SYSENTER, size: 64});
+    const SYSEXIT = insdef({op: OP.SYSEXIT, size: 64});
 
 
     export class Instruction extends i.Instruction {
@@ -119,12 +120,16 @@ export namespace x64 {
     export class Code extends code.Code {
         protected ClassInstruction = Instruction;
 
-        incq(dst: o.Register|o.Memory|number) {
+        incq(dst: code.TOperand) {
             return this.insOneOperand(INC, dst);
         }
 
-        decq(dst: o.Register|o.Memory|number) {
+        decq(dst: code.TOperand) {
             return this.insOneOperand(DEC, dst);
+        }
+        
+        movq(dst: code.TOperand, src: code.TOperand) {
+            return this.insTwoOperands(MOV, dst, src);
         }
 
         int(num: number) {

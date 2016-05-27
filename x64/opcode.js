@@ -7,7 +7,7 @@
 //     |XXXXXX00 <--- Op-code = OP
 "use strict";
 (function (OP) {
-    OP[OP["MOV"] = 137] = "MOV";
+    OP[OP["MOV"] = 139] = "MOV";
     OP[OP["MOVimm"] = 196] = "MOVimm";
     // MOVL    = 0xB8,
     // MOVQ    = 0xC7,

@@ -6,6 +6,7 @@ var __extends = (this && this.__extends) || function (d, b) {
 };
 var o = require('./operand');
 var p = require('./parts');
+var opcode_1 = require('./opcode');
 // Collection of operands an instruction might have. It might
 // have *destination* and *source* operands and a possible *immediate* constant.
 //
@@ -65,28 +66,67 @@ var Operands = (function () {
     return Operands;
 }());
 exports.Operands = Operands;
-var CodeElement = (function () {
-    function CodeElement() {
+var Expression = (function () {
+    function Expression() {
         // Index where instruction was inserted in `Code`s buffer.
         this.index = 0;
         // Byte offset of the instruction in compiled machine code.
-        this.offset = 0;
+        this.offset = -1;
     }
-    return CodeElement;
+    return Expression;
 }());
-exports.CodeElement = CodeElement;
+exports.Expression = Expression;
 var Label = (function (_super) {
     __extends(Label, _super);
     function Label(name) {
         _super.call(this);
         this.name = name;
     }
+    Label.prototype.write = function (arr) {
+        return arr;
+    };
     Label.prototype.toString = function () {
         return this.name + ':';
     };
     return Label;
-}(CodeElement));
+}(Expression));
 exports.Label = Label;
+var Data = (function (_super) {
+    __extends(Data, _super);
+    function Data() {
+        _super.apply(this, arguments);
+        this.octets = [];
+    }
+    Data.prototype.write = function (arr) {
+        this.offset = arr.length;
+        arr = arr.concat(this.octets);
+        return arr;
+    };
+    Data.prototype.toString = function (margin) {
+        if (margin === void 0) { margin = '    '; }
+        return margin + 'db';
+    };
+    return Data;
+}(Expression));
+exports.Data = Data;
+var DataUninitialized = (function (_super) {
+    __extends(DataUninitialized, _super);
+    function DataUninitialized(length) {
+        _super.call(this);
+        this.length = length;
+    }
+    DataUninitialized.prototype.write = function (arr) {
+        this.offset = arr.length;
+        arr = arr.concat(new Array(this.length));
+        return arr;
+    };
+    DataUninitialized.prototype.toString = function (margin) {
+        if (margin === void 0) { margin = '    '; }
+        return margin + 'resb ' + this.length;
+    };
+    return DataUninitialized;
+}(Expression));
+exports.DataUninitialized = DataUninitialized;
 // ## x86_64 `Instruction`
 //
 // `Instruction` object is created using instruction `Definition` and `Operands` provided by the user,
@@ -108,7 +148,8 @@ var Instruction = (function (_super) {
         this.displacement = null;
         this.immediate = null;
         // Direction for register-to-register `MOV` operations, whether REG field of Mod-R/M byte is destination.
-        this.regToRegDirectionRegIsDst = true;
+        // We set this to `false` to be compatible with GAS assembly, which we use for testing.
+        this.regToRegDirectionRegIsDst = false;
         this.def = def;
         this.op = op;
     }
@@ -119,6 +160,7 @@ var Instruction = (function (_super) {
             this.prefixSegment.write(arr);
     };
     Instruction.prototype.write = function (arr) {
+        this.offset = arr.length;
         this.writePrefixes(arr);
         this.opcode.write(arr);
         if (this.modrm)
@@ -202,7 +244,11 @@ var Instruction = (function (_super) {
             parts.push(this.prefixLock.toString());
         if (this.prefixSegment)
             parts.push(this.prefixSegment.toString());
-        var mnemonic = this.def.name ? this.def.name : this.opcode.toString();
+        var mnemonic = this.def.name ? this.def.name : '';
+        if (this.def.opreg > -1)
+            mnemonic = opcode_1.OPREG[this.def.opreg].toLowerCase();
+        else
+            mnemonic = this.opcode.toString();
         parts.push(mnemonic);
         if ((parts.join(' ')).length < 8)
             parts.push((new Array(7 - (parts.join(' ')).length)).join(' '));
@@ -239,6 +285,21 @@ var Instruction = (function (_super) {
             opcode.op = (opcode.op & p.Opcode.MASK_OP) | dst.get3bitId();
         }
         else {
+            // Direction bit `d`
+            if (this.def.opDirectionBit) {
+                var direction = p.Opcode.DIRECTION.REG_IS_DST;
+                if (src instanceof o.Register) {
+                    direction = p.Opcode.DIRECTION.REG_IS_SRC;
+                }
+                // *reg-to-reg* operation
+                if ((dst instanceof o.Register) && (src instanceof o.Register)) {
+                    if (this.regToRegDirectionRegIsDst)
+                        direction = p.Opcode.DIRECTION.REG_IS_DST;
+                    else
+                        direction = p.Opcode.DIRECTION.REG_IS_SRC;
+                }
+                opcode.op = (opcode.op & p.Opcode.MASK_DIRECTION) | direction;
+            }
         }
         opcode.regIsDest = def.regIsDest;
         opcode.isSizeWord = def.isSizeWord;
@@ -247,7 +308,7 @@ var Instruction = (function (_super) {
     Instruction.prototype.createModrm = function () {
         var _a = this.op, dst = _a.dst, src = _a.src;
         var has_opreg = (this.def.opreg > -1);
-        var dst_in_modrm = !this.def.regInOp; // Destination operand is NOT encoded in main op-code byte.
+        var dst_in_modrm = !this.def.regInOp && !!dst; // Destination operand is NOT encoded in main op-code byte.
         if (has_opreg || dst_in_modrm) {
             var mod = 0, reg = 0, rm = 0;
             if (has_opreg) {
@@ -372,5 +433,5 @@ var Instruction = (function (_super) {
         }
     };
     return Instruction;
-}(CodeElement));
+}(Expression));
 exports.Instruction = Instruction;

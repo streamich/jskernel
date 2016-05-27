@@ -10,14 +10,14 @@ var MODE = exports.MODE;
 var Code = (function () {
     function Code() {
         this.mode = MODE.LONG;
-        this.instructions = [];
+        this.expr = [];
         this.ClassInstruction = i.Instruction;
     }
     Code.prototype.ins = function (def, operands) {
         var ins = new this.ClassInstruction(def, operands);
         ins.create();
         ins.index = this.ins.length;
-        this.instructions.push(ins);
+        this.expr.push(ins);
         return ins;
     };
     Code.prototype.toRegOrMem = function (operand) {
@@ -91,20 +91,64 @@ var Code = (function () {
         if ((typeof name !== 'string') || !name)
             throw TypeError('Label name must be a non-empty string.');
         var label = new i.Label(name);
-        this.instructions.push(label);
+        this.expr.push(label);
         return label;
+    };
+    Code.prototype.db = function (a, b) {
+        var octets;
+        if (a instanceof Array) {
+            octets = a;
+        }
+        else if (typeof a === 'string') {
+            var encoding = typeof b === 'string' ? b : 'ascii';
+            // var buf = Buffer.from(a, encoding);
+            var buf = new Buffer(a, encoding);
+            octets = Array.prototype.slice.call(buf, 0);
+        }
+        else
+            throw TypeError('Data must be an array of octets or a string.');
+        var data = new i.Data;
+        data.index = this.expr.length;
+        data.octets = octets;
+        this.expr.push(data);
+        return data;
+    };
+    Code.prototype.dw = function () {
+    };
+    Code.prototype.dd = function () {
+    };
+    Code.prototype.dq = function () {
+    };
+    Code.prototype.dt = function () {
+    };
+    Code.prototype.resb = function (length) {
+        var data = new i.DataUninitialized(length);
+        data.index = this.expr.length;
+        this.expr.push(data);
+        return data;
+    };
+    Code.prototype.resw = function (length) {
+        return this.resb(length * 2);
+    };
+    Code.prototype.resd = function (length) {
+        return this.resb(length * 4);
+    };
+    Code.prototype.resq = function (length) {
+        return this.resb(length * 8);
+    };
+    Code.prototype.rest = function (length) {
+        return this.resb(length * 10);
     };
     Code.prototype.compile = function () {
         var code = [];
-        for (var _i = 0, _a = this.instructions; _i < _a.length; _i++) {
+        for (var _i = 0, _a = this.expr; _i < _a.length; _i++) {
             var ins = _a[_i];
-            if (ins instanceof i.Instruction)
-                ins.write(code);
+            code = ins.write(code);
         }
         return code;
     };
     Code.prototype.toString = function () {
-        return this.instructions.map(function (ins) { return ins.toString(); }).join('\n');
+        return this.expr.map(function (ins) { return ins.toString(); }).join('\n');
     };
     return Code;
 }());
