@@ -1,7 +1,7 @@
 "use strict";
 var i = require('./instruction');
 var o = require('./operand');
-var util_1 = require('./util');
+var util_1 = require('../util');
 (function (MODE) {
     MODE[MODE["REAL"] = 16] = "REAL";
     MODE[MODE["COMPAT"] = 17] = "COMPAT";
@@ -14,12 +14,20 @@ var Code = (function () {
         this.expr = [];
         this.ClassInstruction = i.Instruction;
     }
-    Code.prototype.ins = function (def, operands) {
-        var ins = new this.ClassInstruction(def, operands);
-        ins.create();
-        ins.index = this.ins.length;
-        this.expr.push(ins);
-        return ins;
+    Code.prototype.ins = function (definition, operands) {
+        var instruction = new this.ClassInstruction(definition, operands);
+        instruction.create();
+        instruction.index = this.expr.length;
+        this.expr.push(instruction);
+        return instruction;
+    };
+    Code.prototype.insTable = function (group, ops) {
+        if (ops === void 0) { ops = []; }
+        var operands = o.Operands.fromUiOps(ops);
+        var definition = this.table.find(group, operands);
+        if (!definition)
+            throw Error("Definition for \"" + group + (operands.list.length ? ' ' + operands.toString() : '') + "\" not found.");
+        return this.ins(definition, operands);
     };
     Code.prototype.isRegOrMem = function (operand) {
         if ((operand instanceof o.Register) || (operand instanceof o.Memory))
@@ -32,59 +40,6 @@ var Code = (function () {
         if (operand instanceof o.Memory)
             return operand;
         return this.mem(operand);
-    };
-    Code.prototype.insZeroOperands = function (def) {
-        return this.ins(def, this.createOperands());
-    };
-    Code.prototype.insImmediate = function (def, num, signed) {
-        if (signed === void 0) { signed = true; }
-        var imm = new o.ImmediateValue(num, signed);
-        return this.ins(def, this.createOperands(null, null, imm));
-    };
-    Code.prototype.insOneOperand = function (def, dst, num) {
-        if (num === void 0) { num = null; }
-        var disp = num === null ? null : new o.DisplacementValue(num);
-        return this.ins(def, this.createOperands(dst, null, disp));
-    };
-    Code.prototype.insTwoOperands = function (def, dst, src) {
-        var imm = null;
-        // If `src` argument is constant, treat it as disp/imm rather then memory reference,
-        // use `.mem()` to create memeory reference.
-        if ((typeof src === 'number') || (src instanceof Array)) {
-            imm = new o.ImmediateValue(src);
-            src = null;
-        }
-        return this.ins(def, this.createOperands(dst, src, imm));
-    };
-    // protected createOperand(operand: TOperand): o.Operand {
-    //     if(operand instanceof o.Operand) return operand;
-    //     if(typeof operand === 'number') {
-    //         var imm = new o.Constant(operand as number);
-    //         if(imm.size < o.SIZE.DOUBLE) imm.zeroExtend(o.SIZE.DOUBLE);
-    //         return imm;
-    //     }
-    //     if(operand instanceof Array) return new o.Constant(operand as o.number64);
-    //     throw TypeError(`Not a valid TOperand type: ${operand}`);
-    // }
-    Code.prototype.createOperands = function (dst, src, imm) {
-        if (dst === void 0) { dst = null; }
-        if (src === void 0) { src = null; }
-        if (imm === void 0) { imm = null; }
-        var xdst = null;
-        var xsrc = null;
-        if (dst) {
-            xdst = this.toRegOrMem(dst);
-            if (!(xdst instanceof o.Register) && !(xdst instanceof o.Memory))
-                throw TypeError('Destination operand must be of type Register or Memory.');
-        }
-        if (src) {
-            xsrc = this.toRegOrMem(src);
-            if (!(xsrc instanceof o.Register) && !(xsrc instanceof o.Memory))
-                throw TypeError('Source operand must be of type Register or Memory.');
-        }
-        if (imm && !(imm instanceof o.Constant))
-            throw TypeError('Immediate operand must be of type Constant.');
-        return new i.Operands(xdst, xsrc, imm);
     };
     // Displacement is up to 4 bytes in size, and 8 bytes for some specific MOV instructions, AMD64 Vol.2 p.24:
     //

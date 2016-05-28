@@ -2,7 +2,7 @@ import * as i from './instruction';
 import * as o from './operand';
 import * as d from './def';
 import {number64} from './operand';
-import {UInt64} from './util';
+import {UInt64} from '../util';
 
 
 export enum MODE {
@@ -19,16 +19,26 @@ export abstract class Code {
     
     mode: MODE = MODE.LONG;
 
+    table: d.DefTable;
+
     protected expr: i.Expression[] = [];
 
     protected ClassInstruction = i.Instruction;
 
-    protected ins(def: d.Definition, operands: i.Operands): i.Instruction {
-        var ins = new this.ClassInstruction(def, operands);
-        ins.create();
-        ins.index = this.ins.length;
-        this.expr.push(ins);
-        return ins;
+    protected ins(definition: d.Def, operands: o.Operands): i.Instruction {
+        var instruction = new this.ClassInstruction(definition, operands);
+        instruction.create();
+        instruction.index = this.expr.length;
+        this.expr.push(instruction);
+        return instruction;
+    }
+
+    protected insTable(group: string, ops: o.TUserInterfaceOperand[] = []): i.Instruction {
+        var operands = o.Operands.fromUiOps(ops);
+        var definition = this.table.find(group, operands);
+        if(!definition)
+            throw Error(`Definition for "${group}${operands.list.length ? ' ' + operands.toString() : ''}" not found.`);
+        return this.ins(definition, operands);
     }
 
     protected isRegOrMem(operand: any) {
@@ -40,62 +50,6 @@ export abstract class Code {
         if(operand instanceof o.Register) return operand;
         if(operand instanceof o.Memory) return operand;
         return this.mem(operand as number|number64);
-    }
-
-    protected insZeroOperands(def: d.Definition): i.Instruction {
-        return this.ins(def, this.createOperands());
-    }
-
-    protected insImmediate(def: d.Definition, num: number|number64, signed = true): i.Instruction {
-        var imm = new o.ImmediateValue(num, signed);
-        return this.ins(def, this.createOperands(null, null, imm));
-    }
-
-    protected insOneOperand(def: d.Definition, dst: TOperand, num: number|number64 = null): i.Instruction {
-        var disp = num === null ? null : new o.DisplacementValue(num);
-        return this.ins(def, this.createOperands(dst, null, disp));
-    }
-
-    protected insTwoOperands(def: d.Definition, dst: TOperand, src: TOperand): i.Instruction {
-        var imm: o.ImmediateValue = null;
-
-        // If `src` argument is constant, treat it as disp/imm rather then memory reference,
-        // use `.mem()` to create memeory reference.
-        if((typeof src === 'number') || (src instanceof Array)) {
-            imm = new o.ImmediateValue(src as number|number64);
-            src = null;
-        }
-
-        return this.ins(def, this.createOperands(dst, src as o.Register|o.Memory, imm));
-    }
-
-    // protected createOperand(operand: TOperand): o.Operand {
-    //     if(operand instanceof o.Operand) return operand;
-    //     if(typeof operand === 'number') {
-    //         var imm = new o.Constant(operand as number);
-    //         if(imm.size < o.SIZE.DOUBLE) imm.zeroExtend(o.SIZE.DOUBLE);
-    //         return imm;
-    //     }
-    //     if(operand instanceof Array) return new o.Constant(operand as o.number64);
-    //     throw TypeError(`Not a valid TOperand type: ${operand}`);
-    // }
-
-    protected createOperands(dst: TOperand = null, src: TOperand = null, imm: o.Constant = null): i.Operands {
-        var xdst: o.Register|o.Memory = null;
-        var xsrc: o.Register|o.Memory = null;
-        if(dst) {
-            xdst = this.toRegOrMem(dst);
-            if(!(xdst instanceof o.Register) && !(xdst instanceof o.Memory))
-                throw TypeError('Destination operand must be of type Register or Memory.');
-        }
-        if(src) {
-            xsrc = this.toRegOrMem(src);
-            if(!(xsrc instanceof o.Register) && !(xsrc instanceof o.Memory))
-                throw TypeError('Source operand must be of type Register or Memory.');
-        }
-        if(imm && !(imm instanceof o.Constant))
-            throw TypeError('Immediate operand must be of type Constant.');
-        return new i.Operands(xdst, xsrc, imm);
     }
 
     // Displacement is up to 4 bytes in size, and 8 bytes for some specific MOV instructions, AMD64 Vol.2 p.24:

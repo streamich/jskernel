@@ -1,0 +1,12 @@
+"use strict";
+var operand_1 = require('../x86/operand');
+var code_1 = require('../x64/code');
+var _ = new code_1.Code;
+var ins = _.movq(operand_1.rax.ref(), operand_1.rax);
+// console.log(ins);
+// _.incq(rax).lock();
+// var ins = _.int(0x80);
+// _.syscall();
+var bin = _.compile();
+console.log(new Buffer(bin));
+console.log(_.toString());

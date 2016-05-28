@@ -6,7 +6,6 @@ var __extends = (this && this.__extends) || function (d, b) {
 };
 var regfile_1 = require('./regfile');
 var o = require('./operand');
-var opcode_1 = require('./opcode');
 // # x86_64 Instruction
 //
 // Each CPU instruction is encoded in the following form, where only
@@ -132,13 +131,6 @@ var Opcode = (function (_super) {
         _super.apply(this, arguments);
         // Main op-code value.
         this.op = 0;
-        // Whether lower 3 bits of op-code should hold register address.
-        this.regInOp = false;
-        // Whether register is destination of this instruction, on false register is
-        // the source, basically this specifies the `d` bit in op-code.
-        this.regIsDest = true;
-        // `s` bit encoding in op-code, which tells whether instruction operates on "words" or "bytes".
-        this.isSizeWord = true;
     }
     Opcode.prototype.write = function (arr) {
         // Op-code can be up to 3 bytes long.
@@ -149,9 +141,6 @@ var Opcode = (function (_super) {
             arr.push((op & 0xFF00) >> 8);
         arr.push(op & 0xFF);
         return arr;
-    };
-    Opcode.prototype.toString = function () {
-        return opcode_1.OP[this.op] ? opcode_1.OP[this.op].toLowerCase() : 'xxx';
     };
     /* Now we support up to 3 byte instructions */
     Opcode.MASK_SIZE = 16777214; // `s` bit

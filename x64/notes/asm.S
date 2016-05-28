@@ -45,9 +45,15 @@ mov:
         movq 0x01, %rbp
         movq 0x01, %rsp
         movq %rbx, (%rsp)
+        movq %rbx, %rsp
         movq %rbx, (%rbp)
         movq %rbx, (%rsp, %rbp, 2)
         movq (%rbp, %rax, 8), %rbx
+        movq (, %rdx, 2), %rbp
+        movq %rsp, -0x123(, %rbp, 8)
+        movq $1, %rax
+        movq $-0x3333, %rbp
+        movq $-0x333333, %rsp
 
 test2:
         dec %r10d

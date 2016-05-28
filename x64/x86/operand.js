@@ -5,7 +5,7 @@ var __extends = (this && this.__extends) || function (d, b) {
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
 var regfile_1 = require('./regfile');
-var util_1 = require('./util');
+var util_1 = require('../util');
 (function (SIZE) {
     SIZE[SIZE["BYTE"] = 8] = "BYTE";
     SIZE[SIZE["WORD"] = 16] = "WORD";
@@ -51,7 +51,7 @@ var Constant = (function (_super) {
         this.octets = [];
         this.signed = true;
         this.signed = signed;
-        this.Value = value;
+        this.setValue(value);
     }
     Constant.sizeClass = function (value) {
         if ((value <= 0x7f) && (value >= -0x80))
@@ -71,27 +71,23 @@ var Constant = (function (_super) {
             return SIZE.DOUBLE;
         return SIZE.QUAD;
     };
-    Object.defineProperty(Constant.prototype, "Value", {
-        set: function (value) {
-            if (value instanceof Array) {
-                if (value.length !== 2)
-                    throw TypeError('number64 must be a 2-tuple, given: ' + value);
-                this.setValue64(value);
-            }
-            else if (typeof value === 'number') {
-                var clazz = this.signed ? Constant.sizeClass(value) : Constant.sizeClassUnsigned(value);
-                /* JS integers are 53-bit, so split here `number`s over 32 bits into [number, number]. */
-                if (clazz === SIZE.QUAD)
-                    this.setValue64([util_1.UInt64.lo(value), util_1.UInt64.hi(value)]);
-                else
-                    this.setValue32(value);
-            }
+    Constant.prototype.setValue = function (value) {
+        if (value instanceof Array) {
+            if (value.length !== 2)
+                throw TypeError('number64 must be a 2-tuple, given: ' + value);
+            this.setValue64(value);
+        }
+        else if (typeof value === 'number') {
+            var clazz = this.signed ? Constant.sizeClass(value) : Constant.sizeClassUnsigned(value);
+            /* JS integers are 53-bit, so split here `number`s over 32 bits into [number, number]. */
+            if (clazz === SIZE.QUAD)
+                this.setValue64([util_1.UInt64.lo(value), util_1.UInt64.hi(value)]);
             else
-                throw TypeError('Constant value must be of type number|number64.');
-        },
-        enumerable: true,
-        configurable: true
-    });
+                this.setValue32(value);
+        }
+        else
+            throw TypeError('Constant value must be of type number|number64.');
+    };
     Constant.prototype.setValue32 = function (value) {
         var size = this.signed ? Constant.sizeClass(value) : Constant.sizeClassUnsigned(value);
         this.size = size;
@@ -159,14 +155,71 @@ var Constant = (function (_super) {
     return Constant;
 }(Operand));
 exports.Constant = Constant;
-var ImmediateValue = (function (_super) {
-    __extends(ImmediateValue, _super);
-    function ImmediateValue() {
+var Immediate = (function (_super) {
+    __extends(Immediate, _super);
+    function Immediate() {
         _super.apply(this, arguments);
     }
-    return ImmediateValue;
+    Immediate.throwIfLarger = function (value, size, signed) {
+        var val_size = signed ? Constant.sizeClass(value) : Constant.sizeClassUnsigned(value);
+        if (val_size > size)
+            throw TypeError("Value " + value + " too big for imm8.");
+    };
+    return Immediate;
 }(Constant));
-exports.ImmediateValue = ImmediateValue;
+exports.Immediate = Immediate;
+var Immediate8 = (function (_super) {
+    __extends(Immediate8, _super);
+    function Immediate8() {
+        _super.apply(this, arguments);
+        this.size = SIZE.BYTE;
+    }
+    Immediate8.prototype.setValue = function (value) {
+        Immediate.throwIfLarger(value, SIZE.BYTE, this.signed);
+        _super.prototype.setValue.call(this, value);
+    };
+    return Immediate8;
+}(Immediate));
+exports.Immediate8 = Immediate8;
+var Immediate16 = (function (_super) {
+    __extends(Immediate16, _super);
+    function Immediate16() {
+        _super.apply(this, arguments);
+        this.size = SIZE.WORD;
+    }
+    Immediate16.prototype.setValue = function (value) {
+        Immediate.throwIfLarger(value, SIZE.WORD, this.signed);
+        _super.prototype.setValue.call(this, value);
+    };
+    return Immediate16;
+}(Immediate));
+exports.Immediate16 = Immediate16;
+var Immediate32 = (function (_super) {
+    __extends(Immediate32, _super);
+    function Immediate32() {
+        _super.apply(this, arguments);
+        this.size = SIZE.DOUBLE;
+    }
+    Immediate32.prototype.setValue = function (value) {
+        Immediate.throwIfLarger(value, SIZE.DOUBLE, this.signed);
+        _super.prototype.setValue.call(this, value);
+    };
+    return Immediate32;
+}(Immediate));
+exports.Immediate32 = Immediate32;
+var Immediate64 = (function (_super) {
+    __extends(Immediate64, _super);
+    function Immediate64() {
+        _super.apply(this, arguments);
+        this.size = SIZE.QUAD;
+    }
+    Immediate64.prototype.setValue = function (value) {
+        Immediate.throwIfLarger(value, SIZE.QUAD, this.signed);
+        _super.prototype.setValue.call(this, value);
+    };
+    return Immediate64;
+}(Immediate));
+exports.Immediate64 = Immediate64;
 var DisplacementValue = (function (_super) {
     __extends(DisplacementValue, _super);
     function DisplacementValue(value) {
@@ -200,13 +253,13 @@ var Register = (function (_super) {
         return this;
     };
     Register.prototype.ref = function () {
-        return (new Memory).ref(this);
+        return Memory.fromReg(this).ref(this);
     };
     Register.prototype.ind = function (scale_factor) {
-        return (new Memory).ind(this, scale_factor);
+        return Memory.fromReg(this).ind(this, scale_factor);
     };
     Register.prototype.disp = function (value) {
-        return (new Memory).ref(this).disp(value);
+        return Memory.fromReg(this).ref(this).disp(value);
     };
     // Whether the register is one of `%r8`, `%r9`, etc. extended registers.
     Register.prototype.isExtended = function () {
@@ -229,30 +282,6 @@ var Register = (function (_super) {
     return Register;
 }(Operand));
 exports.Register = Register;
-var Register64 = (function (_super) {
-    __extends(Register64, _super);
-    function Register64(id) {
-        _super.call(this, id, SIZE.QUAD);
-    }
-    return Register64;
-}(Register));
-exports.Register64 = Register64;
-var Register32 = (function (_super) {
-    __extends(Register32, _super);
-    function Register32(id) {
-        _super.call(this, id, SIZE.DOUBLE);
-    }
-    return Register32;
-}(Register));
-exports.Register32 = Register32;
-var Register16 = (function (_super) {
-    __extends(Register16, _super);
-    function Register16(id) {
-        _super.call(this, id, SIZE.WORD);
-    }
-    return Register16;
-}(Register));
-exports.Register16 = Register16;
 var Register8 = (function (_super) {
     __extends(Register8, _super);
     function Register8(id) {
@@ -261,6 +290,30 @@ var Register8 = (function (_super) {
     return Register8;
 }(Register));
 exports.Register8 = Register8;
+var Register16 = (function (_super) {
+    __extends(Register16, _super);
+    function Register16(id) {
+        _super.call(this, id, SIZE.WORD);
+    }
+    return Register16;
+}(Register));
+exports.Register16 = Register16;
+var Register32 = (function (_super) {
+    __extends(Register32, _super);
+    function Register32(id) {
+        _super.call(this, id, SIZE.DOUBLE);
+    }
+    return Register32;
+}(Register));
+exports.Register32 = Register32;
+var Register64 = (function (_super) {
+    __extends(Register64, _super);
+    function Register64(id) {
+        _super.call(this, id, SIZE.QUAD);
+    }
+    return Register64;
+}(Register));
+exports.Register64 = Register64;
 var RegisterRip = (function (_super) {
     __extends(RegisterRip, _super);
     function RegisterRip() {
@@ -305,6 +358,22 @@ exports.r12d = new Register32(regfile_1.R32.R12D);
 exports.r13d = new Register32(regfile_1.R32.R13D);
 exports.r14d = new Register32(regfile_1.R32.R14D);
 exports.r15d = new Register32(regfile_1.R32.R15D);
+exports.ax = new Register16(regfile_1.R16.AX);
+exports.bx = new Register16(regfile_1.R16.BX);
+exports.cx = new Register16(regfile_1.R16.CX);
+exports.dx = new Register16(regfile_1.R16.DX);
+exports.si = new Register16(regfile_1.R16.SI);
+exports.di = new Register16(regfile_1.R16.DI);
+exports.bp = new Register16(regfile_1.R16.BP);
+exports.sp = new Register16(regfile_1.R16.SP);
+exports.r8w = new Register16(regfile_1.R16.R8W);
+exports.r9w = new Register16(regfile_1.R16.R9W);
+exports.r10w = new Register16(regfile_1.R16.R10W);
+exports.r11w = new Register16(regfile_1.R16.R11W);
+exports.r12w = new Register16(regfile_1.R16.R12W);
+exports.r13w = new Register16(regfile_1.R16.R13W);
+exports.r14w = new Register16(regfile_1.R16.R14W);
+exports.r15w = new Register16(regfile_1.R16.R15W);
 exports.al = new Register8(regfile_1.R8.AL);
 exports.bl = new Register8(regfile_1.R8.BL);
 exports.cl = new Register8(regfile_1.R8.CL);
@@ -347,11 +416,21 @@ var Memory = (function (_super) {
     __extends(Memory, _super);
     function Memory() {
         _super.apply(this, arguments);
+        this.size = 0;
         this.base = null;
         this.index = null;
         this.scale = null;
         this.displacement = null;
     }
+    Memory.fromReg = function (reg) {
+        switch (reg.size) {
+            case SIZE.BYTE: return new Memory8;
+            case SIZE.WORD: return new Memory16;
+            case SIZE.DOUBLE: return new Memory32;
+            case SIZE.QUAD: return new Memory64;
+            default: return new Memory;
+        }
+    };
     Memory.prototype.reg = function () {
         if (this.base)
             return this.base;
@@ -399,3 +478,127 @@ var Memory = (function (_super) {
     return Memory;
 }(Operand));
 exports.Memory = Memory;
+var Memory8 = (function (_super) {
+    __extends(Memory8, _super);
+    function Memory8() {
+        _super.apply(this, arguments);
+        this.size = SIZE.BYTE;
+    }
+    return Memory8;
+}(Memory));
+exports.Memory8 = Memory8;
+var Memory16 = (function (_super) {
+    __extends(Memory16, _super);
+    function Memory16() {
+        _super.apply(this, arguments);
+        this.size = SIZE.WORD;
+    }
+    return Memory16;
+}(Memory));
+exports.Memory16 = Memory16;
+var Memory32 = (function (_super) {
+    __extends(Memory32, _super);
+    function Memory32() {
+        _super.apply(this, arguments);
+        this.size = SIZE.DOUBLE;
+    }
+    return Memory32;
+}(Memory));
+exports.Memory32 = Memory32;
+var Memory64 = (function (_super) {
+    __extends(Memory64, _super);
+    function Memory64() {
+        _super.apply(this, arguments);
+        this.size = SIZE.QUAD;
+    }
+    return Memory64;
+}(Memory));
+exports.Memory64 = Memory64;
+// Collection of operands an instruction might have.
+var Operands = (function () {
+    // constructor(dst: TInstructionOperand = null, src: TInstructionOperand = null, op3: TInstructionOperand = null, op4: TInstructionOperand = null) {
+    function Operands(list) {
+        if (list === void 0) { list = []; }
+        this.list = list;
+        this.dst = list[0], this.src = list[1], this.op3 = list[2], this.op4 = list[3];
+    }
+    Operands.uiOpsToInsnOps = function (ops) {
+        var iops = [];
+        for (var _i = 0, ops_1 = ops; _i < ops_1.length; _i++) {
+            var op = ops_1[_i];
+            if ((op instanceof Memory) || (op instanceof Register) || (op instanceof Immediate)) {
+                iops.push(op);
+            }
+            else if (typeof op === 'number') {
+                iops.push(new Immediate(op));
+            }
+            else if ((op instanceof Array) && (op.length === 2) && (typeof op[0] === 'number') && (typeof op[1] === 'number')) {
+                iops.push(new Immediate(op));
+            }
+            else
+                throw TypeError('Invalid operand expected Register, Memory, number or number64.');
+        }
+        return iops;
+    };
+    Operands.fromUiOps = function (ops) {
+        return new Operands(Operands.uiOpsToInsnOps(ops));
+    };
+    Operands.prototype.getFirstOfClass = function (Clazz) {
+        for (var _i = 0, _a = this.list; _i < _a.length; _i++) {
+            var op = _a[_i];
+            if (op instanceof Clazz)
+                return op;
+        }
+        return null;
+    };
+    Operands.prototype.getRegisterOperand = function (dst_first) {
+        if (dst_first === void 0) { dst_first = true; }
+        var first, second;
+        if (dst_first) {
+            first = this.dst;
+            second = this.src;
+        }
+        else {
+            first = this.src;
+            second = this.dst;
+        }
+        if (first instanceof Register)
+            return first;
+        if (second instanceof Register)
+            return second;
+        return null;
+    };
+    Operands.prototype.getMemoryOperand = function () {
+        if (this.dst instanceof Memory)
+            return this.dst;
+        if (this.src instanceof Memory)
+            return this.src;
+        return null;
+    };
+    Operands.prototype.getImmediate = function () {
+        return this.getFirstOfClass(Immediate);
+    };
+    Operands.prototype.hasRegister = function () {
+        return !!this.getRegisterOperand();
+    };
+    Operands.prototype.hasMemory = function () {
+        return !!this.getMemoryOperand();
+    };
+    Operands.prototype.hasRegisterOrMemory = function () {
+        return this.hasRegister() || this.hasMemory();
+    };
+    Operands.prototype.toString = function () {
+        var parts = [];
+        if (this.dst)
+            parts.push(this.dst.toString());
+        if (this.src)
+            parts.push(this.src.toString());
+        if (this.op3)
+            parts.push(this.op3.toString());
+        if (this.op4)
+            parts.push(this.op4.toString());
+        return parts.join(', ');
+    };
+    return Operands;
+}());
+exports.Operands = Operands;

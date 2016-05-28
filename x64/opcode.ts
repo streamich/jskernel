@@ -9,9 +9,7 @@
 
 export enum OP {
     MOV         = 0x8B,
-    MOVimm      = 0xC4,
-    // MOVL    = 0xB8,
-    // MOVQ    = 0xC7,
+    MOVimm      = 0xC7,
     MOVABS      = 0xB8,
     INC         = 0xFF,
     DEC         = 0xFF,
@@ -34,4 +32,5 @@ export enum OP {
 export enum OPREG {
     INC = 0b000,
     DEC = 0b001,
+    MOVimm = 0b000,
 }

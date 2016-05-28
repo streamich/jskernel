@@ -6,65 +6,6 @@ var __extends = (this && this.__extends) || function (d, b) {
 };
 var o = require('./operand');
 var p = require('./parts');
-// Collection of operands an instruction might have. It might
-// have *destination* and *source* operands and a possible *immediate* constant.
-//
-// Each x86 instruction can have up to up to 5 operands: 3 registers, displacement and immediate.
-// 3 registers means: 1 register, and 2 registers that specify the base and index for memory
-// dereferencing, however all operands necessary for memory dereferencing are held in `o.Memory`
-// class so we need only these three operands.
-var Operands = (function () {
-    function Operands(dst, src, imm) {
-        if (dst === void 0) { dst = null; }
-        if (src === void 0) { src = null; }
-        if (imm === void 0) { imm = null; }
-        this.dst = null; // Destination
-        this.src = null; // Source
-        this.imm = null; // Immediate
-        this.dst = dst;
-        this.src = src;
-        this.imm = imm;
-    }
-    Operands.prototype.hasOperands = function () {
-        return !!this.dst || !!this.src || !!this.imm;
-    };
-    Operands.prototype.getRegisterOperand = function (dst_first) {
-        if (dst_first === void 0) { dst_first = true; }
-        var first, second;
-        if (dst_first) {
-            first = this.dst;
-            second = this.src;
-        }
-        else {
-            first = this.src;
-            second = this.dst;
-        }
-        if (first instanceof o.Register)
-            return first;
-        if (second instanceof o.Register)
-            return second;
-        return null;
-    };
-    Operands.prototype.getMemoryOperand = function () {
-        if (this.dst instanceof o.Memory)
-            return this.dst;
-        if (this.src instanceof o.Memory)
-            return this.src;
-        return null;
-    };
-    Operands.prototype.toString = function () {
-        var parts = [];
-        if (this.dst)
-            parts.push(this.dst.toString());
-        if (this.src)
-            parts.push(this.src.toString());
-        if (this.imm)
-            parts.push(this.imm.toString());
-        return parts.join(', ');
-    };
-    return Operands;
-}());
-exports.Operands = Operands;
 var Expression = (function () {
     function Expression() {
         // Index where instruction was inserted in `Code`s buffer.
@@ -173,8 +114,9 @@ var Instruction = (function (_super) {
         return arr;
     };
     Instruction.prototype.lock = function () {
+        if (!this.def.lock)
+            throw Error("Instruction \"" + this.def.mnemonic + "\" does not support LOCK.");
         this.prefixLock = new p.PrefixLock;
-        // TODO: check LOCK is allowed for this instruction.
         return this;
     };
     Instruction.prototype.cs = function () {
@@ -206,29 +148,8 @@ var Instruction = (function (_super) {
     };
     Instruction.prototype.getAddressSize = function () {
     };
+    // Create instruction parts.
     Instruction.prototype.create = function () {
-        var op = this.op;
-        var dstreg = null;
-        var dstmem = null;
-        var srcreg = null;
-        var srcmem = null;
-        // Destination
-        if (op.dst instanceof o.Register)
-            dstreg = op.dst;
-        else if (op.dst instanceof o.Memory)
-            dstmem = op.dst;
-        else if (op.dst)
-            throw TypeError("Destination operand should be Register or Memory; given: " + op.dst.toString());
-        // Source
-        if (op.src) {
-            if (op.src instanceof o.Register)
-                srcreg = op.src;
-            else if (op.src instanceof o.Memory)
-                srcmem = op.src;
-            else if (!(op.src instanceof o.Constant))
-                throw TypeError("Source operand should be Register, Memory or Constant");
-        }
-        // Create instruction parts.
         this.createPrefixes();
         this.createOpcode();
         this.createModrm();
@@ -243,11 +164,10 @@ var Instruction = (function (_super) {
             parts.push(this.prefixLock.toString());
         if (this.prefixSegment)
             parts.push(this.prefixSegment.toString());
-        var mnemonic = this.def.name ? this.def.name : this.opcode.toString();
-        parts.push(mnemonic);
+        parts.push(this.def.mnemonic);
         if ((parts.join(' ')).length < 8)
             parts.push((new Array(7 - (parts.join(' ')).length)).join(' '));
-        if (this.op.hasOperands())
+        if (this.op.list.length)
             parts.push(this.op.toString());
         return margin + parts.join(' ');
     };
@@ -271,7 +191,7 @@ var Instruction = (function (_super) {
     Instruction.prototype.createOpcode = function () {
         var def = this.def;
         var opcode = this.opcode;
-        opcode.op = def.op;
+        opcode.op = def.opcode;
         var _a = this.op, dst = _a.dst, src = _a.src;
         if (def.regInOp) {
             // We have register encoded in op-code here.
@@ -281,7 +201,7 @@ var Instruction = (function (_super) {
         }
         else {
             // Direction bit `d`
-            if (this.def.opDirectionBit) {
+            if (this.def.opcodeDirectionBit) {
                 var direction = p.Opcode.DIRECTION.REG_IS_DST;
                 if (src instanceof o.Register) {
                     direction = p.Opcode.DIRECTION.REG_IS_SRC;
@@ -296,11 +216,10 @@ var Instruction = (function (_super) {
                 opcode.op = (opcode.op & p.Opcode.MASK_DIRECTION) | direction;
             }
         }
-        opcode.regIsDest = def.regIsDest;
-        opcode.isSizeWord = def.isSizeWord;
-        opcode.regInOp = def.regInOp;
     };
     Instruction.prototype.createModrm = function () {
+        if (!this.op.hasRegisterOrMemory())
+            return;
         var _a = this.op, dst = _a.dst, src = _a.src;
         var has_opreg = (this.def.opreg > -1);
         var dst_in_modrm = !this.def.regInOp && !!dst; // Destination operand is NOT encoded in main op-code byte.
@@ -443,10 +362,11 @@ var Instruction = (function (_super) {
         }
     };
     Instruction.prototype.createImmediate = function () {
-        if (this.op.imm) {
-            if (this.displacement && (this.displacement.value.size === o.SIZE.QUAD))
-                throw TypeError("Cannot have Immediate with " + o.SIZE.QUAD + " bit Displacement.");
-            this.immediate = new p.Immediate(this.op.imm);
+        var imm = this.op.getImmediate();
+        if (imm) {
+            // if (this.displacement && (this.displacement.value.size === o.SIZE.QUAD))
+            //     throw TypeError(`Cannot have Immediate with ${o.SIZE.QUAD} bit Displacement.`);
+            this.immediate = new p.Immediate(imm);
         }
     };
     return Instruction;

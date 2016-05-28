@@ -8,9 +8,7 @@
 "use strict";
 (function (OP) {
     OP[OP["MOV"] = 139] = "MOV";
-    OP[OP["MOVimm"] = 196] = "MOVimm";
-    // MOVL    = 0xB8,
-    // MOVQ    = 0xC7,
+    OP[OP["MOVimm"] = 199] = "MOVimm";
     OP[OP["MOVABS"] = 184] = "MOVABS";
     OP[OP["INC"] = 255] = "INC";
     OP[OP["DEC"] = 255] = "DEC";
@@ -31,5 +29,6 @@ var OP = exports.OP;
 (function (OPREG) {
     OPREG[OPREG["INC"] = 0] = "INC";
     OPREG[OPREG["DEC"] = 1] = "DEC";
+    OPREG[OPREG["MOVimm"] = 0] = "MOVimm";
 })(exports.OPREG || (exports.OPREG = {}));
 var OPREG = exports.OPREG;

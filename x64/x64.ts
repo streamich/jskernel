@@ -18,9 +18,10 @@ export namespace x64 {
         return new Definition(extend<IDefinition>({}, defDefaults, defs));
     }
 
-    const INC = insdef({op: OP.INC, opreg: OPREG.INC});
-    const DEC = insdef({op: OP.DEC, opreg: OPREG.DEC});
+    const INC = insdef({op: OP.INC, opreg: OPREG.INC, name: 'inc'});
+    const DEC = insdef({op: OP.DEC, opreg: OPREG.DEC, name: 'dec'});
     const MOV = insdef({op: OP.MOV, opDirectionBit: true});
+    const MOVimm = insdef({op: OP.MOVimm, opreg: OPREG.MOVimm, name: 'mov'});
     const INT = insdef({op: OP.INT, hasImmediate: true, size: 64});
     const SYSCALL = insdef({op: OP.SYSCALL, size: 64});
     const SYSENTER = insdef({op: OP.SYSENTER, size: 64});
@@ -129,7 +130,13 @@ export namespace x64 {
         }
         
         movq(dst: code.TOperand, src: code.TOperand) {
-            return this.insTwoOperands(MOV, dst, src);
+            if(this.isRegOrMem(src)) {
+                return this.insTwoOperands(MOV, dst, src);
+            } else {
+                var imm = new o.ImmediateValue(src as number|o.number64);
+                imm.signExtend(o.SIZE.DOUBLE);
+                return this.ins(MOVimm, this.createOperands(dst, null, imm));
+            }
         }
 
         int(num: number) {

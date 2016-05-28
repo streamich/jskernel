@@ -1,59 +1,6 @@
 import * as o from './operand';
 import * as p from './parts';
-import {Definition} from './def';
-import {OP, OPREG} from './opcode';
-
-
-// Collection of operands an instruction might have. It might
-// have *destination* and *source* operands and a possible *immediate* constant.
-//
-// Each x86 instruction can have up to up to 5 operands: 3 registers, displacement and immediate.
-// 3 registers means: 1 register, and 2 registers that specify the base and index for memory
-// dereferencing, however all operands necessary for memory dereferencing are held in `o.Memory`
-// class so we need only these three operands.
-export class Operands {
-    dst: o.Register|o.Memory = null;            // Destination
-    src: o.Register|o.Memory = null;            // Source
-    imm: o.Constant = null;                     // Immediate
-
-    constructor(dst: o.Register|o.Memory = null, src: o.Register|o.Memory = null, imm: o.Constant = null) {
-        this.dst = dst;
-        this.src = src;
-        this.imm = imm;
-    }
-
-    hasOperands() {
-        return !!this.dst || !!this.src || !!this.imm;
-    }
-
-    getRegisterOperand(dst_first = true): o.Register {
-        var first, second;
-        if(dst_first) {
-            first = this.dst;
-            second = this.src;
-        } else {
-            first = this.src;
-            second = this.dst;
-        }
-        if(first instanceof o.Register) return first as o.Register;
-        if(second instanceof o.Register) return second as o.Register;
-        return null;
-    }
-
-    getMemoryOperand(): o.Memory {
-        if(this.dst instanceof o.Memory) return this.dst as o.Memory;
-        if(this.src instanceof o.Memory) return this.src as o.Memory;
-        return null;
-    }
-
-    toString() {
-        var parts = [];
-        if(this.dst) parts.push(this.dst.toString());
-        if(this.src) parts.push(this.src.toString());
-        if(this.imm) parts.push(this.imm.toString());
-        return parts.join(', ');
-    }
-}
+import * as d from './def';
 
 
 export abstract class Expression {
@@ -142,8 +89,8 @@ export interface InstructionUserInterface {
 // out of those `Instruction` generates `InstructionPart`s, which then can be packaged into machine
 // code using `.write()` method.
 export class Instruction extends Expression implements InstructionUserInterface{
-    def: Definition = null;
-    op: Operands = null;
+    def: d.Def = null;
+    op: o.Operands = null;
 
     // Instruction parts.
     prefixLock: p.PrefixLock = null;
@@ -159,7 +106,7 @@ export class Instruction extends Expression implements InstructionUserInterface{
     protected regToRegDirectionRegIsDst: boolean = false;
 
     // constructor(code: Code, def: Definition, op: Operands) {
-    constructor(def: Definition, op: Operands) {
+    constructor(def: d.Def, op: o.Operands) {
         super();
         this.def = def;
         this.op = op;
@@ -183,8 +130,10 @@ export class Instruction extends Expression implements InstructionUserInterface{
     }
 
     lock(): this {
+        if(!this.def.lock)
+            throw Error(`Instruction "${this.def.mnemonic}" does not support LOCK.`);
+
         this.prefixLock = new p.PrefixLock;
-        // TODO: check LOCK is allowed for this instruction.
         return this;
     }
 
@@ -227,27 +176,8 @@ export class Instruction extends Expression implements InstructionUserInterface{
 
     }
 
+    // Create instruction parts.
     create() {
-        var op = this.op;
-        var dstreg: o.Register = null;
-        var dstmem: o.Memory = null;
-        var srcreg: o.Register = null;
-        var srcmem: o.Memory = null;
-
-        // Destination
-        if(op.dst instanceof o.Register)    dstreg = op.dst as o.Register;
-        else if(op.dst instanceof o.Memory) dstmem = op.dst as o.Memory;
-        else if(op.dst) throw TypeError(`Destination operand should be Register or Memory; given: ${op.dst.toString()}`);
-
-        // Source
-        if(op.src) {
-            if (op.src instanceof o.Register)     srcreg = op.src as o.Register;
-            else if (op.src instanceof o.Memory)  srcmem = op.src as o.Memory;
-            else if (!(op.src instanceof o.Constant))
-                throw TypeError(`Source operand should be Register, Memory or Constant`);
-        }
-
-        // Create instruction parts.
         this.createPrefixes();
         this.createOpcode();
         this.createModrm();
@@ -260,12 +190,9 @@ export class Instruction extends Expression implements InstructionUserInterface{
         var parts = [];
         if(this.prefixLock) parts.push(this.prefixLock.toString());
         if(this.prefixSegment) parts.push(this.prefixSegment.toString());
-
-        var mnemonic = this.def.name ? this.def.name : this.opcode.toString();
-        parts.push(mnemonic);
-
+        parts.push(this.def.mnemonic);
         if((parts.join(' ')).length < 8) parts.push((new Array(7 - (parts.join(' ')).length)).join(' '));
-        if(this.op.hasOperands()) parts.push(this.op.toString());
+        if(this.op.list.length) parts.push(this.op.toString());
 
         return margin + parts.join(' ');
     }
@@ -289,7 +216,7 @@ export class Instruction extends Expression implements InstructionUserInterface{
     protected createOpcode() {
         var def = this.def;
         var opcode = this.opcode;
-        opcode.op = def.op;
+        opcode.op = def.opcode;
 
         var {dst, src} = this.op;
 
@@ -300,7 +227,7 @@ export class Instruction extends Expression implements InstructionUserInterface{
             opcode.op = (opcode.op & p.Opcode.MASK_OP) | (dst as o.Register).get3bitId();
         } else {
             // Direction bit `d`
-            if(this.def.opDirectionBit) {
+            if(this.def.opcodeDirectionBit) {
                 var direction = p.Opcode.DIRECTION.REG_IS_DST;
 
                 if(src instanceof o.Register) {
@@ -319,13 +246,11 @@ export class Instruction extends Expression implements InstructionUserInterface{
             // Size bit `s`
             // opcode.op = (opcode.op & p.Opcode.MASK_SIZE) | (p.Opcode.SIZE.WORD);
         }
-
-        opcode.regIsDest = def.regIsDest;
-        opcode.isSizeWord = def.isSizeWord;
-        opcode.regInOp = def.regInOp;
     }
 
     protected createModrm() {
+        if(!this.op.hasRegisterOrMemory()) return;
+
         var {dst, src} = this.op;
         var has_opreg = (this.def.opreg > -1);
         var dst_in_modrm = !this.def.regInOp && !!dst; // Destination operand is NOT encoded in main op-code byte.
@@ -478,10 +403,11 @@ export class Instruction extends Expression implements InstructionUserInterface{
     }
 
     protected createImmediate() {
-        if(this.op.imm) {
-            if (this.displacement && (this.displacement.value.size === o.SIZE.QUAD))
-                throw TypeError(`Cannot have Immediate with ${o.SIZE.QUAD} bit Displacement.`);
-            this.immediate = new p.Immediate(this.op.imm);
+        var imm = this.op.getImmediate();
+        if(imm) {
+            // if (this.displacement && (this.displacement.value.size === o.SIZE.QUAD))
+            //     throw TypeError(`Cannot have Immediate with ${o.SIZE.QUAD} bit Displacement.`);
+            this.immediate = new p.Immediate(imm);
         }
     }
 }

@@ -1,6 +1,5 @@
-import {R64, R32, R8} from './regfile';
+import {R64, R32, R16, R8} from './regfile';
 import * as o from './operand';
-import {OP} from './opcode';
 
 
 // # x86_64 Instruction
@@ -139,17 +138,7 @@ export class Opcode extends InstructionPart {
     };
 
     // Main op-code value.
-    op: OP = 0;
-
-    // Whether lower 3 bits of op-code should hold register address.
-    regInOp: boolean = false;
-
-    // Whether register is destination of this instruction, on false register is
-    // the source, basically this specifies the `d` bit in op-code.
-    regIsDest: boolean = true;
-
-    // `s` bit encoding in op-code, which tells whether instruction operates on "words" or "bytes".
-    isSizeWord: boolean = true;
+    op: number = 0;
 
     write(arr: number[]): number[] {
         // Op-code can be up to 3 bytes long.
@@ -158,10 +147,6 @@ export class Opcode extends InstructionPart {
         if(op > 0xFF) arr.push((op & 0xFF00) >> 8);
         arr.push(op & 0xFF);
         return arr;
-    }
-
-    toString() {
-        return OP[this.op] ? OP[this.op].toLowerCase() : 'xxx';
     }
 }
 
@@ -303,9 +288,9 @@ export class Displacement extends InstructionPart {
 //
 // Immediate constant value that follows other instruction bytes.
 export class Immediate extends InstructionPart {
-    value: o.ImmediateValue;
+    value: o.Immediate;
 
-    constructor(value: o.ImmediateValue) {
+    constructor(value: o.Immediate) {
         super();
         this.value = value;
     }

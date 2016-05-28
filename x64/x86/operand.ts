@@ -1,13 +1,12 @@
-import {R64, R32, R8} from './regfile';
-import {UInt64} from './util';
-import * as p from './parts';
+import {R64, R32, R16, R8} from './regfile';
+import {UInt64} from '../util';
 
 
 export enum SIZE {
-    BYTE = 8,
-    WORD = 16,
-    DOUBLE = 32,
-    QUAD = 64,
+    BYTE    = 8,
+    WORD    = 16,
+    DOUBLE  = 32,
+    QUAD    = 64,
 }
 
 
@@ -74,10 +73,10 @@ export class Constant extends Operand {
     constructor(value: number|number64, signed = true) {
         super();
         this.signed = signed;
-        this.Value = value;
+        this.setValue(value);
     }
 
-    set Value(value: number|number64) {
+    setValue(value: number|number64) {
         if(value instanceof Array) {
             if(value.length !== 2) throw TypeError('number64 must be a 2-tuple, given: ' + value);
             this.setValue64(value as number64);
@@ -156,7 +155,48 @@ export class Constant extends Operand {
     }
 }
 
-export class ImmediateValue extends Constant {}
+export class Immediate extends Constant {
+    static throwIfLarger(value, size, signed) {
+        var val_size = signed ? Constant.sizeClass(value) : Constant.sizeClassUnsigned(value);
+        if(val_size > size) throw TypeError(`Value ${value} too big for imm8.`);
+    }
+}
+
+export class Immediate8 extends Immediate {
+    size = SIZE.BYTE;
+
+    setValue(value: number|number64) {
+        Immediate.throwIfLarger(value, SIZE.BYTE, this.signed);
+        super.setValue(value);
+    }
+}
+
+export class Immediate16 extends Immediate {
+    size = SIZE.WORD;
+
+    setValue(value: number|number64) {
+        Immediate.throwIfLarger(value, SIZE.WORD, this.signed);
+        super.setValue(value);
+    }
+}
+
+export class Immediate32 extends Immediate {
+    size = SIZE.DOUBLE;
+
+    setValue(value: number|number64) {
+        Immediate.throwIfLarger(value, SIZE.DOUBLE, this.signed);
+        super.setValue(value);
+    }
+}
+
+export class Immediate64 extends Immediate {
+    size = SIZE.QUAD;
+
+    setValue(value: number|number64) {
+        Immediate.throwIfLarger(value, SIZE.QUAD, this.signed);
+        super.setValue(value);
+    }
+}
 
 export class DisplacementValue extends Constant {
     static SIZE = {
@@ -198,15 +238,15 @@ export class Register extends Operand {
     }
 
     ref(): Memory {
-        return (new Memory).ref(this);
+        return Memory.fromReg(this).ref(this);
     }
 
-    ind(scale_factor: number) {
-        return (new Memory).ind(this, scale_factor);
+    ind(scale_factor: number): Memory {
+        return Memory.fromReg(this).ind(this, scale_factor);
     }
 
     disp(value: number): Memory {
-        return (new Memory).ref(this).disp(value);
+        return Memory.fromReg(this).ref(this).disp(value);
     }
 
     // Whether the register is one of `%r8`, `%r9`, etc. extended registers.
@@ -232,15 +272,9 @@ export class Register extends Operand {
     }
 }
 
-export class Register64 extends Register {
+export class Register8 extends Register {
     constructor(id: number) {
-        super(id, SIZE.QUAD);
-    }
-}
-
-export class Register32 extends Register {
-    constructor(id: number) {
-        super(id, SIZE.DOUBLE);
+        super(id, SIZE.BYTE);
     }
 }
 
@@ -250,9 +284,15 @@ export class Register16 extends Register {
     }
 }
 
-export class Register8 extends Register {
+export class Register32 extends Register {
     constructor(id: number) {
-        super(id, SIZE.BYTE);
+        super(id, SIZE.DOUBLE);
+    }
+}
+
+export class Register64 extends Register {
+    constructor(id: number) {
+        super(id, SIZE.QUAD);
     }
 }
 
@@ -305,6 +345,24 @@ export var r14d = new Register32(R32.R14D);
 export var r15d = new Register32(R32.R15D);
 
 
+export var ax   = new Register16(R16.AX);
+export var bx   = new Register16(R16.BX);
+export var cx   = new Register16(R16.CX);
+export var dx   = new Register16(R16.DX);
+export var si   = new Register16(R16.SI);
+export var di   = new Register16(R16.DI);
+export var bp   = new Register16(R16.BP);
+export var sp   = new Register16(R16.SP);
+export var r8w  = new Register16(R16.R8W);
+export var r9w  = new Register16(R16.R9W);
+export var r10w = new Register16(R16.R10W);
+export var r11w = new Register16(R16.R11W);
+export var r12w = new Register16(R16.R12W);
+export var r13w = new Register16(R16.R13W);
+export var r14w = new Register16(R16.R14W);
+export var r15w = new Register16(R16.R15W);
+
+
 export var al   = new Register8(R8.AL);
 export var bl   = new Register8(R8.BL);
 export var cl   = new Register8(R8.CL);
@@ -348,6 +406,18 @@ export class Scale extends Operand {
 //
 // `Memory` is RAM addresses which `Register`s can *dereference*.
 export class Memory extends Operand {
+
+    static fromReg(reg: Register) {
+        switch(reg.size) {
+            case SIZE.BYTE:     return new Memory8;
+            case SIZE.WORD:     return new Memory16;
+            case SIZE.DOUBLE:   return new Memory32;
+            case SIZE.QUAD:     return new Memory64;
+            default:            return new Memory;
+        }
+    }
+
+    size: SIZE = 0;
     base: Register = null;
     index: Register = null;
     scale: Scale = null;
@@ -399,5 +469,111 @@ export class Memory extends Operand {
         if(this.displacement) parts.push(this.displacement.toString());
 
         return `[${parts.join(' + ')}]`;
+    }
+}
+
+export class Memory8 extends Memory {
+    size = SIZE.BYTE;
+}
+
+export class Memory16 extends Memory {
+    size = SIZE.WORD;
+}
+
+export class Memory32 extends Memory {
+    size = SIZE.DOUBLE;
+}
+
+export class Memory64 extends Memory {
+    size = SIZE.QUAD;
+}
+
+
+export type TInstructionOperand = Register|Memory|Immediate;
+export type TUserInterfaceOperand = Register|Memory|Immediate|number|number64;
+
+// Collection of operands an instruction might have.
+export class Operands {
+
+    static uiOpsToInsnOps(ops: TUserInterfaceOperand[]): TInstructionOperand[] {
+        var iops: TInstructionOperand[] = [];
+        for(var op of ops) {
+            if((op instanceof Memory) || (op instanceof Register) || (op instanceof Immediate)) {
+                iops.push(op);
+            } else if(typeof op === 'number') { // number
+                iops.push(new Immediate(op));
+            } else if((op instanceof Array) && (op.length === 2) && (typeof op[0] === 'number') && (typeof op[1] === 'number')) {
+                iops.push(new Immediate(op));
+            } else
+                throw TypeError('Invalid operand expected Register, Memory, number or number64.');
+        }
+        return iops;
+    }
+
+    static fromUiOps(ops: TUserInterfaceOperand[]): Operands {
+        return new Operands(Operands.uiOpsToInsnOps(ops));
+    }
+
+    dst: TInstructionOperand;            // Destination
+    src: TInstructionOperand;            // Source
+    op3: TInstructionOperand;
+    op4: TInstructionOperand;
+
+    list: TInstructionOperand[];
+
+    // constructor(dst: TInstructionOperand = null, src: TInstructionOperand = null, op3: TInstructionOperand = null, op4: TInstructionOperand = null) {
+    constructor(list: TInstructionOperand[] = []) {
+        this.list = list;
+        [this.dst, this.src, this.op3, this.op4] = list;
+    }
+
+    getFirstOfClass(Clazz): TInstructionOperand {
+        for(var op of this.list) if(op instanceof Clazz) return op;
+        return null;
+    }
+
+    getRegisterOperand(dst_first = true): Register {
+        var first, second;
+        if(dst_first) {
+            first = this.dst;
+            second = this.src;
+        } else {
+            first = this.src;
+            second = this.dst;
+        }
+        if(first instanceof Register) return first as Register;
+        if(second instanceof Register) return second as Register;
+        return null;
+    }
+
+    getMemoryOperand(): Memory {
+        if(this.dst instanceof Memory) return this.dst as Memory;
+        if(this.src instanceof Memory) return this.src as Memory;
+        return null;
+    }
+
+    getImmediate(): Immediate {
+        return this.getFirstOfClass(Immediate) as Immediate;
+    }
+
+    hasRegister(): boolean {
+        return !!this.getRegisterOperand();
+    }
+
+    hasMemory(): boolean {
+        return !!this.getMemoryOperand();
+    }
+
+    hasRegisterOrMemory(): boolean {
+        return this.hasRegister() || this.hasMemory();
+    }
+
+    toString() {
+        var parts = [];
+        if(this.dst) parts.push(this.dst.toString());
+        if(this.src) parts.push(this.src.toString());
+        if(this.op3) parts.push(this.op3.toString());
+        if(this.op4) parts.push(this.op4.toString());
+        return parts.join(', ');
     }
 }

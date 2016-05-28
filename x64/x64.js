@@ -20,9 +20,10 @@ var x64;
     function insdef(defs) {
         return new def_1.Definition(util_1.extend({}, defDefaults, defs));
     }
-    var INC = insdef({ op: opcode_1.OP.INC, opreg: opcode_1.OPREG.INC });
-    var DEC = insdef({ op: opcode_1.OP.DEC, opreg: opcode_1.OPREG.DEC });
+    var INC = insdef({ op: opcode_1.OP.INC, opreg: opcode_1.OPREG.INC, name: 'inc' });
+    var DEC = insdef({ op: opcode_1.OP.DEC, opreg: opcode_1.OPREG.DEC, name: 'dec' });
     var MOV = insdef({ op: opcode_1.OP.MOV, opDirectionBit: true });
+    var MOVimm = insdef({ op: opcode_1.OP.MOVimm, opreg: opcode_1.OPREG.MOVimm, name: 'mov' });
     var INT = insdef({ op: opcode_1.OP.INT, hasImmediate: true, size: 64 });
     var SYSCALL = insdef({ op: opcode_1.OP.SYSCALL, size: 64 });
     var SYSENTER = insdef({ op: opcode_1.OP.SYSENTER, size: 64 });
@@ -129,7 +130,14 @@ var x64;
             return this.insOneOperand(DEC, dst);
         };
         Code.prototype.movq = function (dst, src) {
-            return this.insTwoOperands(MOV, dst, src);
+            if (this.isRegOrMem(src)) {
+                return this.insTwoOperands(MOV, dst, src);
+            }
+            else {
+                var imm = new o.ImmediateValue(src);
+                imm.signExtend(o.SIZE.DOUBLE);
+                return this.ins(MOVimm, this.createOperands(dst, null, imm));
+            }
         };
         Code.prototype.int = function (num) {
             if (typeof num !== 'number')
