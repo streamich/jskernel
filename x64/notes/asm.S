@@ -55,6 +55,15 @@ mov:
         movq $-0x3333, %rbp
         movq $-0x333333, %rsp
 
+add:
+        addq %rax, 4
+
+ret:
+        ret
+        retq
+        ret $4
+        retq $16
+
 test2:
         dec %r10d
         mov %eax, %ebx

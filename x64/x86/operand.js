@@ -155,7 +155,8 @@ var Constant = (function (_super) {
     Constant.prototype.toString = function () {
         var str = '';
         for (var i = this.octets.length - 1; i >= 0; i--) {
-            str += this.octets[i].toString(16);
+            var oct = this.octets[i];
+            str += oct > 0xF ? oct.toString(16).toUpperCase() : '0' + oct.toString(16).toUpperCase();
         }
         return '0x' + str;
     };

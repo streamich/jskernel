@@ -3,6 +3,9 @@ import * as o from './operand';
 import {extend} from '../util';
 
 
+const Immediates = [o.Immediate, o.Immediate8, o.Immediate16, o.Immediate32, o.Immediate64];
+
+
 export class Def {
     opcode: number;
     opreg: number;
@@ -38,7 +41,7 @@ export class Def {
             if(typeof def === 'object') { // Object: rax, rbx, r8, etc...
                 if(def === target) return true;
             } else if(typeof def === 'function') { // Class: o.Register, o.Memory, etc...
-                if([o.Immediate, o.Immediate8, o.Immediate16, o.Immediate32, o.Immediate64].indexOf(def) > -1) {
+                if(Immediates.indexOf(def) > -1) {
                     if(target instanceof o.Immediate) return true;
                 } else {
                     if(target instanceof def) return true;
@@ -57,6 +60,15 @@ export class Def {
             if(!is_valid) return false;
         }
         return true;
+    }
+
+    getImmediateClass(): typeof o.Immediate {
+        for(var operand of this.operands) {
+            for(var type of operand) {
+                if(Immediates.indexOf(type) > -1) return type;
+            }
+        }
+        return null;
     }
 }
 
@@ -82,9 +94,12 @@ export class DefGroup {
             this.defs.push(new Def(extend<any>({}, defaults, group_defaults, definition)));
     }
 
-    find(operands: o.Operands): Def {
+    find(operands: o.Operands, size: o.SIZE = 0): Def {
         for(var def of this.defs) {
-            if(def.validateOperands(operands)) return def;
+            if(def.validateOperands(operands)) {
+                if(!size) return def;
+                else if(size === def.operandSize) return def;
+            }
         }
         return null;
     }
@@ -102,7 +117,7 @@ export class DefTable {
         }
     }
 
-    find(name: string, operands: o.Operands): Def {
+    find(name: string, operands: o.Operands, size: o.SIZE = 0): Def {
         var group: DefGroup = this.groups[name] as DefGroup;
         return group.find(operands);
     }

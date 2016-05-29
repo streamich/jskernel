@@ -11,6 +11,7 @@ export abstract class Expression {
     offset: number = -1;
 
     abstract write(arr: number[]): number[];
+    abstract bytes(): number;
     abstract toString(): string;
 }
 
@@ -30,6 +31,10 @@ export class Label extends Expression {
         return arr;
     }
 
+    bytes(): number {
+        return 0;
+    }
+
     toString() {
         return this.name + ':';
     }
@@ -46,9 +51,14 @@ export class Data extends Expression {
         return arr;
     }
 
+    bytes(): number {
+        return this.octets.length;
+    }
+
     toString(margin = '    ') {
-        var data = [];
-        for(var octet of this.octets) data.push(octet.toString(16));
+        var data = this.octets.map(function(byte) {
+            return byte <= 0xF ? '0' + byte.toString(16).toUpperCase() : byte.toString(16).toUpperCase();
+        });
         return margin + 'db 0x' + data.join(', 0x');
     }
 }
@@ -67,6 +77,10 @@ export class DataUninitialized extends Expression {
 
         arr = arr.concat(new Array(this.length));
         return arr;
+    }
+
+    bytes(): number {
+        return this.length;
     }
 
     toString(margin = '    ') {
@@ -92,7 +106,7 @@ export interface InstructionUserInterface {
 // `Instruction` object is created using instruction `Definition` and `Operands` provided by the user,
 // out of those `Instruction` generates `InstructionPart`s, which then can be packaged into machine
 // code using `.write()` method.
-export class Instruction extends Expression implements InstructionUserInterface{
+export class Instruction extends Expression implements InstructionUserInterface {
     def: d.Def = null;
     op: o.Operands = null;
 
@@ -131,6 +145,17 @@ export class Instruction extends Expression implements InstructionUserInterface{
         if(this.displacement)   this.displacement.write(arr);
         if(this.immediate)      this.immediate.write(arr);
         return arr;
+    }
+    
+    bytes(): number {
+        var size = this.opcode.bytes();
+        if(this.prefixLock) size++;
+        if(this.prefixSegment) size++;
+        if(this.modrm) size++;
+        if(this.sib) size++;
+        if(this.displacement) size += this.displacement.value.octets.length;
+        if(this.immediate) size += this.immediate.value.octets.length;
+        return size;
     }
 
     lock(): this {
@@ -190,15 +215,26 @@ export class Instruction extends Expression implements InstructionUserInterface{
         this.createImmediate();
     }
 
-    toString(margin = '    ') {
+    toString(margin = '    ', hex = true) {
         var parts = [];
         if(this.prefixLock) parts.push(this.prefixLock.toString());
         if(this.prefixSegment) parts.push(this.prefixSegment.toString());
         parts.push(this.def.mnemonic);
         if((parts.join(' ')).length < 8) parts.push((new Array(7 - (parts.join(' ')).length)).join(' '));
         if(this.op.list.length) parts.push(this.op.toString());
+        var expression = margin + parts.join(' ');
 
-        return margin + parts.join(' ');
+        var comment = '';
+        if(hex) {
+            var cols = 24;
+            var spaces = (new Array(1 + Math.max(0, cols - expression.length))).join(' ');
+            var octets = this.write([]).map(function(byte) {
+                return byte <= 0xF ? '0' + byte.toString(16).toUpperCase() : byte.toString(16).toUpperCase();
+            });
+            comment = spaces + '; 0x' + octets.join(', 0x');
+        }
+
+        return expression + comment;
     }
 
     protected hasExtendedRegister(): boolean {
@@ -411,9 +447,13 @@ export class Instruction extends Expression implements InstructionUserInterface{
         if(imm) {
             // If immediate does not have concrete size, use the size of instruction operands.
             if(imm.constructor === o.Immediate) {
-                var size = this.getOperandSize();
-                imm = o.Immediate.factory(size, imm.value, imm.signed);
-                imm.extend(size);
+                var ImmediateClass = this.def.getImmediateClass();
+                if(ImmediateClass) imm = new ImmediateClass(imm.value, imm.signed);
+                else {
+                    var size = this.getOperandSize();
+                    imm = o.Immediate.factory(size, imm.value, imm.signed);
+                    imm.extend(size);
+                }
             }
 
             // if (this.displacement && (this.displacement.value.size === o.SIZE.QUAD))

@@ -132,6 +132,13 @@ var Opcode = (function (_super) {
         // Main op-code value.
         this.op = 0;
     }
+    Opcode.prototype.bytes = function () {
+        if (this.op > 0xFFFF)
+            return 3;
+        if (this.op > 0xFF)
+            return 2;
+        return 1;
+    };
     Opcode.prototype.write = function (arr) {
         // Op-code can be up to 3 bytes long.
         var op = this.op;

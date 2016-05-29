@@ -10,7 +10,8 @@ var util_1 = require('../util');
 var MODE = exports.MODE;
 var Code = (function () {
     function Code() {
-        this.addressSize = o.SIZE.DOUBLE;
+        this.operandSize = o.SIZE.DOUBLE; // Default operand size.
+        this.addressSize = o.SIZE.DOUBLE; // Default address size.
         this.mode = MODE.LONG;
         this.expr = [];
         this.ClassInstruction = i.Instruction;
@@ -22,10 +23,11 @@ var Code = (function () {
         this.expr.push(instruction);
         return instruction;
     };
-    Code.prototype.insTable = function (group, ops) {
+    Code.prototype.insTable = function (group, ops, size) {
         if (ops === void 0) { ops = []; }
+        if (size === void 0) { size = this.operandSize; }
         var operands = o.Operands.fromUiOps(ops);
-        var definition = this.table.find(group, operands);
+        var definition = this.table.find(group, operands, size);
         if (!definition)
             throw Error("Definition for \"" + group + (operands.list.length ? ' ' + operands.toString() : '') + "\" not found.");
         return this.ins(definition, operands);

@@ -1,6 +1,7 @@
 "use strict";
 var o = require('./operand');
 var util_1 = require('../util');
+var Immediates = [o.Immediate, o.Immediate8, o.Immediate16, o.Immediate32, o.Immediate64];
 var Def = (function () {
     function Def(def) {
         this.opcode = def.o;
@@ -29,7 +30,7 @@ var Def = (function () {
                     return true;
             }
             else if (typeof def === 'function') {
-                if ([o.Immediate, o.Immediate8, o.Immediate16, o.Immediate32, o.Immediate64].indexOf(def) > -1) {
+                if (Immediates.indexOf(def) > -1) {
                     if (target instanceof o.Immediate)
                         return true;
                 }
@@ -50,6 +51,17 @@ var Def = (function () {
                 return false;
         }
         return true;
+    };
+    Def.prototype.getImmediateClass = function () {
+        for (var _i = 0, _a = this.operands; _i < _a.length; _i++) {
+            var operand = _a[_i];
+            for (var _b = 0, operand_1 = operand; _b < operand_1.length; _b++) {
+                var type = operand_1[_b];
+                if (Immediates.indexOf(type) > -1)
+                    return type;
+            }
+        }
+        return null;
     };
     return Def;
 }());
@@ -72,11 +84,16 @@ var DefGroup = (function () {
             this.defs.push(new Def(util_1.extend({}, defaults, group_defaults, definition)));
         }
     }
-    DefGroup.prototype.find = function (operands) {
+    DefGroup.prototype.find = function (operands, size) {
+        if (size === void 0) { size = 0; }
         for (var _i = 0, _a = this.defs; _i < _a.length; _i++) {
             var def = _a[_i];
-            if (def.validateOperands(operands))
-                return def;
+            if (def.validateOperands(operands)) {
+                if (!size)
+                    return def;
+                else if (size === def.operandSize)
+                    return def;
+            }
         }
         return null;
     };
@@ -91,7 +108,8 @@ var DefTable = (function () {
             this.groups[name] = group;
         }
     }
-    DefTable.prototype.find = function (name, operands) {
+    DefTable.prototype.find = function (name, operands, size) {
+        if (size === void 0) { size = 0; }
         var group = this.groups[name];
         return group.find(operands);
     };

@@ -140,6 +140,12 @@ export class Opcode extends InstructionPart {
     // Main op-code value.
     op: number = 0;
 
+    bytes(): number {
+        if(this.op > 0xFFFF) return 3;
+        if(this.op > 0xFF) return 2;
+        return 1;
+    }
+
     write(arr: number[]): number[] {
         // Op-code can be up to 3 bytes long.
         var op = this.op;

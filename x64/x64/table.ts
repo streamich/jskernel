@@ -8,8 +8,12 @@ export var defaults = extend<any>({}, t.defaults,
 
 
 export var table: t.TableDefinition = {
-    mov: [
-        {mn: 'mov'},
+    // Arithmetic.
+    add: [{},
+        {o: 0x83, or: 0, ops: [rm64, imm8], s: S.QUAD},
+    ],
+
+    mov: [{mn: 'mov'},
         {o: 0x8B, mn: 'movq', ops: [rm64, rm64], dbit: true, s: S.QUAD},
         {o: 0xC7, or: 0, ops: [r64, imm32], s: S.QUAD},
     ],
@@ -19,5 +23,9 @@ export var table: t.TableDefinition = {
     sysenter:   [{o: 0x0F34}],
     sysexit:    [{o: 0x0F35}],
     int:        [{o: 0xCD, ops: [imm8]}],
+    ret: [{},
+        {o: 0xC3},
+        {o: 0xC2, ops: [imm16]}
+    ],
 };
 

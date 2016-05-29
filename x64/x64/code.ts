@@ -12,24 +12,33 @@ export type Operand = o.TUserInterfaceOperand;
 export class Code extends code.Code {
     protected ClassInstruction = Instruction;
 
-    protected insTable(group: string, ops: o.TUserInterfaceOperand[] = []): Instruction {
-        return super.insTable(group, ops) as Instruction;
+    protected insTable(group: string, ops: o.TUserInterfaceOperand[] = [], size: o.SIZE = this.operandSize): Instruction {
+        return super.insTable(group, ops, size) as Instruction;
     }
 
+    operandSize = o.SIZE.DOUBLE;
     addressSize = o.SIZE.QUAD;
 
     table: d.DefTable = table;
 
-    incq(dst: Operand): Instruction {
+    addq(dst: Operand, src: Operand) {
+        return this.insTable('add', [dst, src], o.SIZE.QUAD);
+    }
+
+    inc(dst: Operand): Instruction {
         return this.insTable('inc', [dst]);
     }
 
+    incq(dst: Operand): Instruction {
+        return this.insTable('inc', [dst], o.SIZE.QUAD);
+    }
+
     decq(dst: Operand): Instruction {
-        return this.insTable('dec', [dst]);
+        return this.insTable('dec', [dst], o.SIZE.QUAD);
     }
 
     movq(dst: Operand, src: Operand): Instruction {
-        return this.insTable('mov', [dst, src]);
+        return this.insTable('mov', [dst, src], o.SIZE.QUAD);
     }
 
     int(num: number): Instruction {
@@ -50,4 +59,13 @@ export class Code extends code.Code {
     sysexit(): Instruction {
         return this.insTable('sysexit');
     }
+
+    ret(bytes?: number): Instruction {
+        return this.insTable('ret', bytes ? [new o.Immediate16(bytes)] : [])
+    }
+
+    retq(bytes?: number) {
+        this.ret(bytes);
+    }
+
 }

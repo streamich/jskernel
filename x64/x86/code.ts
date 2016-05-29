@@ -14,8 +14,9 @@ export enum MODE {
 
 export abstract class Code {
 
-    addressSize = o.SIZE.DOUBLE;
-    
+    operandSize = o.SIZE.DOUBLE;    // Default operand size.
+    addressSize = o.SIZE.DOUBLE;    // Default address size.
+
     mode: MODE = MODE.LONG;
 
     table: d.DefTable;
@@ -32,9 +33,9 @@ export abstract class Code {
         return instruction;
     }
 
-    protected insTable(group: string, ops: o.TUserInterfaceOperand[] = []): i.Instruction {
+    protected insTable(group: string, ops: o.TUserInterfaceOperand[] = [], size: o.SIZE = this.operandSize): i.Instruction {
         var operands = o.Operands.fromUiOps(ops);
-        var definition = this.table.find(group, operands);
+        var definition = this.table.find(group, operands, size);
         if(!definition)
             throw Error(`Definition for "${group}${operands.list.length ? ' ' + operands.toString() : ''}" not found.`);
         return this.ins(definition, operands);

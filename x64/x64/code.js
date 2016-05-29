@@ -15,21 +15,29 @@ var Code = (function (_super) {
     function Code() {
         _super.apply(this, arguments);
         this.ClassInstruction = instruction_1.Instruction;
+        this.operandSize = o.SIZE.DOUBLE;
         this.addressSize = o.SIZE.QUAD;
         this.table = exports.table;
     }
-    Code.prototype.insTable = function (group, ops) {
+    Code.prototype.insTable = function (group, ops, size) {
         if (ops === void 0) { ops = []; }
-        return _super.prototype.insTable.call(this, group, ops);
+        if (size === void 0) { size = this.operandSize; }
+        return _super.prototype.insTable.call(this, group, ops, size);
     };
-    Code.prototype.incq = function (dst) {
+    Code.prototype.addq = function (dst, src) {
+        return this.insTable('add', [dst, src], o.SIZE.QUAD);
+    };
+    Code.prototype.inc = function (dst) {
         return this.insTable('inc', [dst]);
     };
+    Code.prototype.incq = function (dst) {
+        return this.insTable('inc', [dst], o.SIZE.QUAD);
+    };
     Code.prototype.decq = function (dst) {
-        return this.insTable('dec', [dst]);
+        return this.insTable('dec', [dst], o.SIZE.QUAD);
     };
     Code.prototype.movq = function (dst, src) {
-        return this.insTable('mov', [dst, src]);
+        return this.insTable('mov', [dst, src], o.SIZE.QUAD);
     };
     Code.prototype.int = function (num) {
         if (typeof num !== 'number')
@@ -44,6 +52,12 @@ var Code = (function (_super) {
     };
     Code.prototype.sysexit = function () {
         return this.insTable('sysexit');
+    };
+    Code.prototype.ret = function (bytes) {
+        return this.insTable('ret', bytes ? [new o.Immediate16(bytes)] : []);
+    };
+    Code.prototype.retq = function (bytes) {
+        this.ret(bytes);
     };
     return Code;
 }(code.Code));

@@ -27,6 +27,9 @@ var Label = (function (_super) {
     Label.prototype.write = function (arr) {
         return arr;
     };
+    Label.prototype.bytes = function () {
+        return 0;
+    };
     Label.prototype.toString = function () {
         return this.name + ':';
     };
@@ -44,13 +47,14 @@ var Data = (function (_super) {
         arr = arr.concat(this.octets);
         return arr;
     };
+    Data.prototype.bytes = function () {
+        return this.octets.length;
+    };
     Data.prototype.toString = function (margin) {
         if (margin === void 0) { margin = '    '; }
-        var data = [];
-        for (var _i = 0, _a = this.octets; _i < _a.length; _i++) {
-            var octet = _a[_i];
-            data.push(octet.toString(16));
-        }
+        var data = this.octets.map(function (byte) {
+            return byte <= 0xF ? '0' + byte.toString(16).toUpperCase() : byte.toString(16).toUpperCase();
+        });
         return margin + 'db 0x' + data.join(', 0x');
     };
     return Data;
@@ -66,6 +70,9 @@ var DataUninitialized = (function (_super) {
         this.offset = arr.length;
         arr = arr.concat(new Array(this.length));
         return arr;
+    };
+    DataUninitialized.prototype.bytes = function () {
+        return this.length;
     };
     DataUninitialized.prototype.toString = function (margin) {
         if (margin === void 0) { margin = '    '; }
@@ -120,6 +127,22 @@ var Instruction = (function (_super) {
             this.immediate.write(arr);
         return arr;
     };
+    Instruction.prototype.bytes = function () {
+        var size = this.opcode.bytes();
+        if (this.prefixLock)
+            size++;
+        if (this.prefixSegment)
+            size++;
+        if (this.modrm)
+            size++;
+        if (this.sib)
+            size++;
+        if (this.displacement)
+            size += this.displacement.value.octets.length;
+        if (this.immediate)
+            size += this.immediate.value.octets.length;
+        return size;
+    };
     Instruction.prototype.lock = function () {
         if (!this.def.lock)
             throw Error("Instruction \"" + this.def.mnemonic + "\" does not support LOCK.");
@@ -165,8 +188,9 @@ var Instruction = (function (_super) {
         this.createDisplacement();
         this.createImmediate();
     };
-    Instruction.prototype.toString = function (margin) {
+    Instruction.prototype.toString = function (margin, hex) {
         if (margin === void 0) { margin = '    '; }
+        if (hex === void 0) { hex = true; }
         var parts = [];
         if (this.prefixLock)
             parts.push(this.prefixLock.toString());
@@ -177,7 +201,17 @@ var Instruction = (function (_super) {
             parts.push((new Array(7 - (parts.join(' ')).length)).join(' '));
         if (this.op.list.length)
             parts.push(this.op.toString());
-        return margin + parts.join(' ');
+        var expression = margin + parts.join(' ');
+        var comment = '';
+        if (hex) {
+            var cols = 24;
+            var spaces = (new Array(1 + Math.max(0, cols - expression.length))).join(' ');
+            var octets = this.write([]).map(function (byte) {
+                return byte <= 0xF ? '0' + byte.toString(16).toUpperCase() : byte.toString(16).toUpperCase();
+            });
+            comment = spaces + '; 0x' + octets.join(', 0x');
+        }
+        return expression + comment;
     };
     Instruction.prototype.hasExtendedRegister = function () {
         var _a = this.op, dst = _a.dst, src = _a.src;
@@ -374,9 +408,14 @@ var Instruction = (function (_super) {
         if (imm) {
             // If immediate does not have concrete size, use the size of instruction operands.
             if (imm.constructor === o.Immediate) {
-                var size = this.getOperandSize();
-                imm = o.Immediate.factory(size, imm.value, imm.signed);
-                imm.extend(size);
+                var ImmediateClass = this.def.getImmediateClass();
+                if (ImmediateClass)
+                    imm = new ImmediateClass(imm.value, imm.signed);
+                else {
+                    var size = this.getOperandSize();
+                    imm = o.Immediate.factory(size, imm.value, imm.signed);
+                    imm.extend(size);
+                }
             }
             // if (this.displacement && (this.displacement.value.size === o.SIZE.QUAD))
             //     throw TypeError(`Cannot have Immediate with ${o.SIZE.QUAD} bit Displacement.`);
