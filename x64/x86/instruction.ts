@@ -12,7 +12,7 @@ export abstract class Expression {
 
     abstract write(arr: number[]): number[];
     abstract bytes(): number;
-    abstract toString(): string;
+    abstract toString(margin?, comment?): string;
 }
 
 

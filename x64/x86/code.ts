@@ -5,19 +5,12 @@ import {number64} from './operand';
 import {UInt64} from '../util';
 
 
-export enum MODE {
-    REAL = 16,
-    COMPAT,
-    LONG,
-}
-
-
 export abstract class Code {
 
     operandSize = o.SIZE.DOUBLE;    // Default operand size.
     addressSize = o.SIZE.DOUBLE;    // Default address size.
 
-    mode: MODE = MODE.LONG;
+    mode: o.MODE = o.MODE.X64;
 
     table: d.DefTable;
 
@@ -255,7 +248,7 @@ export abstract class Code {
         return code;
     }
 
-    toString() {
-        return this.expr.map((ins) => { return ins.toString(); }).join('\n');
+    toString(hex = true) {
+        return this.expr.map((ins) => { return ins.toString('    ', hex); }).join('\n');
     }
 }

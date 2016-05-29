@@ -5,7 +5,7 @@ import {Instruction} from './instruction';
 import * as t from './table';
 
 
-export var table = new d.DefTable(t.table, t.defaults);
+const table = new d.DefTable(t.table, t.defaults);
 export type Operand = o.TUserInterfaceOperand;
 
 

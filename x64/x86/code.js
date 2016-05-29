@@ -2,17 +2,11 @@
 var i = require('./instruction');
 var o = require('./operand');
 var util_1 = require('../util');
-(function (MODE) {
-    MODE[MODE["REAL"] = 16] = "REAL";
-    MODE[MODE["COMPAT"] = 17] = "COMPAT";
-    MODE[MODE["LONG"] = 18] = "LONG";
-})(exports.MODE || (exports.MODE = {}));
-var MODE = exports.MODE;
 var Code = (function () {
     function Code() {
         this.operandSize = o.SIZE.DOUBLE; // Default operand size.
         this.addressSize = o.SIZE.DOUBLE; // Default address size.
-        this.mode = MODE.LONG;
+        this.mode = o.MODE.X64;
         this.expr = [];
         this.ClassInstruction = i.Instruction;
     }
@@ -236,8 +230,9 @@ var Code = (function () {
         }
         return code;
     };
-    Code.prototype.toString = function () {
-        return this.expr.map(function (ins) { return ins.toString(); }).join('\n');
+    Code.prototype.toString = function (hex) {
+        if (hex === void 0) { hex = true; }
+        return this.expr.map(function (ins) { return ins.toString('    ', hex); }).join('\n');
     };
     return Code;
 }());

@@ -748,6 +748,7 @@ export var utimbuf = Struct.define(16, [
 
 export type numberLo = number;
 export type numberHi = number;
+export type number64 = [numberLo, numberHi];
 
 export interface utimbuf {
     actime:     [numberLo, numberHi],

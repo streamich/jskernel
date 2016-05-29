@@ -9,7 +9,7 @@ var o = require('../x86/operand');
 var d = require('../x86/def');
 var instruction_1 = require('./instruction');
 var t = require('./table');
-exports.table = new d.DefTable(t.table, t.defaults);
+var table = new d.DefTable(t.table, t.defaults);
 var Code = (function (_super) {
     __extends(Code, _super);
     function Code() {
@@ -17,7 +17,7 @@ var Code = (function (_super) {
         this.ClassInstruction = instruction_1.Instruction;
         this.operandSize = o.SIZE.DOUBLE;
         this.addressSize = o.SIZE.QUAD;
-        this.table = exports.table;
+        this.table = table;
     }
     Code.prototype.insTable = function (group, ops, size) {
         if (ops === void 0) { ops = []; }

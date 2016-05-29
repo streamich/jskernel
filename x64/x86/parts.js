@@ -155,11 +155,11 @@ var Opcode = (function (_super) {
     Opcode.MASK_OP = 16777208; // When register is encoded into op-code.
     Opcode.SIZE = {
         BYTE: 0,
-        WORD: 1,
+        WORD: 1
     };
     Opcode.DIRECTION = {
         REG_IS_SRC: 0,
-        REG_IS_DST: 2,
+        REG_IS_DST: 2
     };
     return Opcode;
 }(InstructionPart));
@@ -204,7 +204,7 @@ var Modrm = (function (_super) {
         INDIRECT: 0,
         DISP8: 1,
         DISP32: 2,
-        REG_TO_REG: 3,
+        REG_TO_REG: 3
     };
     Modrm.RM = {
         // When this value is encoded in R/M field, SIB byte has to follow Mod-R/M byte.
@@ -212,7 +212,7 @@ var Modrm = (function (_super) {
         // When this value is encoded in R/M field, and MOD is 0b00 = INDIRECT,
         // disp32 bytes have to follow Mod-R/M byte. But not in long-mode,
         // in long-mode it is used for RIP-relative adressing.
-        INDIRECT_DISP: regfile_1.R64.RBP & 7,
+        INDIRECT_DISP: regfile_1.R64.RBP & 7
     };
     return Modrm;
 }(InstructionPart));

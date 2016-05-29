@@ -27,51 +27,21 @@ Part of [jskernel](http://www.github.com/streamich/jskernel) project.
 ### `syscall` and `syscall64`
 
 ```ts
-type TArg = number|string|Buffer;
-function syscall(command: number, ...args: TArg[]): number;
-function syscall64(command: number, ...args: TArg[]): [number, number];
+type TArg = number|string|ArrayBuffer|Uint8Array|Buffer;
+syscall(command: number, ...args: TArg[]): number;
+syscall64(command: number, ...args: TArg[]): [number, number];
 ```
 
 `syscall` accepts up to 6 command arguments `args`, which are treated as
 follows depending on their type:
 
  - `number` is put directly in the appropriate CPU register as is.
- - `string` gets converted to *C*'s `char *` string and that pointer is put in CPU register.
- - `Buffer` pointer to the raw data in-memory is put in CPU register.
+ - `string` gets converted to *C*'s `char *` string and that pointer is used as an argument.
+ - for `ArrayBuffer`, `Uint8Array`, and `Buffer` pointer to the raw data in-memory is used as argument.
     
 `syscall` returns a `number` which is the result returned by the kernel,
 negative numbers usually represent an error. If sytem call returns -1, the
 C `errno` variable will be returned, which usually has more information about the error.
-
-### `malloc`
-
-Returns a `Buffer` object of size `size` that is mapped to memory location
-specified in `addr` argument.
-
-```ts
-function malloc(addr: number, size: number): ArrayBuffer;
-```
-
-### `addr` and `addr64`
-
-Return memory address of `Buffer`'s data contents.
-
-```ts
-function addr(buffer: Buffer): number;
-function addr64(buffer: Buffer): [number, number];
-```
-    
-`addr64` returns a tuple which represents 64-bit number, where first element contains the lower
-32 bits and second element has the high 32 bits.
-
-### `call` as `call64`
-
-Execute machine code at specified memory address. 
-
-```ts
-export function call(addr: number);
-export function call64(addr_lo: number, addr_hi: number);
-```
     
 ### `errno`
 
@@ -80,7 +50,49 @@ Returns `errno` variable.
 ```ts
 function errno(): number;
 ```
+  
+### `malloc` as `malloc64`
+
+`malloc` returns an `ArrayBuffer` object of size `size` that is mapped to memory location
+specified in `addr` argument.
+
+`malloc64` is the same but memory address is split in two 32-bit numbers `lo` and `hi`.
+
+```ts
+malloc(addr: number, size: number): ArrayBuffer;
+malloc64(lo: number, hi: number, size: number): ArrayBuffer;
+```
+
+### `addressBuffer` and `addressBuffer64`
+
+Return memory address of `Buffer`'s data contents.
+
+```ts
+addressBuffer(buffer: Buffer): number;
+addressBuffer64(buffer: Buffer): [number, number];
+```
     
+`addr64` returns a tuple which represents 64-bit number, where first element contains the lower
+32 bits and second element has the high 32 bits.
+
+### `addressArrayBuffer` and `addressArrayBuffer64`
+
+Returns `ArrayBuffer` address.
+
+### `addressUint8Array` and `addressUint8Array64`
+
+Returns `Uint8Array` address.
+
+### `call` as `call64`
+
+Execute machine code at specified memory address. The memory address is converted
+to function pointer and called using your architecture calling conventions.
+
+```ts
+call(addr: number);
+call64(addr_lo: number, addr_hi: number);
+```
+  
 ## Installation
 
     npm i libsys

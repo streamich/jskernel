@@ -251,7 +251,7 @@ var DisplacementValue = (function (_super) {
     };
     DisplacementValue.SIZE = {
         DISP8: SIZE.BYTE,
-        DISP32: SIZE.DOUBLE,
+        DISP32: SIZE.DOUBLE
     };
     return DisplacementValue;
 }(Constant));

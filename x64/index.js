@@ -1,10 +1,6 @@
 "use strict";
-function __export(m) {
-    for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
-}
-__export(require('./operand'));
-__export(require('./opcode'));
-__export(require('./def'));
-__export(require('./instruction'));
-__export(require('./code'));
-__export(require('./x64'));
+var _x64 = require('./x64');
+var x64;
+(function (x64) {
+    x64.Code = _x64.Code;
+})(x64 = exports.x64 || (exports.x64 = {}));

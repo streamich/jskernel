@@ -13,7 +13,7 @@ describe('x64', function () {
         it('incq rbx', function () {
             var _ = code64();
             _.incq(operand_1.rbx);
-            chai_1.expect(_.toString()).to.equal('    inc     rbx');
+            chai_1.expect(_.toString(false)).to.equal('    inc     rbx');
         });
     });
     describe('data', function () {

@@ -17,7 +17,7 @@ describe('x64', function() {
         it('incq rbx', function() {
             var _ = code64();
             _.incq(rbx);
-            expect(_.toString()).to.equal('    inc     rbx');
+            expect(_.toString(false)).to.equal('    inc     rbx');
         });
     });
 

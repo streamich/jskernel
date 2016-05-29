@@ -21,5 +21,5 @@ exports.table = {
     ret: [{},
         { o: 0xC3 },
         { o: 0xC2, ops: [table_1.imm16] }
-    ],
+    ]
 };

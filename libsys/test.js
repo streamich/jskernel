@@ -1,18 +1,27 @@
 var addon = require('./build/Release/sys.node');
 
-var str = 'Hello world, hell yeah!';
-var buf = new Buffer(str + '\n');
+
+var ab = new ArrayBuffer(10);
+console.log(addon.addressArrayBuffer64(ab));
+var uia = new Uint8Array(ab, 3);
+console.log(addon.addressUint8Array64(uia));
+var buf = new Buffer(ab);
+console.log(addon.addressBuffer64(buf));
+
+
+// var str = 'Hello world, hell yeah!';
+// var buf = new Buffer(str + '\n');
 // console.log(addon.syscall64(331, 1, buf, buf.length));
 // console.log(addon.errno());
 
 // console.log(buf.toString());
-var addr = addon.addr64(buf);
-var arr = addon.malloc64(addr[0], addr[1], buf.length);
-console.log(arr);
-var newbuf = new Buffer(arr);
-console.log('Addr', addr);
-console.log('buf', buf.toString(), buf.length);
-console.log('newbuf', newbuf.toString(), newbuf.length);
+// var addr = addon.addr64(buf);
+// var arr = addon.malloc64(addr[0], addr[1], buf.length);
+// console.log(arr);
+// var newbuf = new Buffer(arr);
+// console.log('Addr', addr);
+// console.log('buf', buf.toString(), buf.length);
+// console.log('newbuf', newbuf.toString(), newbuf.length);
 // console.log('newbuf', newbuf.toString(), newbuf.length);
 // console.log('newbuf addr', addon.addr64(newbuf));
 

@@ -10,6 +10,7 @@
 #include <string.h>
 #include <errno.h>
 
+
 namespace jskernel {
 
     using v8::FunctionCallbackInfo;
@@ -23,9 +24,23 @@ namespace jskernel {
     using v8::Integer;
     using v8::Exception;
     using v8::ArrayBuffer;
+    using v8::Uint8Array;
 
-    uint64_t GetBufferAddr(Local<Object> obj) {
+
+    uint64_t GetAddrBuffer(Local<Object> obj) {
         return (uint64_t) node::Buffer::Data(obj);
+    }
+
+    uint64_t GetAddrArrayBuffer(Local<Object> obj) {
+        Local<ArrayBuffer> ab = obj.As<ArrayBuffer>();
+        ArrayBuffer::Contents ab_c = ab->GetContents();
+        return (uint64_t)(ab_c.Data());
+    }
+
+    uint64_t GetAddrUint8Array(Local<Object> obj) {
+        Local<Uint8Array> ui = obj.As<Uint8Array>();
+        ArrayBuffer::Contents ab_c = ui->Buffer()->GetContents();
+        return (uint64_t)(ab_c.Data()) + ui->ByteOffset();
     }
 
     uint64_t ArgToInt(Local<Value> arg) {
@@ -38,8 +53,13 @@ namespace jskernel {
                 std::string cppstr = std::string(*v8str);
                 const char *cstr = cppstr.c_str();
                 return (uint64_t) cstr;
+            } else if(arg->IsArrayBuffer()) {
+                return GetAddrArrayBuffer(arg->ToObject());
+            } else if(arg->IsUint8Array()) {
+                return GetAddrUint8Array(arg->ToObject());
             } else {
-                return GetBufferAddr(arg->ToObject());
+                // Assume it is `Buffer`.
+                return GetAddrBuffer(arg->ToObject());
             }
         }
     }
@@ -124,16 +144,40 @@ namespace jskernel {
         }
     }
 
-    void MethodBufAddr64(const FunctionCallbackInfo<Value>& args) {
+    void MethodAddrArrayBuffer(const FunctionCallbackInfo<Value>& args) {
         Isolate* isolate = args.GetIsolate();
-        int64_t addr = GetBufferAddr(args[0]->ToObject());
+        uint64_t addr = GetAddrArrayBuffer(args[0]->ToObject());
+        args.GetReturnValue().Set(Integer::New(isolate, addr));
+    }
+
+    void MethodAddrArrayBuffer64(const FunctionCallbackInfo<Value>& args) {
+        Isolate* isolate = args.GetIsolate();
+        uint64_t addr = GetAddrArrayBuffer(args[0]->ToObject());
         args.GetReturnValue().Set(Int64ToArray(isolate, addr));
     }
 
-    void MethodBufAddr(const FunctionCallbackInfo<Value>& args) {
+    void MethodAddrUint8Array(const FunctionCallbackInfo<Value>& args) {
         Isolate* isolate = args.GetIsolate();
-        uint64_t addr = GetBufferAddr(args[0]->ToObject());
+        uint64_t addr = GetAddrUint8Array(args[0]->ToObject());
         args.GetReturnValue().Set(Integer::New(isolate, addr));
+    }
+
+    void MethodAddrUint8Array64(const FunctionCallbackInfo<Value>& args) {
+        Isolate* isolate = args.GetIsolate();
+        uint64_t addr = GetAddrUint8Array(args[0]->ToObject());
+        args.GetReturnValue().Set(Int64ToArray(isolate, addr));
+    }
+
+    void MethodAddrBuffer(const FunctionCallbackInfo<Value>& args) {
+        Isolate* isolate = args.GetIsolate();
+        uint64_t addr = GetAddrBuffer(args[0]->ToObject());
+        args.GetReturnValue().Set(Integer::New(isolate, addr));
+    }
+
+    void MethodAddrBuffer64(const FunctionCallbackInfo<Value>& args) {
+        Isolate* isolate = args.GetIsolate();
+        int64_t addr = GetAddrBuffer(args[0]->ToObject());
+        args.GetReturnValue().Set(Int64ToArray(isolate, addr));
     }
 
     void MethodMalloc(const FunctionCallbackInfo<Value>& args) {
@@ -201,17 +245,21 @@ namespace jskernel {
 //    }
 
     void init(Local<Object> exports) {
-        NODE_SET_METHOD(exports, "syscall",     MethodSyscall);
-        NODE_SET_METHOD(exports, "syscall64",   MethodSyscall64);
-        NODE_SET_METHOD(exports, "addr",        MethodBufAddr);
-        NODE_SET_METHOD(exports, "addr64",      MethodBufAddr64);
-        NODE_SET_METHOD(exports, "malloc",      MethodMalloc);
-        NODE_SET_METHOD(exports, "malloc64",    MethodMalloc64);
-        NODE_SET_METHOD(exports, "errno",       MethodErrno);
-//        NODE_SET_METHOD(exports, "jump",        MethodJump);
-        NODE_SET_METHOD(exports, "call",        MethodCall);
-        NODE_SET_METHOD(exports, "call64",      MethodCall64);
-//        NODE_SET_METHOD(exports, "gen",         MethodGen);
+        NODE_SET_METHOD(exports, "syscall",                 MethodSyscall);
+        NODE_SET_METHOD(exports, "syscall64",               MethodSyscall64);
+        NODE_SET_METHOD(exports, "errno",                   MethodErrno);
+        NODE_SET_METHOD(exports, "addressArrayBuffer",      MethodAddrArrayBuffer);
+        NODE_SET_METHOD(exports, "addressArrayBuffer64",    MethodAddrArrayBuffer64);
+        NODE_SET_METHOD(exports, "addressUint8Array",       MethodAddrUint8Array);
+        NODE_SET_METHOD(exports, "addressUint8Array64",     MethodAddrUint8Array64);
+        NODE_SET_METHOD(exports, "addressBuffer",           MethodAddrBuffer);
+        NODE_SET_METHOD(exports, "addressBuffer64",         MethodAddrBuffer64);
+        NODE_SET_METHOD(exports, "malloc",                  MethodMalloc);
+        NODE_SET_METHOD(exports, "malloc64",                MethodMalloc64);
+        NODE_SET_METHOD(exports, "call",                    MethodCall);
+        NODE_SET_METHOD(exports, "call64",                  MethodCall64);
+//        NODE_SET_METHOD(exports, "jump",                  MethodJump);
+//        NODE_SET_METHOD(exports, "gen",                   MethodGen);
     }
 
     NODE_MODULE(addon, init)
