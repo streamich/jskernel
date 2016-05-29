@@ -17,7 +17,7 @@ exports.imm8 = [o.Immediate8];
 exports.imm16 = [o.Immediate16];
 exports.imm32 = [o.Immediate32];
 // Global defaults
-exports.defaults = { s: exports.S.DOUBLE, lock: false, ops: null, or: -1, r: false, dbit: false };
+exports.defaults = { s: exports.S.DOUBLE, lock: false, ops: null, or: -1, r: false, dbit: false, rex: false };
 // Instruction are divided in groups, each group consists of list
 // of possible instructions. The first object is NOT an instruction
 // but defaults for the group.

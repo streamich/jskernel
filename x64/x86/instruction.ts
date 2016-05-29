@@ -21,6 +21,8 @@ export class Label extends Expression {
 
     constructor(name: string) {
         super();
+        if((typeof name !== 'string') || !name)
+            throw TypeError('Label name must be a non-empty string.');
         this.name = name;
     }
 
@@ -45,7 +47,9 @@ export class Data extends Expression {
     }
 
     toString(margin = '    ') {
-        return margin + 'db';
+        var data = [];
+        for(var octet of this.octets) data.push(octet.toString(16));
+        return margin + 'db 0x' + data.join(', 0x');
     }
 }
 
@@ -168,8 +172,8 @@ export class Instruction extends Expression implements InstructionUserInterface{
     }
 
     // http://wiki.osdev.org/X86-64_Instruction_Encoding#Operand-size_and_address-size_override_prefix
-    getOperandSize() {
-
+    getOperandSize(): o.SIZE {
+        return o.SIZE.DOUBLE;
     }
 
     getAddressSize() {
@@ -405,6 +409,13 @@ export class Instruction extends Expression implements InstructionUserInterface{
     protected createImmediate() {
         var imm = this.op.getImmediate();
         if(imm) {
+            // If immediate does not have concrete size, use the size of instruction operands.
+            if(imm.constructor === o.Immediate) {
+                var size = this.getOperandSize();
+                imm = o.Immediate.factory(size, imm.value, imm.signed);
+                imm.extend(size);
+            }
+
             // if (this.displacement && (this.displacement.value.size === o.SIZE.QUAD))
             //     throw TypeError(`Cannot have Immediate with ${o.SIZE.QUAD} bit Displacement.`);
             this.immediate = new p.Immediate(imm);

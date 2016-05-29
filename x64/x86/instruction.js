@@ -20,6 +20,8 @@ var Label = (function (_super) {
     __extends(Label, _super);
     function Label(name) {
         _super.call(this);
+        if ((typeof name !== 'string') || !name)
+            throw TypeError('Label name must be a non-empty string.');
         this.name = name;
     }
     Label.prototype.write = function (arr) {
@@ -44,7 +46,12 @@ var Data = (function (_super) {
     };
     Data.prototype.toString = function (margin) {
         if (margin === void 0) { margin = '    '; }
-        return margin + 'db';
+        var data = [];
+        for (var _i = 0, _a = this.octets; _i < _a.length; _i++) {
+            var octet = _a[_i];
+            data.push(octet.toString(16));
+        }
+        return margin + 'db 0x' + data.join(', 0x');
     };
     return Data;
 }(Expression));
@@ -145,6 +152,7 @@ var Instruction = (function (_super) {
     };
     // http://wiki.osdev.org/X86-64_Instruction_Encoding#Operand-size_and_address-size_override_prefix
     Instruction.prototype.getOperandSize = function () {
+        return o.SIZE.DOUBLE;
     };
     Instruction.prototype.getAddressSize = function () {
     };
@@ -364,6 +372,12 @@ var Instruction = (function (_super) {
     Instruction.prototype.createImmediate = function () {
         var imm = this.op.getImmediate();
         if (imm) {
+            // If immediate does not have concrete size, use the size of instruction operands.
+            if (imm.constructor === o.Immediate) {
+                var size = this.getOperandSize();
+                imm = o.Immediate.factory(size, imm.value, imm.signed);
+                imm.extend(size);
+            }
             // if (this.displacement && (this.displacement.value.size === o.SIZE.QUAD))
             //     throw TypeError(`Cannot have Immediate with ${o.SIZE.QUAD} bit Displacement.`);
             this.immediate = new p.Immediate(imm);

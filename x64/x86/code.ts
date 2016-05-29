@@ -12,10 +12,9 @@ export enum MODE {
 }
 
 
-export type TOperand = o.Register|o.Memory|number|number64;
-
-
 export abstract class Code {
+
+    addressSize = o.SIZE.DOUBLE;
     
     mode: MODE = MODE.LONG;
 
@@ -46,9 +45,10 @@ export abstract class Code {
         return false;
     }
 
-    protected toRegOrMem(operand: TOperand): o.Register|o.Memory {
+    protected toRegOrMem(operand: o.TUserInterfaceOperand): o.Register|o.Memory {
         if(operand instanceof o.Register) return operand;
         if(operand instanceof o.Memory) return operand;
+        if(operand instanceof o.Immediate) throw TypeError('Operand cannot be of type Immediate.');
         return this.mem(operand as number|number64);
     }
 
@@ -61,9 +61,9 @@ export abstract class Code {
     // > information on this.
     mem(disp: number|number64): o.Memory {
         if(typeof disp === 'number')
-            return (new o.Memory).disp(disp as number);
+            return o.Memory.factory(this.addressSize).disp(disp as number);
         else if((disp instanceof Array) && (disp.length == 2))
-            return (new o.Memory).disp(disp as number64);
+            return o.Memory.factory(this.addressSize).disp(disp as number64);
         else
             throw TypeError('Displacement value must be of type number or number64.');
     }
@@ -73,10 +73,7 @@ export abstract class Code {
     }
 
     label(name: string): i.Label {
-        if((typeof name !== 'string') || !name)
-            throw TypeError('Label name must be a non-empty string.');
         var label = new i.Label(name);
-
         this.expr.push(label);
         return label;
     }

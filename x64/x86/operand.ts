@@ -70,7 +70,7 @@ export class Constant extends Operand {
 
     signed: boolean = true;
 
-    constructor(value: number|number64, signed = true) {
+    constructor(value: number|number64 = 0, signed = true) {
         super();
         this.signed = signed;
         this.setValue(value);
@@ -146,6 +146,11 @@ export class Constant extends Operand {
         }
     }
 
+    extend(size: SIZE) {
+        if(this.signed) this.signExtend(size);
+        else this.zeroExtend(size);
+    }
+
     toString() {
         var str = '';
         for(var i = this.octets.length - 1; i >= 0; i--) {
@@ -156,6 +161,16 @@ export class Constant extends Operand {
 }
 
 export class Immediate extends Constant {
+    static factory(size, value: number|number64 = 0, signed = true) {
+        switch(size) {
+            case SIZE.BYTE:     return new Immediate8(value, signed);
+            case SIZE.WORD:     return new Immediate16(value, signed);
+            case SIZE.DOUBLE:   return new Immediate32(value, signed);
+            case SIZE.QUAD:     return new Immediate64(value, signed);
+            default:            return new Immediate(value, signed);
+        }
+    }
+
     static throwIfLarger(value, size, signed) {
         var val_size = signed ? Constant.sizeClass(value) : Constant.sizeClassUnsigned(value);
         if(val_size > size) throw TypeError(`Value ${value} too big for imm8.`);
@@ -163,38 +178,34 @@ export class Immediate extends Constant {
 }
 
 export class Immediate8 extends Immediate {
-    size = SIZE.BYTE;
-
     setValue(value: number|number64) {
         Immediate.throwIfLarger(value, SIZE.BYTE, this.signed);
         super.setValue(value);
+        this.extend(SIZE.BYTE);
     }
 }
 
 export class Immediate16 extends Immediate {
-    size = SIZE.WORD;
-
     setValue(value: number|number64) {
         Immediate.throwIfLarger(value, SIZE.WORD, this.signed);
         super.setValue(value);
+        this.extend(SIZE.WORD);
     }
 }
 
 export class Immediate32 extends Immediate {
-    size = SIZE.DOUBLE;
-
     setValue(value: number|number64) {
         Immediate.throwIfLarger(value, SIZE.DOUBLE, this.signed);
         super.setValue(value);
+        this.extend(SIZE.DOUBLE);
     }
 }
 
 export class Immediate64 extends Immediate {
-    size = SIZE.QUAD;
-
     setValue(value: number|number64) {
         Immediate.throwIfLarger(value, SIZE.QUAD, this.signed);
         super.setValue(value);
+        this.extend(SIZE.QUAD);
     }
 }
 
@@ -238,15 +249,15 @@ export class Register extends Operand {
     }
 
     ref(): Memory {
-        return Memory.fromReg(this).ref(this);
+        return Memory.factory(this.size).ref(this);
     }
 
     ind(scale_factor: number): Memory {
-        return Memory.fromReg(this).ind(this, scale_factor);
+        return Memory.factory(this.size).ind(this, scale_factor);
     }
 
     disp(value: number): Memory {
-        return Memory.fromReg(this).ref(this).disp(value);
+        return Memory.factory(this.size).ref(this).disp(value);
     }
 
     // Whether the register is one of `%r8`, `%r9`, etc. extended registers.
@@ -407,8 +418,8 @@ export class Scale extends Operand {
 // `Memory` is RAM addresses which `Register`s can *dereference*.
 export class Memory extends Operand {
 
-    static fromReg(reg: Register) {
-        switch(reg.size) {
+    static factory(size: SIZE) {
+        switch(size) {
             case SIZE.BYTE:     return new Memory8;
             case SIZE.WORD:     return new Memory16;
             case SIZE.DOUBLE:   return new Memory32;

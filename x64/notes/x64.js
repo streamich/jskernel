@@ -2,7 +2,8 @@
 var operand_1 = require('../x86/operand');
 var code_1 = require('../x64/code');
 var _ = new code_1.Code;
-var ins = _.movq(operand_1.rax.ref(), operand_1.rax);
+// var ins = _.movq(rax.ref(), rax);
+var ins = _.movq(operand_1.rax, 0x01);
 // console.log(ins);
 // _.incq(rax).lock();
 // var ins = _.int(0x80);

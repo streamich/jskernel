@@ -12,6 +12,7 @@ export class Def {
     lock: boolean;
     regInOp: boolean;
     opcodeDirectionBit: boolean;
+    mandatoryRex: boolean;
 
     constructor(def: t.Definition) {
         this.opcode             = def.o;
@@ -21,6 +22,7 @@ export class Def {
         this.lock               = def.lock;
         this.regInOp            = def.r;
         this.opcodeDirectionBit = def.dbit;
+        this.mandatoryRex       = def.rex;
 
         this.operands = [];
         if(def.ops && def.ops.length) {
@@ -36,7 +38,11 @@ export class Def {
             if(typeof def === 'object') { // Object: rax, rbx, r8, etc...
                 if(def === target) return true;
             } else if(typeof def === 'function') { // Class: o.Register, o.Memory, etc...
-                if(target instanceof def) return true;
+                if([o.Immediate, o.Immediate8, o.Immediate16, o.Immediate32, o.Immediate64].indexOf(def) > -1) {
+                    if(target instanceof o.Immediate) return true;
+                } else {
+                    if(target instanceof def) return true;
+                }
             }
         }
         return false;

@@ -15,6 +15,7 @@ var Code = (function (_super) {
     function Code() {
         _super.apply(this, arguments);
         this.ClassInstruction = instruction_1.Instruction;
+        this.addressSize = o.SIZE.QUAD;
         this.table = exports.table;
     }
     Code.prototype.insTable = function (group, ops) {
@@ -47,15 +48,3 @@ var Code = (function (_super) {
     return Code;
 }(code.Code));
 exports.Code = Code;
-var FuzzyCode = (function (_super) {
-    __extends(FuzzyCode, _super);
-    function FuzzyCode() {
-        _super.apply(this, arguments);
-        this.ClassInstruction = instruction_1.FuzzyInstruction;
-    }
-    FuzzyCode.prototype.nop = function (size) {
-        if (size === void 0) { size = 1; }
-    };
-    return FuzzyCode;
-}(Code));
-exports.FuzzyCode = FuzzyCode;

@@ -7,7 +7,7 @@ export class Instruction extends i.Instruction {
 
     prefixRex: p.PrefixRex = null;
 
-    operandSize = o.SIZE.QUAD;
+    operandSize = o.SIZE.DOUBLE;
 
     getOperandSize() {
         return this.operandSize;
@@ -18,20 +18,23 @@ export class Instruction extends i.Instruction {
         if(this.prefixRex) this.prefixRex.write(arr);
     }
 
-    protected needsOperandSizeChange() {
-        return (this.def.operandSize === o.SIZE.DOUBLE) && (this.getOperandSize() === o.SIZE.QUAD);
+    protected needs32To64OperandSizeChange() {
+        // Default operand size in x64 mode is 32 bits.
+        return this.def.operandSize === o.SIZE.QUAD;
     }
 
     protected createPrefixes() {
         super.createPrefixes();
-        if(this.op.hasRegisterOrMemory() && (this.needsOperandSizeChange() || this.hasExtendedRegister()))
+        if(this.def.mandatoryRex ||
+            (this.op.hasRegisterOrMemory() && (this.needs32To64OperandSizeChange() || this.hasExtendedRegister()))
+        )
             this.createRex();
     }
 
     protected createRex() {
         var W = 0, R = 0, X = 0, B = 0;
 
-        if(this.needsOperandSizeChange()) W = 1;
+        if(this.needs32To64OperandSizeChange()) W = 1;
 
         var {dst, src} = this.op;
 
@@ -89,37 +92,5 @@ export class Instruction extends i.Instruction {
             this.modrm = new p.Modrm(p.Modrm.MOD.INDIRECT, reg, p.Modrm.RM.INDIRECT_DISP);
 
         } else super.createModrm();
-    }
-}
-
-
-// Generates logically equivalent code to `Instruction` but the actual
-// bytes of the machine code will likely differ, because `FuzzyInstruction`
-// picks at random one of the possible instructions when multiple instructions
-// can perform the same operation. Here are some examples:
-//
-//  - Bits in `REX` prefix are ignored if they don't have an effect on the instruction.
-//  - Register-to-register `MOV` instruction can be encoded in two different ways.
-//  - Up to four prefixes may be added to instruction, if they are not used, they are ignored.
-//  - There can be many different *no-op* instruction that are used to fill in padding, for example:
-//
-//     mov %rax, %rax
-//     add $0, %rax
-export class FuzzyInstruction extends Instruction {
-    protected regToRegDirectionRegIsDst = !(Math.random() > 0.5);
-
-    protected oneOrZero(): number {
-        return Math.random() > 0.5 ? 1 : 0;
-    }
-
-    // Randomize unused bits in REX byte.
-    protected createRex() {
-        var rex: p.PrefixRex = super.createRex();
-        var {dst, src} = this.op;
-        if(!dst && !src) {
-            rex.X = this.oneOrZero();
-            if(!src) rex.B = this.oneOrZero();
-        }
-        return rex;
     }
 }

@@ -28,6 +28,7 @@ export interface Definition {
     or?: number;            // Opreg - 3bit opcode part in modrm.reg field, -1 if none.
     r?: boolean;            // /r - 3bit register encoded in lowest opcode bits.
     dbit?: boolean;         // Whether it is allowed to change `d` bit in opcode.
+    rex?: boolean;          // Whether REX prefix is mandatory for this instruction.
 }
 
 export type GroupDefinition = Definition[];
@@ -36,7 +37,7 @@ export type TableDefinition = {[s: string]: GroupDefinition};
 
 // Global defaults
 export var defaults: Definition
-    = {s: S.DOUBLE, lock: false, ops: null, or: -1, r: false, dbit: false};
+    = {s: S.DOUBLE, lock: false, ops: null, or: -1, r: false, dbit: false, rex: false};
 
 
 // Instruction are divided in groups, each group consists of list

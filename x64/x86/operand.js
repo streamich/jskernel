@@ -42,6 +42,7 @@ exports.Operand = Operand;
 var Constant = (function (_super) {
     __extends(Constant, _super);
     function Constant(value, signed) {
+        if (value === void 0) { value = 0; }
         if (signed === void 0) { signed = true; }
         _super.call(this);
         // Size in bits.
@@ -145,6 +146,12 @@ var Constant = (function (_super) {
             this.octets[3] = (value >> 24) & 0xFF;
         }
     };
+    Constant.prototype.extend = function (size) {
+        if (this.signed)
+            this.signExtend(size);
+        else
+            this.zeroExtend(size);
+    };
     Constant.prototype.toString = function () {
         var str = '';
         for (var i = this.octets.length - 1; i >= 0; i--) {
@@ -160,6 +167,17 @@ var Immediate = (function (_super) {
     function Immediate() {
         _super.apply(this, arguments);
     }
+    Immediate.factory = function (size, value, signed) {
+        if (value === void 0) { value = 0; }
+        if (signed === void 0) { signed = true; }
+        switch (size) {
+            case SIZE.BYTE: return new Immediate8(value, signed);
+            case SIZE.WORD: return new Immediate16(value, signed);
+            case SIZE.DOUBLE: return new Immediate32(value, signed);
+            case SIZE.QUAD: return new Immediate64(value, signed);
+            default: return new Immediate(value, signed);
+        }
+    };
     Immediate.throwIfLarger = function (value, size, signed) {
         var val_size = signed ? Constant.sizeClass(value) : Constant.sizeClassUnsigned(value);
         if (val_size > size)
@@ -172,11 +190,11 @@ var Immediate8 = (function (_super) {
     __extends(Immediate8, _super);
     function Immediate8() {
         _super.apply(this, arguments);
-        this.size = SIZE.BYTE;
     }
     Immediate8.prototype.setValue = function (value) {
         Immediate.throwIfLarger(value, SIZE.BYTE, this.signed);
         _super.prototype.setValue.call(this, value);
+        this.extend(SIZE.BYTE);
     };
     return Immediate8;
 }(Immediate));
@@ -185,11 +203,11 @@ var Immediate16 = (function (_super) {
     __extends(Immediate16, _super);
     function Immediate16() {
         _super.apply(this, arguments);
-        this.size = SIZE.WORD;
     }
     Immediate16.prototype.setValue = function (value) {
         Immediate.throwIfLarger(value, SIZE.WORD, this.signed);
         _super.prototype.setValue.call(this, value);
+        this.extend(SIZE.WORD);
     };
     return Immediate16;
 }(Immediate));
@@ -198,11 +216,11 @@ var Immediate32 = (function (_super) {
     __extends(Immediate32, _super);
     function Immediate32() {
         _super.apply(this, arguments);
-        this.size = SIZE.DOUBLE;
     }
     Immediate32.prototype.setValue = function (value) {
         Immediate.throwIfLarger(value, SIZE.DOUBLE, this.signed);
         _super.prototype.setValue.call(this, value);
+        this.extend(SIZE.DOUBLE);
     };
     return Immediate32;
 }(Immediate));
@@ -211,11 +229,11 @@ var Immediate64 = (function (_super) {
     __extends(Immediate64, _super);
     function Immediate64() {
         _super.apply(this, arguments);
-        this.size = SIZE.QUAD;
     }
     Immediate64.prototype.setValue = function (value) {
         Immediate.throwIfLarger(value, SIZE.QUAD, this.signed);
         _super.prototype.setValue.call(this, value);
+        this.extend(SIZE.QUAD);
     };
     return Immediate64;
 }(Immediate));
@@ -253,13 +271,13 @@ var Register = (function (_super) {
         return this;
     };
     Register.prototype.ref = function () {
-        return Memory.fromReg(this).ref(this);
+        return Memory.factory(this.size).ref(this);
     };
     Register.prototype.ind = function (scale_factor) {
-        return Memory.fromReg(this).ind(this, scale_factor);
+        return Memory.factory(this.size).ind(this, scale_factor);
     };
     Register.prototype.disp = function (value) {
-        return Memory.fromReg(this).ref(this).disp(value);
+        return Memory.factory(this.size).ref(this).disp(value);
     };
     // Whether the register is one of `%r8`, `%r9`, etc. extended registers.
     Register.prototype.isExtended = function () {
@@ -422,8 +440,8 @@ var Memory = (function (_super) {
         this.scale = null;
         this.displacement = null;
     }
-    Memory.fromReg = function (reg) {
-        switch (reg.size) {
+    Memory.factory = function (size) {
+        switch (size) {
             case SIZE.BYTE: return new Memory8;
             case SIZE.WORD: return new Memory16;
             case SIZE.DOUBLE: return new Memory32;

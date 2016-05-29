@@ -6,7 +6,8 @@ import {table, Code} from '../x64/code';
 
 
 var _ = new Code;
-var ins = _.movq(rax.ref(), rax);
+// var ins = _.movq(rax.ref(), rax);
+var ins = _.movq(rax, 0x01);
 // console.log(ins);
 // _.incq(rax).lock();
 // var ins = _.int(0x80);

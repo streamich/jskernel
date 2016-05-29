@@ -1,7 +1,7 @@
 import * as code from '../x86/code';
 import * as o from '../x86/operand';
 import * as d from '../x86/def';
-import {Instruction, FuzzyInstruction} from './instruction';
+import {Instruction} from './instruction';
 import * as t from './table';
 
 
@@ -15,6 +15,8 @@ export class Code extends code.Code {
     protected insTable(group: string, ops: o.TUserInterfaceOperand[] = []): Instruction {
         return super.insTable(group, ops) as Instruction;
     }
+
+    addressSize = o.SIZE.QUAD;
 
     table: d.DefTable = table;
 
@@ -47,14 +49,5 @@ export class Code extends code.Code {
 
     sysexit(): Instruction {
         return this.insTable('sysexit');
-    }
-}
-
-
-export class FuzzyCode extends Code {
-    protected ClassInstruction = FuzzyInstruction;
-
-    nop(size = 1) {
-
     }
 }

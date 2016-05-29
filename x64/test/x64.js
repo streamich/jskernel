@@ -16,26 +16,45 @@ describe('x64', function () {
             chai_1.expect(_.toString()).to.equal('    inc     rbx');
         });
     });
-    describe('db', function () {
-        it('octets', function () {
-            var _ = code64();
-            var data = [1, 2, 3];
-            _.db(data);
-            chai_1.expect(compile(_)).to.eql(data);
+    describe('data', function () {
+        describe('db', function () {
+            it('octets', function () {
+                var _ = code64();
+                var data = [1, 2, 3];
+                _.db(data);
+                chai_1.expect(compile(_)).to.eql(data);
+            });
+            it('buffer', function () {
+                var _ = code64();
+                var data = [1, 2, 3];
+                _.db(new Buffer(data));
+                chai_1.expect(compile(_)).to.eql(data);
+            });
+            it('string', function () {
+                var _ = code64();
+                var str = 'Hello World!\n';
+                _.db(str);
+                var bin = compile(_);
+                chai_1.expect(bin.length).to.be.equal(str.length);
+                chai_1.expect(bin).to.eql([72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100, 33, 10]);
+            });
         });
-        it('buffer', function () {
-            var _ = code64();
-            var data = [1, 2, 3];
-            _.db(new Buffer(data));
-            chai_1.expect(compile(_)).to.eql(data);
-        });
-        it('string', function () {
-            var _ = code64();
-            var str = 'Hello World!\n';
-            _.db(str);
-            var bin = compile(_);
-            chai_1.expect(bin.length).to.be.equal(str.length);
-            chai_1.expect(bin).to.eql([72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100, 33, 10]);
+        describe('incbin', function () {
+            it('.incbin(filepath)', function () {
+                var _ = code64();
+                var ins = _.incbin(__dirname + '/data.txt');
+                chai_1.expect(ins.octets).to.eql([49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 13, 10]);
+            });
+            it('.incbin(filepath, offset)', function () {
+                var _ = code64();
+                var ins = _.incbin(__dirname + '/data.txt', 3);
+                chai_1.expect(ins.octets).to.eql([52, 53, 54, 55, 56, 57, 48, 13, 10]);
+            });
+            it('.incbin(filepath, offset, length)', function () {
+                var _ = code64();
+                var ins = _.incbin(__dirname + '/data.txt', 3, 3);
+                chai_1.expect(ins.octets).to.eql([52, 53, 54]);
+            });
         });
     });
     describe('system', function () {
@@ -203,7 +222,7 @@ describe('x64', function () {
             var _ = code64();
             _.movq(operand_1.rbp, -0x3333);
             var bin = compile(_);
-            console.log(new Buffer(bin));
+            // console.log(new Buffer(bin));
             chai_1.expect(bin).to.eql([0x48, 0xC7, 0xC5, 0xCD, 0xCC, 0xFF, 0xFF]);
         });
     });

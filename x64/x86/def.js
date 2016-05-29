@@ -1,4 +1,5 @@
 "use strict";
+var o = require('./operand');
 var util_1 = require('../util');
 var Def = (function () {
     function Def(def) {
@@ -9,6 +10,7 @@ var Def = (function () {
         this.lock = def.lock;
         this.regInOp = def.r;
         this.opcodeDirectionBit = def.dbit;
+        this.mandatoryRex = def.rex;
         this.operands = [];
         if (def.ops && def.ops.length) {
             for (var _i = 0, _a = def.ops; _i < _a.length; _i++) {
@@ -27,8 +29,14 @@ var Def = (function () {
                     return true;
             }
             else if (typeof def === 'function') {
-                if (target instanceof def)
-                    return true;
+                if ([o.Immediate, o.Immediate8, o.Immediate16, o.Immediate32, o.Immediate64].indexOf(def) > -1) {
+                    if (target instanceof o.Immediate)
+                        return true;
+                }
+                else {
+                    if (target instanceof def)
+                        return true;
+                }
             }
         }
         return false;

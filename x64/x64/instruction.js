@@ -12,7 +12,7 @@ var Instruction = (function (_super) {
     function Instruction() {
         _super.apply(this, arguments);
         this.prefixRex = null;
-        this.operandSize = o.SIZE.QUAD;
+        this.operandSize = o.SIZE.DOUBLE;
     }
     Instruction.prototype.getOperandSize = function () {
         return this.operandSize;
@@ -22,17 +22,19 @@ var Instruction = (function (_super) {
         if (this.prefixRex)
             this.prefixRex.write(arr);
     };
-    Instruction.prototype.needsOperandSizeChange = function () {
-        return (this.def.operandSize === o.SIZE.DOUBLE) && (this.getOperandSize() === o.SIZE.QUAD);
+    Instruction.prototype.needs32To64OperandSizeChange = function () {
+        // Default operand size in x64 mode is 32 bits.
+        return this.def.operandSize === o.SIZE.QUAD;
     };
     Instruction.prototype.createPrefixes = function () {
         _super.prototype.createPrefixes.call(this);
-        if (this.op.hasRegisterOrMemory() && (this.needsOperandSizeChange() || this.hasExtendedRegister()))
+        if (this.def.mandatoryRex ||
+            (this.op.hasRegisterOrMemory() && (this.needs32To64OperandSizeChange() || this.hasExtendedRegister())))
             this.createRex();
     };
     Instruction.prototype.createRex = function () {
         var W = 0, R = 0, X = 0, B = 0;
-        if (this.needsOperandSizeChange())
+        if (this.needs32To64OperandSizeChange())
             W = 1;
         var _a = this.op, dst = _a.dst, src = _a.src;
         if ((dst instanceof o.Register) && (src instanceof o.Register)) {
@@ -95,38 +97,3 @@ var Instruction = (function (_super) {
     return Instruction;
 }(i.Instruction));
 exports.Instruction = Instruction;
-// Generates logically equivalent code to `Instruction` but the actual
-// bytes of the machine code will likely differ, because `FuzzyInstruction`
-// picks at random one of the possible instructions when multiple instructions
-// can perform the same operation. Here are some examples:
-//
-//  - Bits in `REX` prefix are ignored if they don't have an effect on the instruction.
-//  - Register-to-register `MOV` instruction can be encoded in two different ways.
-//  - Up to four prefixes may be added to instruction, if they are not used, they are ignored.
-//  - There can be many different *no-op* instruction that are used to fill in padding, for example:
-//
-//     mov %rax, %rax
-//     add $0, %rax
-var FuzzyInstruction = (function (_super) {
-    __extends(FuzzyInstruction, _super);
-    function FuzzyInstruction() {
-        _super.apply(this, arguments);
-        this.regToRegDirectionRegIsDst = !(Math.random() > 0.5);
-    }
-    FuzzyInstruction.prototype.oneOrZero = function () {
-        return Math.random() > 0.5 ? 1 : 0;
-    };
-    // Randomize unused bits in REX byte.
-    FuzzyInstruction.prototype.createRex = function () {
-        var rex = _super.prototype.createRex.call(this);
-        var _a = this.op, dst = _a.dst, src = _a.src;
-        if (!dst && !src) {
-            rex.X = this.oneOrZero();
-            if (!src)
-                rex.B = this.oneOrZero();
-        }
-        return rex;
-    };
-    return FuzzyInstruction;
-}(Instruction));
-exports.FuzzyInstruction = FuzzyInstruction;

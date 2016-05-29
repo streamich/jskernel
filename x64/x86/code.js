@@ -10,6 +10,7 @@ var util_1 = require('../util');
 var MODE = exports.MODE;
 var Code = (function () {
     function Code() {
+        this.addressSize = o.SIZE.DOUBLE;
         this.mode = MODE.LONG;
         this.expr = [];
         this.ClassInstruction = i.Instruction;
@@ -39,6 +40,8 @@ var Code = (function () {
             return operand;
         if (operand instanceof o.Memory)
             return operand;
+        if (operand instanceof o.Immediate)
+            throw TypeError('Operand cannot be of type Immediate.');
         return this.mem(operand);
     };
     // Displacement is up to 4 bytes in size, and 8 bytes for some specific MOV instructions, AMD64 Vol.2 p.24:
@@ -50,9 +53,9 @@ var Code = (function () {
     // > information on this.
     Code.prototype.mem = function (disp) {
         if (typeof disp === 'number')
-            return (new o.Memory).disp(disp);
+            return o.Memory.factory(this.addressSize).disp(disp);
         else if ((disp instanceof Array) && (disp.length == 2))
-            return (new o.Memory).disp(disp);
+            return o.Memory.factory(this.addressSize).disp(disp);
         else
             throw TypeError('Displacement value must be of type number or number64.');
     };
@@ -60,8 +63,6 @@ var Code = (function () {
         return this.mem(disp);
     };
     Code.prototype.label = function (name) {
-        if ((typeof name !== 'string') || !name)
-            throw TypeError('Label name must be a non-empty string.');
         var label = new i.Label(name);
         this.expr.push(label);
         return label;
