@@ -12,6 +12,7 @@
 
 // `libjs` creates wrappers around system calls, similar to what `libc` does for `C` language.
 import * as sys from './sys';
+const syscall = sys.syscall;
 
 // [libsys](http://www.npmjs.com/package/libsys) library contains our only native dependency -- the `syscall` function:
 //
@@ -20,6 +21,7 @@ import * as sys from './sys';
 
 // `defs` provides platform specific constants and structs, the default one we use is `x86_64_linux`.
 import * as defs from './definitions';
+const nums = defs.syscalls;
 import {Type, Arr, Struct} from './typebase';
 
 
@@ -34,6 +36,9 @@ var debug = require('debug')('libjs:syscall');
 export * from './ctypes';
 export * from './definitions';
 export * from './socket';
+
+
+export type Taddr = Buffer|ArrayBuffer|Uint8Array;
 
 
 // ## Files
@@ -52,7 +57,7 @@ export * from './socket';
 // zero than zero does not necessarily mean *end-of-file*.
 
 export function read(fd: number, buf: Buffer): number {
-    debug('read', fd, sys.addr64(buf), buf.length);
+    // debug('read', fd, sys.addr64(buf), buf.length);
     return sys.syscall(defs.syscalls.read, fd, buf, buf.length);
 }
 
@@ -64,7 +69,7 @@ export function read(fd: number, buf: Buffer): number {
 // Write data to a file descriptor.
 
 export function write(fd: number, buf: string|Buffer): number {
-    debug('write', fd);
+    // debug('write', fd);
     if(!(buf instanceof Buffer)) buf = new Buffer((buf as string) + '\0');
     return sys.syscall(defs.syscalls.write, fd, buf, buf.length);
 }
@@ -81,7 +86,7 @@ export function write(fd: number, buf: string|Buffer): number {
 // Opens a file, returns file descriptor on success or a negative number representing an error.
 
 export function open(pathname: string, flags: defs.FLAG, mode?: defs.S): number {
-    debug('open', pathname, flags, mode);
+    // debug('open', pathname, flags, mode);
     var args = [defs.syscalls.open, pathname, flags];
     if(typeof mode === 'number') args.push(mode);
     return sys.syscall.apply(null, args);
@@ -99,7 +104,7 @@ export function open(pathname: string, flags: defs.FLAG, mode?: defs.S): number 
 // Close a file descriptor.
 
 export function close(fd: number): number {
-    debug('close', fd);
+    // debug('close', fd);
     return sys.syscall(defs.syscalls.close, fd);
 }
 
@@ -115,7 +120,7 @@ export function close(fd: number): number {
 // Check user's permissions for a file.
 
 export function access(pathname: string, mode: number): number {
-    debug('access', pathname, mode);
+    // debug('access', pathname, mode);
     return sys.syscall(defs.syscalls.access, pathname, mode);
 }
 
@@ -134,12 +139,12 @@ export function access(pathname: string, mode: number): number {
 // and errno is set appropriately.
 
 export function chmod(pathname: string, mode: number): number {
-    debug('chmod', pathname, mode);
+    // debug('chmod', pathname, mode);
     return sys.syscall(defs.syscalls.chmod, pathname, mode);
 }
 
 export function fchmod(fd: number, mode: number): number {
-    debug('fchmod', fd, mode);
+    // debug('fchmod', fd, mode);
     return sys.syscall(defs.syscalls.chmod, fd, mode);
 }
 
@@ -165,17 +170,17 @@ export function fchmod(fd: number, mode: number): number {
 //  - `lchown()` is like chown(), but does not dereference symbolic links.
 
 export function chown(pathname: string, owner: number, group: number): number {
-    debug('chown', pathname, owner, group);
+    // debug('chown', pathname, owner, group);
     return sys.syscall(defs.syscalls.chown, pathname, owner, group);
 }
 
 export function fchown(fd: number, owner: number, group: number): number {
-    debug('fchown', fd, owner, group);
+    // debug('fchown', fd, owner, group);
     return sys.syscall(defs.syscalls.fchown, fd, owner, group);
 }
 
 export function lchown(pathname: string, owner: number, group: number): number {
-    debug('lchown', pathname, owner, group);
+    // debug('lchown', pathname, owner, group);
     return sys.syscall(defs.syscalls.lchown, pathname, owner, group);
 }
 
@@ -185,12 +190,12 @@ export function lchown(pathname: string, owner: number, group: number): number {
 // Synchronize a file's in-core state with storage.
 
 export function fsync(fd: number): number {
-    debug('fsync', fd);
+    // debug('fsync', fd);
     return sys.syscall(defs.syscalls.fsync, fd);
 }
 
 export function fdatasync(fd: number): number {
-    debug('fdatasync', fd);
+    // debug('fdatasync', fd);
     return sys.syscall(defs.syscalls.fdatasync, fd);
 }
 
@@ -231,7 +236,7 @@ export function fdatasync(fd: number): number {
 // Fetches and returns statistics about a file.
 
 export function stat(filepath: string): defs.stat { // Throws number
-    debug('stat', filepath);
+    // debug('stat', filepath);
     var buf = new Buffer(defs.stat.size);
     var result = sys.syscall(defs.syscalls.stat, filepath, buf);
     if(result == 0) return defs.stat.unpack(buf);
@@ -239,7 +244,7 @@ export function stat(filepath: string): defs.stat { // Throws number
 }
 
 export function lstat(linkpath: string): defs.stat {
-    debug('lstat', linkpath);
+    // debug('lstat', linkpath);
     var buf = new Buffer(defs.stat.size);
     var result = sys.syscall(defs.syscalls.lstat, linkpath, buf);
     if(result == 0) return defs.stat.unpack(buf);
@@ -247,7 +252,7 @@ export function lstat(linkpath: string): defs.stat {
 }
 
 export function fstat(fd: number): defs.stat {
-    debug('fstat', fd);
+    // debug('fstat', fd);
     var buf = new Buffer(defs.stat.size);
     var result = sys.syscall(defs.syscalls.fstat, fd, buf);
     if(result == 0) return defs.stat.unpack(buf);
@@ -268,12 +273,12 @@ export function fstat(fd: number): defs.stat {
 // Truncate a file to a specified length
 
 export function truncate(path: string, length: number): number {
-    debug('truncate', path, length);
+    // debug('truncate', path, length);
     return sys.syscall(defs.syscalls.truncate, path, length);
 }
 
 export function ftruncate(fd: number, length: number): number {
-    debug('ftruncate', fd, length);
+    // debug('ftruncate', fd, length);
     return sys.syscall(defs.syscalls.ftruncate, fd, length);
 }
 
@@ -289,7 +294,7 @@ export function ftruncate(fd: number, length: number): number {
 // Reposition read/write file offset.
 
 export function lseek(fd: number, offset: number, whence: defs.SEEK): number {
-    debug('lseek', fd, offset, whence);
+    // debug('lseek', fd, offset, whence);
     return sys.syscall(defs.syscalls.lseek, fd, offset, whence);
 }
 
@@ -304,7 +309,7 @@ export function lseek(fd: number, offset: number, whence: defs.SEEK): number {
 //
 // change the name or location of a file
 export function rename(oldpath: string, newpath: string): number {
-    debug('rename', oldpath, newpath);
+    // debug('rename', oldpath, newpath);
     return sys.syscall(defs.syscalls.rename, oldpath, newpath);
 }
 
@@ -328,17 +333,17 @@ export function rename(oldpath: string, newpath: string): number {
 // Use `mkdir` to create a directory and `rmdir` to remove one.
 
 export function mkdir(pathname: string, mode: number): number {
-    debug('mkdir', pathname, mode);
+    // debug('mkdir', pathname, mode);
     return sys.syscall(defs.syscalls.mkdir, pathname, mode);
 }
 
 export function mkdirat(dirfd: number, pathname: string, mode: number): number {
-    debug('mkdirat', dirfd, pathname, mode);
+    // debug('mkdirat', dirfd, pathname, mode);
     return sys.syscall(defs.syscalls.mkdirat, dirfd, pathname, mode);
 }
 
 export function rmdir(pathname: string): number {
-    debug('rmdir', pathname);
+    // debug('rmdir', pathname);
     return sys.syscall(defs.syscalls.rmdir, pathname);
 }
 
@@ -356,7 +361,7 @@ export function rmdir(pathname: string): number {
 // > Linux has a maximum filename length of 255 characters for most filesystems (including EXT4), and a maximum path of 4096 characters.
 
 export function getcwd(): string {
-    debug('getcwd');
+    // debug('getcwd');
 
     var buf = new Buffer(64);
     var res = sys.syscall(defs.syscalls.getcwd, buf, buf.length);
@@ -393,7 +398,7 @@ export function getcwd(): string {
 // appropriately.
 
 export function getdents64(fd: number, dirp: Buffer): number {
-    debug('getdents64', fd, dirp.length);
+    // debug('getdents64', fd, dirp.length);
     return sys.syscall(defs.syscalls.getdents64, fd, dirp, dirp.length);
 }
 
@@ -427,7 +432,7 @@ export interface IReaddirEntry {
 //     ]
 
 export function readdir(path: string, encoding = 'utf8'): IReaddirEntry[] {
-    debug('readdir', path, encoding);
+    // debug('readdir', path, encoding);
 
     /* Open directory. */
     var fd = open(path, defs.FLAG.O_RDONLY | defs.FLAG.O_DIRECTORY);
@@ -469,7 +474,7 @@ export function readdir(path: string, encoding = 'utf8'): IReaddirEntry[] {
 // excluding `.` and `..` directories, similar to what `fs.readdirSync` does for *Node.js*.
 
 export function readdirList(path: string, encoding = 'utf8'): string[] {
-    debug('readdirList', path, encoding);
+    // debug('readdirList', path, encoding);
 
     var fd = open(path, defs.FLAG.O_RDONLY | defs.FLAG.O_DIRECTORY);
     if(fd < 0) throw fd;
@@ -513,7 +518,7 @@ export function readdirList(path: string, encoding = 'utf8'): string[] {
 // Make a new name for a file.
 
 export function symlink(target: string, linkpath: string): number {
-    debug('symlink', target, linkpath);
+    // debug('symlink', target, linkpath);
     return sys.syscall(defs.syscalls.symlink, target, linkpath);
 }
 
@@ -529,7 +534,7 @@ export function symlink(target: string, linkpath: string): number {
 // Delete a name and possibly the file it refers to.
 
 export function unlink(pathname: string): number {
-    debug('unlink', pathname);
+    // debug('unlink', pathname);
     return sys.syscall(defs.syscalls.unlink, pathname);
 }
 
@@ -545,7 +550,7 @@ export function unlink(pathname: string): number {
 // read value of a symbolic link
 
 export function readlink(pathname: string, buf: Buffer): number {
-    debug('readlink', pathname, buf.length);
+    // debug('readlink', pathname, buf.length);
     return sys.syscall(defs.syscalls.readlink, pathname, buf, buf.length);
 }
 
@@ -561,7 +566,7 @@ export function readlink(pathname: string, buf: Buffer): number {
 // Make a new name for a file.
 
 export function link(oldpath: string, newpath: string): number {
-    debug('link', oldpath, newpath);
+    // debug('link', oldpath, newpath);
     return sys.syscall(defs.syscalls.link, oldpath, newpath);
 }
 
@@ -579,13 +584,13 @@ export function link(oldpath: string, newpath: string): number {
 //     int futimens(int fd, const struct timespec times[2]);
 
 export function utime(filename: string, times: defs.utimbuf): number {
-    debug('utime', filename, times);
+    // debug('utime', filename, times);
     var buf = defs.utimbuf.pack(times);
     return sys.syscall(defs.syscalls.utime, filename, buf);
 }
 
 export function utimes(filename: string, times: defs.timevalarr): number {
-    debug('utimes', filename, times);
+    // debug('utimes', filename, times);
     var buf = defs.timevalarr.pack(times);
     return sys.syscall(defs.syscalls.utimes, buf);
 }
@@ -618,7 +623,7 @@ export function futimens(fd: number, times: defs.timespecarr): number {
 //  - [Asynchronous IO with `epoll` example](https://banu.com/blog/2/how-to-use-epoll-a-complete-example-in-c/epoll-example.c)
 
 export function socket(domain: defs.AF, type: defs.SOCK, protocol: number): number {
-    debug('socket', domain, type, protocol);
+    // debug('socket', domain, type, protocol);
     return sys.syscall(defs.syscalls.socket, domain, type, protocol);
 }
 
@@ -633,7 +638,7 @@ export function socket(domain: defs.AF, type: defs.SOCK, protocol: number): numb
 // Initiate a connection on a socket.
 
 export function connect(fd: number, sockaddr: defs.sockaddr_in): number {
-    debug('connect', fd, sockaddr.sin_addr.s_addr.toString(), require('./socket').hton16(sockaddr.sin_port));
+    // debug('connect', fd, sockaddr.sin_addr.s_addr.toString(), require('./socket').hton16(sockaddr.sin_port));
     var buf = defs.sockaddr_in.pack(sockaddr);
     return sys.syscall(defs.syscalls.connect, fd, buf, buf.length);
 }
@@ -649,33 +654,33 @@ export function connect(fd: number, sockaddr: defs.sockaddr_in): number {
 // Bind a name to a socket. On success, zero is returned.
 
 export function bind(fd: number, sockaddr: defs.sockaddr_in, addr_type: Struct): number {
-    debug('bind', fd, sockaddr, require('./socket').hton16(sockaddr.sin_port));
+    // debug('bind', fd, sockaddr, require('./socket').hton16(sockaddr.sin_port));
     var buf = addr_type.pack(sockaddr);
     return sys.syscall(defs.syscalls.bind, fd, buf, buf.length);
 }
 
 // int listen(int sockfd, int backlog);
 export function listen(fd: number, backlog: number): number {
-    debug('listen', fd, backlog);
+    // debug('listen', fd, backlog);
     return sys.syscall(defs.syscalls.listen, fd, backlog);
 }
 
 // int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
 export function accept(fd: number, buf: Buffer): number {
-    debug('accept', fd);
+    // debug('accept', fd);
     var buflen = defs.int32.pack(buf.length);
     return sys.syscall(defs.syscalls.accept, fd, buf, buflen);
 }
 
 // int accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags);
 export function accept4(fd: number, buf: Buffer, flags: defs.SOCK) {
-    debug('accept4', fd, flags);
+    // debug('accept4', fd, flags);
     var buflen = defs.int32.pack(buf.length);
     return sys.syscall(defs.syscalls.accept4, fd, buf, buflen, flags);
 }
 
 export function shutdown(fd: number, how: defs.SHUT) {
-    debug('shutdown', fd, how);
+    // debug('shutdown', fd, how);
     return sys.syscall(defs.syscalls.shutdown, fd, how);
 }
 
@@ -697,12 +702,12 @@ export function shutdown(fd: number, how: defs.SHUT) {
 // Send a message on a socket.
 
 export function send(fd: number, buf: Buffer, flags: defs.MSG = 0): number {
-    debug('send');
+    // debug('send');
     return sendto(fd, buf, flags);
 }
 
 export function sendto(fd: number, buf: Buffer, flags: defs.MSG = 0, addr?: defs.sockaddr_in, addr_type?: Struct): number {
-    debug('sendto', fd, buf.toString(), buf.length, flags, addr);
+    // debug('sendto', fd, buf.toString(), buf.length, flags, addr);
     var params = [defs.syscalls.sendto, fd, buf, buf.length, flags, 0, 0];
     if(addr) {
         var addrbuf = addr_type.pack(addr);
@@ -723,12 +728,12 @@ export function sendto(fd: number, buf: Buffer, flags: defs.MSG = 0, addr?: defs
 // Receive a message from a socket. These calls return the number of bytes received.
 
 export function recv(sockfd: number, buf: Buffer, flags: number = 0): number {
-    debug('recv', sockfd, buf.length, flags);
+    // debug('recv', sockfd, buf.length, flags);
     return recvfrom(sockfd, buf, flags);
 }
 
 export function recvfrom(sockfd: number, buf: Buffer, flags: number, addr?: defs.sockaddr_in, addr_type?: Struct): number {
-    debug('recvfrom', sockfd, buf.length, flags, addr);
+    // debug('recvfrom', sockfd, buf.length, flags, addr);
     var args = [defs.syscalls.recvfrom, sockfd, buf, buf.length, flags, 0, 0];
     if(addr) {
         var addrbuf = addr_type.pack(addr);
@@ -747,12 +752,12 @@ export function recvfrom(sockfd: number, buf: Buffer, flags: number, addr?: defs
 //     int getsockopt(int sockfd, int level, int optname, void *optval, socklen_t *optlen);
 
 export function setsockopt(sockfd: number, level: number, optname: number, optval: Buffer): number {
-    debug('setsockopt', sockfd, level, optname, optval.toString(), optval.length);
+    // debug('setsockopt', sockfd, level, optname, optval.toString(), optval.length);
     return sys.syscall(defs.syscalls.setsockopt, sockfd, level, optname, optval, optval.length);
 }
 
 export function getsockopt(sockfd: number, level: number, optname: number, optval: Buffer): number {
-    debug('getsockopt', sockfd, level, optname, optval.length);
+    // debug('getsockopt', sockfd, level, optname, optval.length);
 }
 
 
@@ -765,7 +770,7 @@ export function getsockopt(sockfd: number, level: number, optname: number, optva
 // Get process ID.
 
 export function getpid(): number {
-    debug('getpid');
+    // debug('getpid');
     return sys.syscall(defs.syscalls.getpid);
 }
 
@@ -776,7 +781,7 @@ export function getpid(): number {
 // Get parent process ID.
 
 export function getppid(): number {
-    debug('getppid');
+    // debug('getppid');
     return sys.syscall(defs.syscalls.getppid);
 }
 
@@ -787,7 +792,7 @@ export function getppid(): number {
 // Get parent user ID.
 
 export function getuid(): number {
-    debug('getuid');
+    // debug('getuid');
     return sys.syscall(defs.syscalls.getuid);
 }
 
@@ -798,7 +803,7 @@ export function getuid(): number {
 // Get parent real user ID.
 
 export function geteuid(): number {
-    debug('geteuid');
+    // debug('geteuid');
     return sys.syscall(defs.syscalls.geteuid);
 }
 
@@ -809,7 +814,7 @@ export function geteuid(): number {
 // Get group ID.
 
 export function getgid(): number {
-    debug('getgid');
+    // debug('getgid');
     return sys.syscall(defs.syscalls.getgid);
 }
 
@@ -820,7 +825,7 @@ export function getgid(): number {
 // Get read group ID.
 
 export function getegid(): number {
-    debug('getegid');
+    // debug('getegid');
     return sys.syscall(defs.syscalls.getegid);
 }
 
@@ -829,7 +834,7 @@ export function getegid(): number {
 
 // ### fcntl
 export function fcntl(fd: number, cmd: defs.FCNTL, arg?: number): number {
-    debug('fcntl', fd, cmd, arg);
+    // debug('fcntl', fd, cmd, arg);
     var params = [defs.syscalls.fcntl, fd, cmd];
     if(typeof arg !== 'undefined') params.push(arg);
     return sys.syscall.apply(null, params);
@@ -844,13 +849,13 @@ export function fcntl(fd: number, cmd: defs.FCNTL, arg?: number): number {
 //     int epoll_create(int size);
 //
 export function epoll_create(size: number): number {
-    debug('epoll_create', size);
+    // debug('epoll_create', size);
     return sys.syscall(defs.syscalls.epoll_create, size);
 }
 
 // int epoll_create1(int flags);
 export function epoll_create1(flags: defs.EPOLL): number {
-    debug('epoll_create1');
+    // debug('epoll_create1');
     return sys.syscall(defs.syscalls.epoll_create1, flags);
 }
 
@@ -868,7 +873,7 @@ export function epoll_create1(flags: defs.EPOLL): number {
 // http://man7.org/linux/man-pages/man2/epoll_wait.2.html
 // int epoll_wait(int epfd, struct epoll_event *events, int maxevents, int timeout);
 export function epoll_wait(epfd: number, buf: Buffer, maxevents: number, timeout: number): number {
-    debug('epoll_wait', epfd, maxevents, timeout);
+    // debug('epoll_wait', epfd, maxevents, timeout);
     return sys.syscall(defs.syscalls.epoll_wait, epfd, buf, maxevents, timeout);
 }
 
@@ -879,7 +884,7 @@ export function epoll_wait(epfd: number, buf: Buffer, maxevents: number, timeout
 
 // int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event);
 export function epoll_ctl(epfd: number, op: defs.EPOLL_CTL, fd: number, epoll_event: defs.epoll_event): number {
-    debug('epoll_ctl', epfd, op, fd, epoll_event);
+    // debug('epoll_ctl', epfd, op, fd, epoll_event);
     var buf = defs.epoll_event.pack(epoll_event);
     return sys.syscall(defs.syscalls.epoll_ctl, epfd, op, fd, buf);
 }
@@ -905,22 +910,22 @@ export function epoll_ctl(epfd: number, op: defs.EPOLL_CTL, fd: number, epoll_ev
 // system calls.
 
 export function inotify_init(): number {
-    debug('inotify_init');
+    // debug('inotify_init');
     return sys.syscall(defs.syscalls.inotify_init);
 }
 
 export function inotify_init1(flags: defs.IN): number {
-    debug('inotify_init1', flags);
+    // debug('inotify_init1', flags);
     return sys.syscall(defs.syscalls.inotify_init1,  flags);
 }
 
 export function inotify_add_watch(fd: number, pathname: string, mask: defs.IN): number {
-    debug('inotify_add_watch', fd, pathname, mask);
+    // debug('inotify_add_watch', fd, pathname, mask);
     return sys.syscall(defs.syscalls.inotify_add_watch, fd, pathname, mask);
 }
 
 export function inotify_rm_watch(fd: number, wd: number): number {
-    debug('inotify_rm_watch', fd, wd);
+    // debug('inotify_rm_watch', fd, wd);
     return sys.syscall(defs.syscalls.inotify_rm_watch, fd, wd);
 }
 
@@ -939,7 +944,7 @@ export function inotify_rm_watch(fd: number, wd: number): number {
 //     void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
 //
 export function mmap(addr: number, length: number, prot: defs.PROT, flags: defs.MAP, fd: number, offset: number): [number, number] {
-    debug('mmap', addr, length, prot, flags, fd, offset);
+    // debug('mmap', addr, length, prot, flags, fd, offset);
     return sys.syscall64(defs.syscalls.mmap, addr, length, prot, flags, fd, offset);
 }
 
@@ -950,8 +955,17 @@ export function mmap(addr: number, length: number, prot: defs.PROT, flags: defs.
 //     int munmap(void *addr, size_t length);
 //
 export function munmap(addr: Buffer, length: number): number {
-    debug('munmap', sys.addr64(addr), length);
+    // debug('munmap', sys.addr64(addr), length);
     return sys.syscall(defs.syscalls.munmap, addr, length);
+}
+
+// ### mprotect
+//
+// In `libc`:
+//
+//     int mprotect(void *addr, size_t len, int prot);
+export function mprotect(addr: Taddr, len: number, prot: defs.PROT): number {
+    return syscall(defs.syscalls.mprotect, addr, len, prot);
 }
 
 // ### shmget
@@ -991,7 +1005,7 @@ export function munmap(addr: Buffer, length: number): number {
  * @returns {number} `shmid` -- ID of the allocated memory, if positive.
  */
 export function shmget(key: number, size: number, shmflg: defs.IPC|defs.FLAG): number {
-    debug('shmget', key, size, shmflg);
+    // debug('shmget', key, size, shmflg);
     return sys.syscall(defs.syscalls.shmget, key, size, shmflg);
 }
 
@@ -1022,7 +1036,7 @@ export function shmget(key: number, size: number, shmflg: defs.IPC|defs.FLAG): n
  * @returns {number}
  */
 export function shmat(shmid: number, shmaddr: number = defs.NULL, shmflg: defs.SHM = 0): [number, number] {
-    debug('shmat', shmid, shmaddr, shmflg);
+    // debug('shmat', shmid, shmaddr, shmflg);
     return sys.syscall64(defs.syscalls.shmat, shmid, shmaddr, shmflg);
 }
 
@@ -1046,7 +1060,7 @@ export function shmat(shmid: number, shmaddr: number = defs.NULL, shmflg: defs.S
  * @returns {number} On success shmdt() returns 0; on error -1 is returned, and errno is set to indicate the cause of the error.
  */
 export function shmdt(shmaddr: number): number {
-    debug('shmdt', shmaddr);
+    // debug('shmdt', shmaddr);
     return sys.syscall(defs.syscalls.shmdt, shmaddr);
 }
 
@@ -1072,7 +1086,7 @@ export function shmdt(shmaddr: number): number {
  *      shmid. Other operations return 0 on success. On error, -1 is returned, and errno is set appropriately.
  */
 export function shmctl(shmid: number, cmd: defs.IPC|defs.SHM, buf: Buffer|defs.shmid_ds|number = defs.NULL): number {
-    debug('shmctl', shmid, cmd, buf instanceof Buffer ? '[Buffer]' : buf);
+    // debug('shmctl', shmid, cmd, buf instanceof Buffer ? '[Buffer]' : buf);
     if(buf instanceof Buffer) {
         // User provided us buffer of size `defs.shmid_ds.size` where kernel will write reponse.
     } else if(typeof buf === 'object') {

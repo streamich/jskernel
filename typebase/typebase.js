@@ -132,7 +132,12 @@ var Pointer = (function () {
     }
     /* Return a copy of itself. */
     Pointer.prototype.clone = function () {
-        return new Pointer(this.buf, this.off);
+        // return new Pointer(this.buf, this.off);
+        return this.offset();
+    };
+    Pointer.prototype.offset = function (off) {
+        if (off === void 0) { off = 0; }
+        return new Pointer(this.buf, this.off + off);
     };
     return Pointer;
 }());
@@ -187,6 +192,9 @@ var List = (function () {
     List.prototype.pack = function (p, values, length) {
         if (length === void 0) { length = this.length; }
         var valp = p.clone();
+        // This allows to provide simle `number`s where 64-bit `[number, number]` is required.
+        if (!(values instanceof Array))
+            values = [values];
         if (!length)
             length = values.length;
         length = Math.min(length, values.length);
@@ -236,13 +244,13 @@ var Struct = (function () {
             if (field instanceof Struct) {
                 var parent = field;
                 var parentfields = parent.fields.map(function (field) {
-                    return [field.name, field.type];
+                    return [field.type, field.name];
                 });
                 this.addFields(parentfields);
                 continue;
             }
             var fielddef = field;
-            var name = fielddef[0], struct = fielddef[1];
+            var struct = fielddef[0], name = fielddef[1];
             var entry = {
                 type: struct,
                 offset: this.size,
@@ -315,4 +323,10 @@ exports.i32 = Primitive.define(4, bp.writeInt32LE, bp.readInt32LE);
 exports.ui32 = Primitive.define(4, bp.writeUInt32LE, bp.readUInt32LE);
 exports.i64 = List.define(exports.i32, 2);
 exports.ui64 = List.define(exports.ui32, 2);
+exports.bi16 = Primitive.define(2, bp.writeInt16BE, bp.readInt16BE);
+exports.bui16 = Primitive.define(2, bp.writeUInt16BE, bp.readUInt16BE);
+exports.bi32 = Primitive.define(4, bp.writeInt32BE, bp.readInt32BE);
+exports.bui32 = Primitive.define(4, bp.writeUInt32BE, bp.readUInt32BE);
+exports.bi64 = List.define(exports.bi32, 2);
+exports.bui64 = List.define(exports.bui32, 2);
 exports.t_void = Primitive.define(0); // `0` means variable length, like `void*`.

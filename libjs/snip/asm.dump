@@ -120,33 +120,33 @@ Disassembly of section .text:
   400579:	48 83 c6 0a          	add    $0xa,%rsi
   40057d:	48 c7 c0 01 00 00 00 	mov    $0x1,%rax
   400584:	48 c7 c7 01 00 00 00 	mov    $0x1,%rdi
-  40058b:	48 89 ee             	mov    %rbp,%rsi
-  40058e:	48 83 c6 0a          	add    $0xa,%rsi
-  400592:	48 c7 c2 0d 00 00 00 	mov    $0xd,%rdx
-  400599:	0f 05                	syscall 
-  40059b:	e9 60 fa bf ff       	jmpq   0 <_init-0x400430>
-  4005a0:	e9 5a fa bf 00       	jmpq   ffffff <_end+0x9ff637>
-  4005a5:	ff 24 25 ff ff ff 00 	jmpq   *0xffffff
-  4005ac:	e9 c5 ff ff ff       	jmpq   400576 <main>
-  4005b1:	ff e0                	jmpq   *%rax
-  4005b3:	48 c7 c0 7b 00 00 00 	mov    $0x7b,%rax
-  4005ba:	ff e0                	jmpq   *%rax
-  4005bc:	c3                   	retq   
-  4005bd:	48 c7 c0 3c 00 00 00 	mov    $0x3c,%rax
-  4005c4:	48 31 ff             	xor    %rdi,%rdi
-  4005c7:	0f 05                	syscall 
+  40058b:	48 8d 35 00 00 00 00 	lea    0x0(%rip),%rsi        # 400592 <main+0x1c>
+  400592:	48 83 c6 0a          	add    $0xa,%rsi
+  400596:	48 c7 c2 0d 00 00 00 	mov    $0xd,%rdx
+  40059d:	0f 05                	syscall 
+  40059f:	e9 5c fa bf ff       	jmpq   0 <_init-0x400430>
+  4005a4:	e9 56 fa bf 00       	jmpq   ffffff <_end+0x9ff637>
+  4005a9:	ff 24 25 ff ff ff 00 	jmpq   *0xffffff
+  4005b0:	e9 c1 ff ff ff       	jmpq   400576 <main>
+  4005b5:	ff e0                	jmpq   *%rax
+  4005b7:	48 c7 c0 7b 00 00 00 	mov    $0x7b,%rax
+  4005be:	ff e0                	jmpq   *%rax
+  4005c0:	c3                   	retq   
+  4005c1:	48 c7 c0 3c 00 00 00 	mov    $0x3c,%rax
+  4005c8:	48 31 ff             	xor    %rdi,%rdi
+  4005cb:	0f 05                	syscall 
 
-00000000004005c9 <message>:
-  4005c9:	48                   	rex.W
-  4005ca:	65 6c                	gs insb (%dx),%es:(%rdi)
-  4005cc:	6c                   	insb   (%dx),%es:(%rdi)
-  4005cd:	6f                   	outsl  %ds:(%rsi),(%dx)
-  4005ce:	2c 20                	sub    $0x20,%al
-  4005d0:	77 6f                	ja     400641 <__libc_csu_init+0x61>
-  4005d2:	72 6c                	jb     400640 <__libc_csu_init+0x60>
-  4005d4:	64 0a 66 2e          	or     %fs:0x2e(%rsi),%ah
-  4005d8:	0f 1f 84 00 00 00 00 	nopl   0x0(%rax,%rax,1)
-  4005df:	00 
+00000000004005cd <message>:
+  4005cd:	48                   	rex.W
+  4005ce:	65 6c                	gs insb (%dx),%es:(%rdi)
+  4005d0:	6c                   	insb   (%dx),%es:(%rdi)
+  4005d1:	6f                   	outsl  %ds:(%rsi),(%dx)
+  4005d2:	2c 20                	sub    $0x20,%al
+  4005d4:	77 6f                	ja     400645 <__libc_csu_init+0x65>
+  4005d6:	72 6c                	jb     400644 <__libc_csu_init+0x64>
+  4005d8:	64 0a 66 0f          	or     %fs:0xf(%rsi),%ah
+  4005dc:	1f                   	(bad)  
+  4005dd:	44 00 00             	add    %r8b,(%rax)
 
 00000000004005e0 <__libc_csu_init>:
   4005e0:	41 57                	push   %r15

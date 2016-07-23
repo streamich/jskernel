@@ -1,0 +1,12 @@
+{
+  "name": "full-js",
+  "version": "1.0.0",
+  "description": "node standard library in pure JavaScript",
+  "main": "index.js",
+  "bin": "./bin/full",
+  "preferGlobal": true,
+  "dependencies": {
+    "libjs": "*",
+    "buffer": "4.6.0"
+  }
+}

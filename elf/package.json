@@ -1,0 +1,27 @@
+{
+  "name": "elf",
+  "description": "ELF file reader/writer",
+  "version": "1.0.0",
+  "keywords": [
+    "elf",
+    "executable",
+    "linkable",
+    "linux",
+    "x86",
+    "x64",
+    "x86_64",
+    "native-code",
+    "machine-code",
+    "asm",
+    "compiler",
+    "assembler"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/streamich/elf"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "typebase": "1.0.1"
+  }
+}

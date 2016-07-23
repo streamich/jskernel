@@ -25,6 +25,7 @@
     "node": ">= 4.4.3"
   },
   "dependencies": {
+    "buffer": "4.6.0",
     "libsys": "*",
     "libjs": "*",
     "debug": "*"

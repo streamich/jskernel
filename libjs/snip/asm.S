@@ -11,7 +11,7 @@ main:
         mov     $1, %rdi                # file handle 1 is stdout
 #        mov     $message, %rsi          # address of string to output
 #        mov     %pc, %rsi          # address of string to output
-        mov     %rbp, %rsi          # address of string to output
+        lea     (%rip), %rsi          # address of string to output
         add     $10, %rsi          # address of string to output
         mov     $13, %rdx               # number of bytes
         syscall                         # invoke operating system to do the write

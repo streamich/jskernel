@@ -27,17 +27,12 @@ Part of [jskernel](http://www.github.com/streamich/jskernel) project.
 ### `syscall` and `syscall64`
 
 ```ts
-type TArg = number|string|ArrayBuffer|Uint8Array|Buffer;
-syscall(command: number, ...args: TArg[]): number;
+syscall(command: number, ...args: Targ[]): number;
 syscall64(command: number, ...args: TArg[]): [number, number];
 ```
 
-`syscall` accepts up to 6 command arguments `args`, which are treated as
-follows depending on their type:
-
- - `number` is put directly in the appropriate CPU register as is.
- - `string` gets converted to *C*'s `char *` string and that pointer is used as an argument.
- - for `ArrayBuffer`, `Uint8Array`, and `Buffer` pointer to the raw data in-memory is used as argument.
+`syscall` accepts up to 6 command arguments `args`. See discussion on *Arguments*
+below to see how JavaScript objects are converted to 64-bit integers.
     
 `syscall` returns a `number` which is the result returned by the kernel,
 negative numbers usually represent an error. If sytem call returns -1, the
@@ -51,16 +46,13 @@ Returns `errno` variable.
 function errno(): number;
 ```
   
-### `malloc` as `malloc64`
+### `malloc`
 
 `malloc` returns an `ArrayBuffer` object of size `size` that is mapped to memory location
 specified in `addr` argument.
 
-`malloc64` is the same but memory address is split in two 32-bit numbers `lo` and `hi`.
-
 ```ts
-malloc(addr: number, size: number): ArrayBuffer;
-malloc64(lo: number, hi: number, size: number): ArrayBuffer;
+malloc(addr: Targ, size: number): ArrayBuffer;
 ```
 
 ### `addressBuffer` and `addressBuffer64`
@@ -79,19 +71,34 @@ addressBuffer64(buffer: Buffer): [number, number];
 
 Returns `ArrayBuffer` address.
 
-### `addressUint8Array` and `addressUint8Array64`
+### `addressTypedArray` and `addressTypedArray64`
 
 Returns `Uint8Array` address.
 
-### `call` as `call64`
+### `call`
 
 Execute machine code at specified memory address. The memory address is converted
 to function pointer and called using your architecture calling conventions.
 
+Up to ten arguments in arguments array supported.
+
 ```ts
-call(addr: number);
-call64(addr_lo: number, addr_hi: number);
+call(addr: Targ, offset: number = 0, args?: number[]);
 ```
+  
+### Arguments
+
+```ts
+type Targ = number|[number, number]|[number, number, number]|string|ArrayBuffer|TypedArray|Buffer;
+```
+
+Different JavaScript objects can be used as C arguments. Here is how they are converted to 64-bit integers:
+
+ - `number` is treated as 32-bit integer and gets extended to 64-bit integer;
+ - `[number, number]` treated as a `[lo, hi]` tuple of two 32-bit integers, which are combined to 64-bit integer;
+ - `[number, number, number]` treated as a `[lo, hi, offset]` tuple, same as above with the difference that `offset` is added to the resulting 64-bit integer;
+ - `string` gets converted to C null-terminated string and 64-bit pointer created to the beginning of that string;
+ - `ArrayBuffer`, `TypedArray`, `Buffer` 64-bit pointer to the beginning of data contents of those objects is created;
   
 ## Installation
 

@@ -25,6 +25,7 @@ namespace jskernel {
     using v8::Exception;
     using v8::ArrayBuffer;
     using v8::Uint8Array;
+    using v8::TypedArray;
 
 
     uint64_t GetAddrBuffer(Local<Object> obj) {
@@ -37,15 +38,21 @@ namespace jskernel {
         return (uint64_t)(ab_c.Data());
     }
 
-    uint64_t GetAddrUint8Array(Local<Object> obj) {
-        Local<Uint8Array> ui = obj.As<Uint8Array>();
-        ArrayBuffer::Contents ab_c = ui->Buffer()->GetContents();
-        return (uint64_t)(ab_c.Data()) + ui->ByteOffset();
+//    uint64_t GetAddrUint8Array(Local<Object> obj) {
+//        Local<Uint8Array> ui = obj.As<Uint8Array>();
+//        ArrayBuffer::Contents ab_c = ui->Buffer()->GetContents();
+//        return (uint64_t)(ab_c.Data()) + ui->ByteOffset();
+//    }
+
+    uint64_t GetAddrTypedArray(Local<Object> obj) {
+        Local<TypedArray> ta = obj.As<TypedArray>();
+        ArrayBuffer::Contents ab_c = ta->Buffer()->GetContents();
+        return (uint64_t)(ab_c.Data()) + ta->ByteOffset();
     }
 
-    uint64_t ArgToInt(Local<Value> arg) {
+    int64_t ArgToInt(Local<Value> arg) {
         if(arg->IsNumber()) {
-            return (uint64_t) arg->Int32Value();
+            return (int64_t) arg->Int32Value();
         } else {
             if(arg->IsString()) {
                 String::Utf8Value v8str(arg->ToString());
@@ -55,8 +62,25 @@ namespace jskernel {
                 return (uint64_t) cstr;
             } else if(arg->IsArrayBuffer()) {
                 return GetAddrArrayBuffer(arg->ToObject());
-            } else if(arg->IsUint8Array()) {
-                return GetAddrUint8Array(arg->ToObject());
+//            } else if(arg->IsUint8Array()) {
+            } else if(arg->IsTypedArray()) {
+//                return GetAddrUint8Array(arg->ToObject());
+                return GetAddrTypedArray(arg->ToObject());
+            } else if (arg->IsArray()) { // [lo, hi, offset]
+                Local<Array> arr = arg.As<Array>();
+                uint32_t arrlen = arr->Length();
+
+                int32_t lo = (int32_t) arr->Get(0)->Int32Value();
+                int32_t hi = (int32_t) arr->Get(1)->Int32Value();
+
+                uint64_t addr = (uint64_t) ((((int64_t) hi) << 32) | ((int64_t) lo & 0xffffffff));
+
+                if(arrlen == 3) {
+                    int32_t offset = (int32_t) arr->Get(2)->Int32Value();
+                    addr += offset;
+                }
+
+                return addr;
             } else {
                 // Assume it is `Buffer`.
                 return GetAddrBuffer(arg->ToObject());
@@ -153,18 +177,22 @@ namespace jskernel {
     void MethodAddrArrayBuffer64(const FunctionCallbackInfo<Value>& args) {
         Isolate* isolate = args.GetIsolate();
         uint64_t addr = GetAddrArrayBuffer(args[0]->ToObject());
+        if(args.Length() == 2) {
+            int32_t offset = (int32_t) args[1]->Int32Value();
+            addr += offset;
+        }
         args.GetReturnValue().Set(Int64ToArray(isolate, addr));
     }
 
-    void MethodAddrUint8Array(const FunctionCallbackInfo<Value>& args) {
+    void MethodAddrTypedArray(const FunctionCallbackInfo<Value>& args) {
         Isolate* isolate = args.GetIsolate();
-        uint64_t addr = GetAddrUint8Array(args[0]->ToObject());
+        uint64_t addr = GetAddrTypedArray(args[0]->ToObject());
         args.GetReturnValue().Set(Integer::New(isolate, addr));
     }
 
-    void MethodAddrUint8Array64(const FunctionCallbackInfo<Value>& args) {
+    void MethodAddrTypedArray64(const FunctionCallbackInfo<Value>& args) {
         Isolate* isolate = args.GetIsolate();
-        uint64_t addr = GetAddrUint8Array(args[0]->ToObject());
+        uint64_t addr = GetAddrTypedArray(args[0]->ToObject());
         args.GetReturnValue().Set(Int64ToArray(isolate, addr));
     }
 
@@ -183,29 +211,10 @@ namespace jskernel {
     void MethodMalloc(const FunctionCallbackInfo<Value>& args) {
         Isolate* isolate = args.GetIsolate();
 
-        void* addr = (void*) args[0]->Int32Value();
+        void* addr = (void*) ArgToInt(args[0]);
         size_t size = (size_t) args[1]->Int32Value();
 
         Local<ArrayBuffer> buf = ArrayBuffer::New(isolate, addr, size);
-        args.GetReturnValue().Set(buf);
-    }
-
-    void MethodMalloc64(const FunctionCallbackInfo<Value>& args) {
-        Isolate* isolate = args.GetIsolate();
-
-        int32_t lo = (int32_t) args[0]->Int32Value();
-        int32_t hi = (int32_t) args[1]->Int32Value();
-        int64_t addr = (((int64_t) hi) << 32) | ((int64_t) lo & 0xffffffff);
-
-//        std::cout << "<<: " << (((int64_t) hi) << 32) << std::endl;
-//        std::cout << "lo: " << lo << std::endl;
-//        std::cout << "hi: " << hi << std::endl;
-//        std::cout << "malloc: " << addr << std::endl;
-
-        size_t size = (size_t) args[2]->Int32Value();
-
-        Local<ArrayBuffer> buf = ArrayBuffer::New(isolate, (void*) addr, size);
-//        v8::Local<v8::Object> buf = node::Buffer::New(isolate, (char*) addr, size).ToLocalChecked();
         args.GetReturnValue().Set(buf);
     }
 
@@ -214,22 +223,193 @@ namespace jskernel {
         args.GetReturnValue().Set(Integer::New(isolate, errno));
     }
 
-    typedef long (*callback)();
+    typedef int64_t number; // JavaScript number.
+    typedef number (*callback)();
+    typedef number (*callback1)(number arg1);
+    typedef number (*callback2)(number arg1, number arg2);
+    typedef number (*callback3)(number arg1, number arg2, number arg3);
+    typedef number (*callback4)(number arg1, number arg2, number arg3, number arg4);
+    typedef number (*callback5)(number arg1, number arg2, number arg3, number arg4, number arg5);
+    typedef number (*callback6)(number arg1, number arg2, number arg3, number arg4, number arg5, number arg6);
+    typedef number (*callback7)(number arg1, number arg2, number arg3, number arg4, number arg5, number arg6, number arg7);
+    typedef number (*callback8)(number arg1, number arg2, number arg3, number arg4, number arg5, number arg6, number arg7, number arg8);
+    typedef number (*callback9)(number arg1, number arg2, number arg3, number arg4, number arg5, number arg6, number arg7, number arg8, number arg9);
+    typedef number (*callback10)(number arg1, number arg2, number arg3, number arg4, number arg5, number arg6, number arg7, number arg8, number arg9, number arg10);
+
 
     void MethodCall(const FunctionCallbackInfo<Value>& args) {
-        int32_t addr = (int32_t) args[0]->Int32Value();
-        callback func = (callback) addr;
-        func();
+        Isolate* isolate = args.GetIsolate();
+
+        uint64_t addr = ArgToInt(args[0]);
+        char len = (char) args.Length();
+
+        int32_t offset;
+        if(len > 1) {
+            offset = (int32_t) args[1]->Int32Value();
+            addr += offset;
+        }
+
+        if(len <= 2) {
+            args.GetReturnValue().Set(Integer::New(isolate, ((callback) addr)()));
+            return;
+        }
+
+        Local<Array> arr = args[2].As<Array>();
+        uint32_t arrlen = arr->Length();
+
+        switch(arrlen) {
+            case 0:
+                args.GetReturnValue().Set(Integer::New(isolate, ((callback) addr)()));
+                break;
+            case 1:
+                args.GetReturnValue().Set(Integer::New(isolate, ((callback1) addr)(
+                    ArgToInt(arr->Get(0))
+                    )));
+                break;
+            case 2:
+                args.GetReturnValue().Set(Integer::New(isolate, ((callback2) addr)(
+                    ArgToInt(arr->Get(0)), ArgToInt(arr->Get(1))
+                    )));
+                break;
+            case 3:
+                args.GetReturnValue().Set(Integer::New(isolate, ((callback3) addr)(
+                    ArgToInt(arr->Get(0)), ArgToInt(arr->Get(1)), ArgToInt(arr->Get(2))
+                    )));
+                break;
+            case 4:
+                args.GetReturnValue().Set(Integer::New(isolate, ((callback4) addr)(
+                    ArgToInt(arr->Get(0)), ArgToInt(arr->Get(1)), ArgToInt(arr->Get(2)), ArgToInt(arr->Get(3))
+                    )));
+                break;
+            case 5:
+                args.GetReturnValue().Set(Integer::New(isolate, ((callback5) addr)(
+                    ArgToInt(arr->Get(0)), ArgToInt(arr->Get(1)), ArgToInt(arr->Get(2)), ArgToInt(arr->Get(3)), ArgToInt(arr->Get(4))
+                    )));
+                break;
+            case 6:
+                args.GetReturnValue().Set(Integer::New(isolate, ((callback6) addr)(
+                    ArgToInt(arr->Get(0)), ArgToInt(arr->Get(1)), ArgToInt(arr->Get(2)), ArgToInt(arr->Get(3)), ArgToInt(arr->Get(4)),
+                    ArgToInt(arr->Get(5))
+                    )));
+                break;
+            case 7:
+                args.GetReturnValue().Set(Integer::New(isolate, ((callback7) addr)(
+                    ArgToInt(arr->Get(0)), ArgToInt(arr->Get(1)), ArgToInt(arr->Get(2)), ArgToInt(arr->Get(3)), ArgToInt(arr->Get(4)),
+                    ArgToInt(arr->Get(5)), ArgToInt(arr->Get(6))
+                    )));
+                break;
+            case 8:
+                args.GetReturnValue().Set(Integer::New(isolate, ((callback8) addr)(
+                    ArgToInt(arr->Get(0)), ArgToInt(arr->Get(1)), ArgToInt(arr->Get(2)), ArgToInt(arr->Get(3)), ArgToInt(arr->Get(4)),
+                    ArgToInt(arr->Get(5)), ArgToInt(arr->Get(6)), ArgToInt(arr->Get(7))
+                    )));
+                break;
+            case 9:
+                args.GetReturnValue().Set(Integer::New(isolate, ((callback9) addr)(
+                    ArgToInt(arr->Get(0)), ArgToInt(arr->Get(1)), ArgToInt(arr->Get(2)), ArgToInt(arr->Get(3)), ArgToInt(arr->Get(4)),
+                    ArgToInt(arr->Get(5)), ArgToInt(arr->Get(6)), ArgToInt(arr->Get(7)), ArgToInt(arr->Get(8))
+                    )));
+                break;
+            case 10:
+                args.GetReturnValue().Set(Integer::New(isolate, ((callback10) addr)(
+                    ArgToInt(arr->Get(0)), ArgToInt(arr->Get(1)), ArgToInt(arr->Get(2)), ArgToInt(arr->Get(3)), ArgToInt(arr->Get(4)),
+                    ArgToInt(arr->Get(5)), ArgToInt(arr->Get(6)), ArgToInt(arr->Get(7)), ArgToInt(arr->Get(8)), ArgToInt(arr->Get(9))
+                    )));
+                break;
+            default:
+                isolate->ThrowException(String::NewFromUtf8(isolate, "Too many arguments."));
+        }
     }
 
+/*
     void MethodCall64(const FunctionCallbackInfo<Value>& args) {
+        Isolate* isolate = args.GetIsolate();
+
         int32_t lo = (int32_t) args[0]->Int32Value();
         int32_t hi = (int32_t) args[1]->Int32Value();
         int64_t addr = (((int64_t) hi) << 32) | ((int64_t) lo & 0xffffffff);
+        uint64_t offset = (uint64_t) args[2]->Int32Value();
+        addr += offset;
+        char len = (char) args.Length();
 
-        callback func = (callback) addr;
-        func();
+        uint64_t offset;
+        if(len > 1) {
+            offset = (uint64_t) args[1]->Int32Value();
+            addr += offset;
+        }
+
+        if(len <= 3) {
+            args.GetReturnValue().Set(Integer::New(isolate, ((callback) addr)()));
+            return;
+        }
+
+        Local<Array> arr = args[3].As<Array>();
+        uint32_t arrlen = arr->Length();
+
+        switch(arrlen) {
+            case 0:
+                args.GetReturnValue().Set(Integer::New(isolate, ((callback) addr)()));
+                break;
+            case 1:
+                args.GetReturnValue().Set(Integer::New(isolate, ((callback1) addr)(
+                    ArgToInt(arr->Get(0))
+                    )));
+                break;
+            case 2:
+                args.GetReturnValue().Set(Integer::New(isolate, ((callback2) addr)(
+                    ArgToInt(arr->Get(0)), ArgToInt(arr->Get(1))
+                    )));
+                break;
+            case 3:
+                args.GetReturnValue().Set(Integer::New(isolate, ((callback3) addr)(
+                    ArgToInt(arr->Get(0)), ArgToInt(arr->Get(1)), ArgToInt(arr->Get(2))
+                    )));
+                break;
+            case 4:
+                args.GetReturnValue().Set(Integer::New(isolate, ((callback4) addr)(
+                    ArgToInt(arr->Get(0)), ArgToInt(arr->Get(1)), ArgToInt(arr->Get(2)), ArgToInt(arr->Get(3))
+                    )));
+                break;
+            case 5:
+                args.GetReturnValue().Set(Integer::New(isolate, ((callback5) addr)(
+                    ArgToInt(arr->Get(0)), ArgToInt(arr->Get(1)), ArgToInt(arr->Get(2)), ArgToInt(arr->Get(3)), ArgToInt(arr->Get(4))
+                    )));
+                break;
+            case 6:
+                args.GetReturnValue().Set(Integer::New(isolate, ((callback6) addr)(
+                    ArgToInt(arr->Get(0)), ArgToInt(arr->Get(1)), ArgToInt(arr->Get(2)), ArgToInt(arr->Get(3)), ArgToInt(arr->Get(4)),
+                    ArgToInt(arr->Get(5))
+                    )));
+                break;
+            case 7:
+                args.GetReturnValue().Set(Integer::New(isolate, ((callback7) addr)(
+                    ArgToInt(arr->Get(0)), ArgToInt(arr->Get(1)), ArgToInt(arr->Get(2)), ArgToInt(arr->Get(3)), ArgToInt(arr->Get(4)),
+                    ArgToInt(arr->Get(5)), ArgToInt(arr->Get(6))
+                    )));
+                break;
+            case 8:
+                args.GetReturnValue().Set(Integer::New(isolate, ((callback8) addr)(
+                    ArgToInt(arr->Get(0)), ArgToInt(arr->Get(1)), ArgToInt(arr->Get(2)), ArgToInt(arr->Get(3)), ArgToInt(arr->Get(4)),
+                    ArgToInt(arr->Get(5)), ArgToInt(arr->Get(6)), ArgToInt(arr->Get(7))
+                    )));
+                break;
+            case 9:
+                args.GetReturnValue().Set(Integer::New(isolate, ((callback9) addr)(
+                    ArgToInt(arr->Get(0)), ArgToInt(arr->Get(1)), ArgToInt(arr->Get(2)), ArgToInt(arr->Get(3)), ArgToInt(arr->Get(4)),
+                    ArgToInt(arr->Get(5)), ArgToInt(arr->Get(6)), ArgToInt(arr->Get(7)), ArgToInt(arr->Get(8))
+                    )));
+                break;
+            case 10:
+                args.GetReturnValue().Set(Integer::New(isolate, ((callback10) addr)(
+                    ArgToInt(arr->Get(0)), ArgToInt(arr->Get(1)), ArgToInt(arr->Get(2)), ArgToInt(arr->Get(3)), ArgToInt(arr->Get(4)),
+                    ArgToInt(arr->Get(5)), ArgToInt(arr->Get(6)), ArgToInt(arr->Get(7)), ArgToInt(arr->Get(8)), ArgToInt(arr->Get(9))
+                    )));
+                break;
+            default:
+                isolate->ThrowException(String::NewFromUtf8(isolate, "Too many arguments."));
+        }
     }
+    */
 
 //    void MethodGen(const FunctionCallbackInfo<Value>& args) {
 //        Isolate* isolate = args.GetIsolate();
@@ -250,14 +430,14 @@ namespace jskernel {
         NODE_SET_METHOD(exports, "errno",                   MethodErrno);
         NODE_SET_METHOD(exports, "addressArrayBuffer",      MethodAddrArrayBuffer);
         NODE_SET_METHOD(exports, "addressArrayBuffer64",    MethodAddrArrayBuffer64);
-        NODE_SET_METHOD(exports, "addressUint8Array",       MethodAddrUint8Array);
-        NODE_SET_METHOD(exports, "addressUint8Array64",     MethodAddrUint8Array64);
+        NODE_SET_METHOD(exports, "addressTypedArray",       MethodAddrTypedArray);
+        NODE_SET_METHOD(exports, "addressTypedArray64",     MethodAddrTypedArray64);
         NODE_SET_METHOD(exports, "addressBuffer",           MethodAddrBuffer);
         NODE_SET_METHOD(exports, "addressBuffer64",         MethodAddrBuffer64);
         NODE_SET_METHOD(exports, "malloc",                  MethodMalloc);
-        NODE_SET_METHOD(exports, "malloc64",                MethodMalloc64);
+//        NODE_SET_METHOD(exports, "malloc64",                MethodMalloc64);
         NODE_SET_METHOD(exports, "call",                    MethodCall);
-        NODE_SET_METHOD(exports, "call64",                  MethodCall64);
+//        NODE_SET_METHOD(exports, "call64",                  MethodCall64);
 //        NODE_SET_METHOD(exports, "jump",                  MethodJump);
 //        NODE_SET_METHOD(exports, "gen",                   MethodGen);
     }

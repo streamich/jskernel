@@ -135,7 +135,12 @@ export class Pointer {
 
     /* Return a copy of itself. */
     clone() {
-        return new Pointer(this.buf, this.off);
+        // return new Pointer(this.buf, this.off);
+        return this.offset();
+    }
+
+    offset(off: number = 0) {
+        return new Pointer(this.buf, this.off + off);
     }
 }
 
@@ -206,6 +211,10 @@ export class List implements IType {
 
     pack(p: Pointer, values: any[], length = this.length) {
         var valp = p.clone();
+
+        // This allows to provide simle `number`s where 64-bit `[number, number]` is required.
+        if(!(values instanceof Array)) values = [values];
+
         if(!length) length = values.length;
         length = Math.min(length, values.length);
         for(var i = 0; i < length; i++) {
@@ -234,7 +243,7 @@ export class IStructField {
     name: string;
 }
 
-export type IFieldDefinition = [string, IType] | Struct;
+export type IFieldDefinition = [IType, string] | Struct;
 
 // Represents a structured memory record definition similar to that of `struct` in `C`.
 export class Struct implements IType {
@@ -261,14 +270,14 @@ export class Struct implements IType {
             if(field instanceof Struct) {
                 var parent = field as Struct;
                 var parentfields = parent.fields.map(function(field: IStructField) {
-                    return [field.name, field.type];
+                    return [field.type, field.name];
                 });
-                this.addFields(parentfields as [string, IType][]);
+                this.addFields(parentfields as [IType, string][]);
                 continue;
             }
 
-            var fielddef = field as [string, IType];
-            var [name, struct] = fielddef;
+            var fielddef = field as [IType, string];
+            var [struct, name] = fielddef;
             var entry: IStructField = {
                 type: struct,
                 offset: this.size,
@@ -340,10 +349,19 @@ export class Variable {
 var bp = Buffer.prototype;
 export var i8   = Primitive.define(1, bp.writeInt8,     bp.readInt8);
 export var ui8  = Primitive.define(1, bp.writeUInt8,    bp.readUInt8);
+
 export var i16  = Primitive.define(2, bp.writeInt16LE,  bp.readInt16LE);
 export var ui16 = Primitive.define(2, bp.writeUInt16LE, bp.readUInt16LE);
 export var i32  = Primitive.define(4, bp.writeInt32LE,  bp.readInt32LE);
 export var ui32 = Primitive.define(4, bp.writeUInt32LE, bp.readUInt32LE);
 export var i64  = List.define(i32, 2);
 export var ui64 = List.define(ui32, 2);
+
+export var bi16  = Primitive.define(2, bp.writeInt16BE,  bp.readInt16BE);
+export var bui16 = Primitive.define(2, bp.writeUInt16BE, bp.readUInt16BE);
+export var bi32  = Primitive.define(4, bp.writeInt32BE,  bp.readInt32BE);
+export var bui32 = Primitive.define(4, bp.writeUInt32BE, bp.readUInt32BE);
+export var bi64  = List.define(bi32, 2);
+export var bui64 = List.define(bui32, 2);
+
 export var t_void = Primitive.define(0); // `0` means variable length, like `void*`.
