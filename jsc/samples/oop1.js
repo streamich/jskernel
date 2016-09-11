@@ -1,0 +1,18 @@
+"use strict";
+var dom_1 = require('../c/dom');
+var codegen_1 = require("../codegen");
+var unit = new dom_1.TranslationUnit();
+var main = new dom_1.FunctionDefinition('main');
+unit.add(main);
+var a = new dom_1.Object(dom_1.PrimitiveType.int(), 100);
+main.body.push(new dom_1.Declaration(a));
+var b = new dom_1.Object(dom_1.PrimitiveType.int(), 200);
+main.body.push(new dom_1.Declaration(b));
+var c = new dom_1.Object(dom_1.PrimitiveType.int(), 300);
+main.body.push(new dom_1.Declaration(c));
+var expr1 = new dom_1.AdditionExpression(dom_1.PrimaryExpression.create(b), dom_1.PrimaryExpression.create(c));
+var expr2 = new dom_1.AdditionExpression(dom_1.PrimaryExpression.create(a), expr1);
+main.body.push(new dom_1.ReturnStatement(expr2));
+console.dir(unit, { depth: 20, colors: true });
+var codegen = new codegen_1.Codegen;
+var bin = codegen.translate(unit);

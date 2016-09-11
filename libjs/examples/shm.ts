@@ -1,5 +1,5 @@
 import * as libjs from '../libjs';
-import * as sys from '../sys';
+import * as sys from '../node_modules/libsys/index';
 
 
 

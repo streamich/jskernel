@@ -1,5 +1,22 @@
 # jskernel
 
+## Repository Contents
+
+ - `libsys` -- syscall function module for Node.js.
+ - `static-buffer` -- `StaticBuffer` and `StaticArrayBuffer` implementations.
+ - `typebase` -- basic *struct* reader/writer into/from `Buffer`.
+ - `libjs` -- syscall wrapper.
+ - `fslib` -- `require('fs')` implementation.
+ - `libaio` -- Wrapper around asynchronous system calls.
+ - `ass-js` -- Assembler.js, x86 assembler.
+ - `cpuid` -- basic utility to work with `cpuid` system call from JavaScript.
+ - `elf` -- ELF file reader/writer.
+ - `f1` -- JavaScript runtime written in JavaScript that compiles JavaScript to machine code.
+ - `full-js` -- Drop-in Node.js replacement, written in pure JavaScript.
+ - `jsc` -- Write C in JavaScript and JIT compile.
+
+## Proposal
+
 The Node.js exo-kernel dream: this is a proposal to create a JavaScript exo-kernel
 that would have API compatible to Node.js but would be possible to run as part of the Linux kernel.
 
@@ -221,16 +238,16 @@ If you don't have Docker:
     
 Start a Docker container:
     
-    sudo docker build -t jskernel /share/
-    sudo docker run -it -v /share:/share --name myjskernel jskernel /bin/bash
+    docker build -t jskernel .
+    docker run -it -v ~/dev/jskernel:/share --name myjskernel jskernel /bin/bash
     cd /share
     npm install -g npm@latest
     npm install -g node-gyp n typescript tsd mocha
     
 Next time just do:
 
-    sudo docker start -i myjskernel
-    sudo docker exec -it myjskernel bash
+    docker start myjskernel
+    docker exec -it myjskernel bash
     
 Typings:
 

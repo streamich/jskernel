@@ -1,5 +1,5 @@
 import * as libjs from '../libjs';
-import * as sys from '../sys';
+import * as sys from '../node_modules/libsys/index';
 
 
 // mmap(0, size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
@@ -43,6 +43,6 @@ console.log(code);
 console.log(arr);
 console.log(buf);
 
-sys.call64(addr[0], addr[1]);
+(sys as any).call64(addr[0], addr[1]);
 
 // setTimeout(() => {}, 3000);

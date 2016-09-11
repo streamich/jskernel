@@ -1,6 +1,7 @@
 // # x86_64 Linux
 "use strict";
 var typebase_1 = require('../../typebase');
+// import {t_pointer} from "../../../libmem/struct";
 // The C `NULL` pointer:
 exports.NULL = 0;
 // Basic types.

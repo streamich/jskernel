@@ -1,0 +1,21 @@
+{
+  "name": "asyscall",
+  "description": "Asynchronous syscal",
+  "version": "1.0.0",
+  "keywords": [
+    "asyscall",
+    "syscall",
+    "x86",
+    "x64",
+    "x86_64"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/streamich/asyscall"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "ass-js": "*",
+    "static-buffer": "*"
+  }
+}

@@ -2,3 +2,4 @@ node_modules
 asm.o
 tsconfig.json
 /typings
+.idea

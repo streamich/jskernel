@@ -1,4 +1,4 @@
-/// <reference path="../typings/typing.d.ts" />
+/// <reference path="./node.d.ts" />
 
 
 declare module 'libsys' {

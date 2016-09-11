@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "es3",
+    "module": "commonjs",
+    "removeComments": true,
+    "sourceMap": false,
+    "listFiles": false,
+    "skipDefaultLibCheck": true,
+    "noImplicitAny": false
+  },
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}

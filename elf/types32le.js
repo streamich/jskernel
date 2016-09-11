@@ -56,8 +56,6 @@ exports.Phdr = t.Struct.define([
     [exports.Off, 'offset'],
     [exports.Addr, 'vaddr'],
     [exports.Addr, 'paddr'],
-    // Should be `filesz`, we rename it to `size` to be consistent with `Shdr`,
-    // used in inheritance later.
     [exports.Word, 'size'],
     [exports.Word, 'memsz'],
     [exports.Word, 'flags'],

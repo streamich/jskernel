@@ -2,7 +2,7 @@
 
 import {Type, Arr, Struct} from '../../typebase';
 import {Ipv4} from '../../socket';
-import {t_pointer} from "../../../libmem/struct";
+// import {t_pointer} from "../../../libmem/struct";
 
 // The C `NULL` pointer:
 export const NULL = 0;

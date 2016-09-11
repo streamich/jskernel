@@ -1,0 +1,23 @@
+import * as tac from '../tac';
+const t = tac.t;
+
+
+var func = new tac.Function();
+var a = new tac.AssignmentStatement(new tac.OperandVariable(t.i64), new tac.OperandConst(t.i64, 100));
+var b = new tac.AssignmentStatement(new tac.OperandVariable(t.i64), new tac.OperandConst(t.i64, 200));
+var c = new tac.AssignmentStatement(new tac.OperandVariable(t.i64), new tac.OperandConst(t.i64, 300));
+func.block.addStatement(a);
+func.block.addStatement(b);
+func.block.addStatement(c);
+
+var bc = new tac.AdditionStatement(new tac.OperandVariable(t.i64), b.op1, c.op1);
+var abc = new tac.AdditionStatement(new tac.OperandVariable(t.i64), a.op1, bc.op1);
+func.block.addStatement(bc);
+func.block.addStatement(abc);
+
+
+console.dir(func, {depth: 30, colors: true});
+
+console.log(func.toString());
+
+

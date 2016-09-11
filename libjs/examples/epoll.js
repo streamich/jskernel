@@ -1,7 +1,7 @@
 "use strict";
-var posix = require('../posix');
 var socket = require('../socket');
 var defs = require('../definitions');
+var libjs = require('../libjs');
 var Socket = (function () {
     function Socket(postpone) {
         if (postpone === void 0) { postpone = false; }
@@ -15,7 +15,7 @@ var Socket = (function () {
     }
     Socket.prototype.poll = function () {
         var evbuf = new Buffer(defs.epoll_event.size);
-        var waitres = posix.epoll_wait(this.epfd, evbuf, 1, 0);
+        var waitres = libjs.epoll_wait(this.epfd, evbuf, 1, 0);
         if (waitres > 0) {
             var event = defs.epoll_event.unpack(evbuf);
             if (!this.connected) {
@@ -27,7 +27,7 @@ var Socket = (function () {
             }
             if ((event.events & 1 /* EPOLLIN */) > 0) {
                 var buf = new Buffer(1000);
-                var bytes = posix.read(this.fd, buf);
+                var bytes = libjs.read(this.fd, buf);
                 if (bytes < -1) {
                     this.onerror(Error("Error reading data: " + bytes));
                 }
@@ -45,22 +45,22 @@ var Socket = (function () {
         process.nextTick(this.pollBound);
     };
     Socket.prototype.create = function () {
-        this.fd = posix.socket(2 /* INET */, 1 /* STREAM */, 0);
+        this.fd = libjs.socket(2 /* INET */, 1 /* STREAM */, 0);
         if (this.fd < 0)
             throw Error("Could not create scoket: " + this.fd);
         // Socket is not a file, we just created the file descriptor for it, flags
         // for this file descriptor are set to 0 anyways, so we just overwrite 'em.
-        var fcntl = posix.fcntl(this.fd, 4 /* SETFL */, 2048 /* O_NONBLOCK */);
+        var fcntl = libjs.fcntl(this.fd, 4 /* SETFL */, 2048 /* O_NONBLOCK */);
         if (fcntl < 0)
             throw Error("Could not make socket non-blocking: " + fcntl);
-        this.epfd = posix.epoll_create1(0);
+        this.epfd = libjs.epoll_create1(0);
         if (this.epfd < 0)
             throw Error("Could not start epoll: " + this.epfd);
         var event = {
             events: 1 /* EPOLLIN */ | 4 /* EPOLLOUT */,
             data: [this.fd, 0]
         };
-        var ctl = posix.epoll_ctl(this.epfd, 1 /* ADD */, this.fd, event);
+        var ctl = libjs.epoll_ctl(this.epfd, 1 /* ADD */, this.fd, event);
     };
     Socket.prototype.connect = function (opts) {
         // on read check for:
@@ -73,7 +73,7 @@ var Socket = (function () {
             },
             sin_zero: [0, 0, 0, 0, 0, 0, 0, 0]
         };
-        var res = posix.connect(this.fd, addr_in);
+        var res = libjs.connect(this.fd, addr_in);
         // Everything is OK, we are connecting...
         if (res == -115 /* EINPROGRESS */) {
             this.poll(); // Start event loop.
@@ -90,7 +90,7 @@ var Socket = (function () {
     };
     Socket.prototype.write = function (data) {
         var buf = new Buffer(data + '\0');
-        var res = posix.write(this.fd, buf);
+        var res = libjs.write(this.fd, buf);
         return res;
     };
     return Socket;

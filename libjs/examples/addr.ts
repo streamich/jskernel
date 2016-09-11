@@ -1,4 +1,3 @@
-import * as posix from '../posix';
 import * as socket from '../socket';
 import * as defs from '../definitions';
 

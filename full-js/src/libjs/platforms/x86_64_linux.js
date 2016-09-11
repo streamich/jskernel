@@ -1,0 +1,387 @@
+// # x86_64 Linux
+"use strict";
+var typebase_1 = require('../typebase');
+exports.PATH_MAX = 4096;
+exports.isLE = true;
+// The C `NULL` pointer:
+exports.NULL = 0;
+// Basic types.
+var buf = Buffer.prototype;
+exports.int8 = typebase_1.Type.define(1, buf.readInt8, buf.writeInt8);
+exports.uint8 = typebase_1.Type.define(1, buf.readUInt8, buf.readUInt8);
+exports.int16 = typebase_1.Type.define(2, buf.readInt16LE, buf.writeInt16LE);
+exports.uint16 = typebase_1.Type.define(2, buf.readUInt16LE, buf.writeUInt16LE);
+exports.int32 = typebase_1.Type.define(4, buf.readInt32LE, buf.writeInt32LE);
+exports.uint32 = typebase_1.Type.define(4, buf.readUInt32LE, buf.writeUInt32LE);
+exports.int64 = typebase_1.Arr.define(exports.int32, 2);
+exports.uint64 = typebase_1.Arr.define(exports.uint32, 2);
+exports.size_t = exports.uint64;
+exports.time_t = exports.uint64;
+exports.pid_t = exports.uint32;
+exports.optval_t = exports.int32;
+exports.ipv4 = typebase_1.Type.define(4, function (offset) {
+    if (offset === void 0) { offset = 0; }
+    var buf = this;
+    var socket = require('../socket');
+    var octets = socket.Ipv4.type.unpack(buf, offset);
+    return new socket.Ipv4(octets);
+}, function (data, offset) {
+    if (offset === void 0) { offset = 0; }
+    var buf = this;
+    data.toBuffer().copy(buf, offset);
+});
+exports.pointer_t = exports.uint64;
+// See <asm/stat.h> line 82:
+//
+//     __kernel_ulong_t = unsigned long long // 64+ bits
+//     __kernel_long_t = long long // 64+ bits
+//     unsigned int // 32+ bits
+//
+// In `libc`:
+//
+//     struct stat {
+//         __kernel_ulong_t	st_dev;
+//         __kernel_ulong_t	st_ino;
+//         __kernel_ulong_t	st_nlink;
+//         unsigned int		st_mode;
+//         unsigned int		st_uid;
+//         unsigned int		st_gid;
+//         unsigned int		__pad0;
+//         __kernel_ulong_t	st_rdev;
+//         __kernel_long_t		st_size;
+//         __kernel_long_t		st_blksize;
+//         __kernel_long_t		st_blocks;	// Number 512-byte blocks allocated.
+//         __kernel_ulong_t	st_atime;
+//         __kernel_ulong_t	st_atime_nsec;
+//         __kernel_ulong_t	st_mtime;
+//         __kernel_ulong_t	st_mtime_nsec;
+//         __kernel_ulong_t	st_ctime;
+//         __kernel_ulong_t	st_ctime_nsec;
+//         __kernel_long_t		__unused[3];
+//     };
+exports.stat = typebase_1.Struct.define(32 * 4, [
+    [0, exports.uint32, 'dev'],
+    // dev_hi:         [1 * 4,     buffer.int32],
+    [2 * 4, exports.uint32, 'ino'],
+    // ino_hi:         [3 * 4,     buffer.int32],
+    [4 * 4, exports.uint32, 'nlink'],
+    // nlink_hi:       [5 * 4,     buffer.int32],
+    [6 * 4, exports.int32, 'mode'],
+    [7 * 4, exports.int32, 'uid'],
+    [8 * 4, exports.int32, 'gid'],
+    // __pad0:         [9 * 4,     buffer.int32],
+    [10 * 4, exports.uint32, 'rdev'],
+    // rdev_hi:        [11 * 4,    buffer.int32],
+    [12 * 4, exports.uint32, 'size'],
+    // size_hi:        [13 * 4,    buffer.int32],
+    [14 * 4, exports.uint32, 'blksize'],
+    // blksize_hi:     [15 * 4,    buffer.int32],
+    [16 * 4, exports.uint32, 'blocks'],
+    // blocks_hi:      [17 * 4,    buffer.int32],
+    [18 * 4, exports.uint32, 'atime'],
+    // atime_hi:       [19 * 4,    buffer.int32],
+    [20 * 4, exports.uint32, 'atime_nsec'],
+    // atime_nsec_hi:  [21 * 4,    buffer.int32],
+    [22 * 4, exports.uint32, 'mtime'],
+    // mtime_hi:       [23 * 4,    buffer.int32],
+    [24 * 4, exports.uint32, 'mtime_nsec'],
+    // mtime_nsec_hi:  [25 * 4,    buffer.int32],
+    [26 * 4, exports.uint32, 'ctime'],
+    // ctime_hi:       [27 * 4,    buffer.int32],
+    [28 * 4, exports.uint32, 'ctime_nsec'],
+]);
+// From http://beej.us/guide/bgnet/output/html/multipage/sockaddr_inman.html
+//
+//     struct sockaddr_in {
+//         short            sin_family;   // e.g. AF_INET
+//         unsigned short   sin_port;     // e.g. htons(3490)
+//         struct in_addr   sin_addr;     // see struct in_addr, below
+//         char             sin_zero[8];  // zero this if you want to
+//     };
+//     struct in_addr {
+//         unsigned long s_addr;  // load with inet_aton()
+//     };
+exports.in_addr = typebase_1.Struct.define(4, [
+    [0, exports.ipv4, 's_addr'],
+]);
+exports.sockaddr_in = typebase_1.Struct.define(16, [
+    [0, exports.int16, 'sin_family'],
+    [2, exports.uint16, 'sin_port'],
+    [4, exports.in_addr, 'sin_addr'],
+    [8, typebase_1.Arr.define(exports.int8, 8), 'sin_zero'],
+]);
+// IPv6 AF_INET6 sockets:
+//
+//     struct sockaddr_in6 {
+//         u_int16_t       sin6_family;   // address family, AF_INET6
+//         u_int16_t       sin6_port;     // port number, Network Byte Order
+//         u_int32_t       sin6_flowinfo; // IPv6 flow information
+//         struct in6_addr sin6_addr;     // IPv6 address
+//         u_int32_t       sin6_scope_id; // Scope ID
+//     };
+//     struct in6_addr {
+//         unsigned char   s6_addr[16];   // load with inet_pton()
+//     };
+//     struct sockaddr {
+//         sa_family_t sa_family;
+//         char        sa_data[14];
+//     }
+exports.sockaddr = typebase_1.Struct.define(1, [
+    [0, 'sa_family', exports.uint16],
+    [2, 'sa_data', typebase_1.Arr.define(exports.int8, 14)],
+]);
+//     typedef union epoll_data {
+//         void    *ptr;
+//         int      fd;
+//         uint32_t u32;
+//         uint64_t u64;
+//     } epoll_data_t;
+//
+//     struct epoll_event {
+//         uint32_t     events;    /* Epoll events */
+//         epoll_data_t data;      /* User data variable */
+//     };
+exports.epoll_event = typebase_1.Struct.define(4 + 8, [
+    [0, exports.uint32, 'events'],
+    [4, exports.uint64, 'data'],
+]);
+// In `libc`, <bits/ipc.h> line 42:
+//
+//     struct ipc_perm {
+//         __key_t __key;			// Key.
+//         __uid_t uid;			// Owner's user ID.
+//         __gid_t gid;			// Owner's group ID.
+//         __uid_t cuid;			// Creator's user ID.
+//         __gid_t cgid;			// Creator's group ID.
+//         unsigned short int mode;		// Read/write permission.
+//         unsigned short int __pad1;
+//         unsigned short int __seq;		// Sequence number.
+//         unsigned short int __pad2;
+//         __syscall_ulong_t __glibc_reserved1;
+//         __syscall_ulong_t __glibc_reserved2;
+//     };
+//
+// __syscall_ulong_t` is `unsigned long long int`
+exports.ipc_perm = typebase_1.Struct.define(48, [
+    [0, exports.int32, '__key'],
+    [4, exports.uint32, 'uid'],
+    [8, exports.uint32, 'gid'],
+    [12, exports.uint32, 'cuid'],
+    [16, exports.uint32, 'cgid'],
+    [20, exports.uint16, 'mode'],
+    // [22, uint16, '__pad1'],
+    [24, exports.uint16, '__seq'],
+]);
+// In `libc`, <bits/shm.h> line 49:
+//
+//     struct shmid_ds {
+//         struct ipc_perm shm_perm;		// operation permission struct
+//         size_t shm_segsz;			// size of segment in bytes
+//         __time_t shm_atime;			// time of last shmat()
+//     #ifndef __x86_64__
+//         unsigned long int __glibc_reserved1;
+//     #endif
+//         __time_t shm_dtime;			// time of last shmdt()
+//     #ifndef __x86_64__
+//         unsigned long int __glibc_reserved2;
+//     #endif
+//         __time_t shm_ctime;			// time of last change by shmctl()
+//     #ifndef __x86_64__
+//         unsigned long int __glibc_reserved3;
+//     #endif
+//         __pid_t shm_cpid;			// pid of creator
+//         __pid_t shm_lpid;			// pid of last shmop
+//         shmatt_t shm_nattch;		// number of current attaches
+//         __syscall_ulong_t __glibc_reserved4;
+//         __syscall_ulong_t __glibc_reserved5;
+//     };
+//
+// From internet:
+//
+//     struct shmid_ds {
+//         struct ipc_perm shm_perm;    // Ownership and permissions
+//         size_t          shm_segsz;   // Size of segment (bytes)
+//         time_t          shm_atime;   // Last attach time
+//         time_t          shm_dtime;   // Last detach time
+//         time_t          shm_ctime;   // Last change time
+//         pid_t           shm_cpid;    // PID of creator
+//         pid_t           shm_lpid;    // PID of last shmat(2)/shmdt(2)
+//         shmatt_t        shm_nattch;  // No. of current attaches
+//         // ...
+//     };
+exports.shmid_ds = typebase_1.Struct.define(112, [
+    [0, exports.ipc_perm, 'shm_perm'],
+    [48, exports.size_t, 'shm_segsz'],
+    [56, exports.time_t, 'shm_atime'],
+    [64, exports.time_t, 'shm_dtime'],
+    [72, exports.time_t, 'shm_ctime'],
+    [80, exports.pid_t, 'shm_cpid'],
+    [84, exports.pid_t, 'shm_lpid'],
+    [88, exports.uint64, 'shm_nattch'],
+]);
+// ## Time
+//
+//     struct utimbuf {
+//         time_t actime;       /* access time */
+//         time_t modtime;      /* modification time */
+//     };
+exports.utimbuf = typebase_1.Struct.define(16, [
+    [0, exports.uint64, 'actime'],
+    [8, exports.uint64, 'modtime'],
+]);
+exports.timeval = typebase_1.Struct.define(16, [
+    [0, exports.uint64, 'tv_sec'],
+    [8, exports.uint64, 'tv_nsec'],
+]);
+exports.timevalarr = typebase_1.Arr.define(exports.timeval, 2);
+exports.timespec = exports.timeval;
+exports.timespecarr = exports.timevalarr;
+//     struct linux_dirent64 {
+//         ino64_t        d_ino;    /* 64-bit inode number */
+//         off64_t        d_off;    /* 64-bit offset to next structure */
+//         unsigned short d_reclen; /* Size of this dirent */
+//         unsigned char  d_type;   /* File type */
+//         char           d_name[]; /* Filename (null-terminated) */
+//     };
+exports.linux_dirent64 = typebase_1.Struct.define(19, [
+    [0, exports.uint64, 'ino64_t'],
+    [8, exports.uint64, 'off64_t'],
+    [16, exports.uint16, 'd_reclen'],
+    [18, exports.uint8, 'd_type'],
+]);
+// Stucture that `inotify` returns when reading from one of its descriptors, in `libc`:
+//
+//     struct inotify_event {
+//         int      wd;       /* Watch descriptor */
+//         uint32_t mask;     /* Mask describing event */
+//         uint32_t cookie;   /* Unique cookie associating related events (for rename(2)) */
+//         uint32_t len;      /* Size of name field */
+//         char     name[];   /* Optional null-terminated name */
+//     };
+//
+// We create a representation of this struct in JavaScript:
+exports.inotify_event = typebase_1.Struct.define(16, [
+    [0, exports.int32, 'wd'],
+    [4, exports.uint32, 'mask'],
+    [8, exports.uint32, 'cookie'],
+    [12, exports.uint32, 'len'],
+]);
+// Relevant:
+// https://filippo.io/linux-syscall-table/
+// Linux:
+// apt-get install man manpages-dev
+// man 2 syscall
+// man 2 syscalls
+// x86:
+// /usr/include/asm/unistd.h
+// i386:
+// /usr/src/linux/arch/i386/kernel/entry.S
+// POSIX:
+// http://pubs.opengroup.org/onlinepubs/009695399/
+// http://pubs.opengroup.org/onlinepubs/009695399/idx/functions.html
+exports.SYS = {
+    read: 0,
+    write: 1,
+    open: 2,
+    close: 3,
+    stat: 4,
+    fstat: 5,
+    lstat: 6,
+    // poll:           7, // Use epoll instead.
+    lseek: 8,
+    mmap: 9,
+    mprotect: 10,
+    munmap: 11,
+    brk: 12,
+    rt_sigaction: 13,
+    rt_sigprocmask: 14,
+    rt_sigreturn: 15,
+    ioctl: 16,
+    pread64: 17,
+    pwrite64: 18,
+    readv: 19,
+    writev: 20,
+    access: 21,
+    pipe: 22,
+    // select:         23,
+    sched_yield: 24,
+    mremap: 25,
+    msync: 26,
+    mincore: 27,
+    madvise: 28,
+    shmget: 29,
+    shmat: 30,
+    shmctl: 31,
+    dup: 32,
+    dup2: 33,
+    pause: 34,
+    nanosleep: 35,
+    getitimer: 36,
+    alarm: 37,
+    setitimer: 38,
+    getpid: 39,
+    sendfile: 40,
+    socket: 41,
+    connect: 42,
+    accept: 43,
+    sendto: 44,
+    recvfrom: 45,
+    sendmsg: 46,
+    recvmsg: 47,
+    shutdown: 48,
+    bind: 49,
+    listen: 50,
+    getsockname: 51,
+    getpeername: 52,
+    socketpair: 53,
+    setsockopt: 54,
+    getsockopt: 55,
+    shmdt: 67,
+    fcntl: 72,
+    fsync: 74,
+    fdatasync: 75,
+    truncate: 76,
+    ftruncate: 77,
+    getdents: 78,
+    getcwd: 79,
+    chdir: 80,
+    fchdir: 81,
+    rename: 82,
+    mkdir: 83,
+    rmdir: 84,
+    creat: 85,
+    link: 86,
+    unlink: 87,
+    symlink: 88,
+    readlink: 89,
+    chmod: 90,
+    fchmod: 91,
+    chown: 92,
+    fchown: 93,
+    lchown: 94,
+    umask: 95,
+    gettimeofday: 96,
+    getrlimit: 97,
+    getrusage: 98,
+    getuid: 102,
+    getgid: 104,
+    geteuid: 107,
+    getegid: 108,
+    setpgid: 109,
+    getppid: 110,
+    utime: 132,
+    epoll_create: 213,
+    getdents64: 217,
+    epoll_wait: 232,
+    epoll_ctl: 233,
+    utimes: 235,
+    inotify_init: 253,
+    inotify_add_watch: 254,
+    inotify_rm_watch: 255,
+    mkdirat: 258,
+    futimesat: 261,
+    utimensat: 280,
+    accept4: 288,
+    epoll_create1: 291,
+    inotify_init1: 294
+};

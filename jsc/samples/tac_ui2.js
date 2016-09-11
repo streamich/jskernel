@@ -1,0 +1,26 @@
+"use strict";
+var ui_1 = require('../ir/ui');
+var codegen_basic_1 = require('../x64/codegen-basic');
+var _ = ui_1.create();
+_.func('main', function (_) {
+    var a = _.var();
+    _.assign(a, 25);
+    var isTrue = _.var();
+    _.cmp(isTrue, a, 2, ui_1.COND.NE);
+    var lblTrue = _.lbl();
+    var lblFalse = _.lbl();
+    var lblContinue = _.lbl();
+    _.br(isTrue, lblTrue, lblFalse);
+    _.label(lblTrue);
+    _.assign(a, 1);
+    _.jmp(lblContinue);
+    _.label(lblFalse);
+    _.assign(a, 0);
+    _.label(lblContinue);
+});
+console.log(_.toString());
+var codegen = new codegen_basic_1.BasicUnitCodegen(_.unit);
+codegen.translate();
+console.log(_.toString());
+codegen.mc.compile();
+console.log(codegen.mc.toString());

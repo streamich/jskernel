@@ -1,12 +1,17 @@
 {
   "name": "full-js",
   "version": "1.0.0",
-  "description": "node standard library in pure JavaScript",
+  "description": "Node.js standard library in pure JavaScript",
   "main": "index.js",
   "bin": "./bin/full",
   "preferGlobal": true,
   "dependencies": {
-    "libjs": "*",
-    "buffer": "4.6.0"
+    "buffer": "4.6.0",
+    "libsys": "*"
+  },
+  "devDependencies": {
+    "webpack": "1.13.1",
+    "webpack-node-externals": "1.3.0",
+    "wrapper-webpack-plugin": "0.1.7"
   }
 }

@@ -1,6 +1,6 @@
-import * as posix from '../posix';
 import * as socket from '../socket';
 import * as defs from '../definitions';
+import * as libjs from '../libjs';
 
 
 class Socket {
@@ -23,7 +23,7 @@ class Socket {
 
     protected poll() { // Executes on every event loop cycle.
         var evbuf = new Buffer(defs.epoll_event.size);
-        var waitres = posix.epoll_wait(this.epfd, evbuf, 1, 0);
+        var waitres = libjs.epoll_wait(this.epfd, evbuf, 1, 0);
         if(waitres > 0) { // New events arrived.
             var event = defs.epoll_event.unpack(evbuf);
             if(!this.connected) {
@@ -35,7 +35,7 @@ class Socket {
             }
             if((event.events & defs.EPOLL_EVENTS.EPOLLIN) > 0) { // Socket received data.
                 var buf = new Buffer(1000);
-                var bytes = posix.read(this.fd, buf);
+                var bytes = libjs.read(this.fd, buf);
                 if(bytes < -1) {
                     this.onerror(Error(`Error reading data: ${bytes}`));
                 }
@@ -55,22 +55,22 @@ class Socket {
     }
 
     create() {
-        this.fd = posix.socket(defs.AF.INET, defs.SOCK.STREAM, 0);
+        this.fd = libjs.socket(defs.AF.INET, defs.SOCK.STREAM, 0);
         if(this.fd < 0) throw Error(`Could not create scoket: ${this.fd}`);
 
         // Socket is not a file, we just created the file descriptor for it, flags
         // for this file descriptor are set to 0 anyways, so we just overwrite 'em.
-        var fcntl = posix.fcntl(this.fd, defs.FCNTL.SETFL, defs.FLAG.O_NONBLOCK);
+        var fcntl = libjs.fcntl(this.fd, defs.FCNTL.SETFL, defs.FLAG.O_NONBLOCK);
         if(fcntl < 0) throw Error(`Could not make socket non-blocking: ${fcntl}`);
 
-        this.epfd = posix.epoll_create1(0);
+        this.epfd = libjs.epoll_create1(0);
         if(this.epfd < 0) throw Error(`Could not start epoll: ${this.epfd}`);
 
         var event: defs.epoll_event = {
             events: defs.EPOLL_EVENTS.EPOLLIN | defs.EPOLL_EVENTS.EPOLLOUT,
             data: [this.fd, 0],
         };
-        var ctl = posix.epoll_ctl(this.epfd, defs.EPOLL_CTL.ADD, this.fd, event);
+        var ctl = libjs.epoll_ctl(this.epfd, defs.EPOLL_CTL.ADD, this.fd, event);
     }
 
     connect(opts: {host: string, port: number}) {
@@ -86,7 +86,7 @@ class Socket {
             },
             sin_zero: [0, 0, 0, 0, 0, 0, 0, 0],
         };
-        var res = posix.connect(this.fd, addr_in);
+        var res = libjs.connect(this.fd, addr_in);
 
         // Everything is OK, we are connecting...
         if(res == -defs.ERROR.EINPROGRESS) {
@@ -108,7 +108,7 @@ class Socket {
 
     write(data) {
         var buf = new Buffer(data + '\0');
-        var res = posix.write(this.fd, buf);
+        var res = libjs.write(this.fd, buf);
         return res;
     }
 }

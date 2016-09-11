@@ -1,6 +1,6 @@
 "use strict";
 var libjs = require('../libjs');
-var sys = require('../sys');
+var sys = require('../node_modules/libsys/index');
 // mmap(0, size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 var filepath = '/share/jskernel-posix/examples/read.txt';
 // var fd = libjs.open(filepath, posix.OFLAG.O_RDONLY);

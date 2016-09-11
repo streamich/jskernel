@@ -12,3 +12,15 @@ if (fd > -1) {
 else {
     console.log('Error: ', fd);
 }
+libjs.openAsync(filepath, 0 /* O_RDONLY */, null, function (fd) {
+    if (fd > -1) {
+        var buf = new Buffer(1024);
+        libjs.readAsync(fd, buf, function (bytes_read) {
+            console.log('Bytes read: ', bytes_read);
+            console.log(buf.toString().substr(0, bytes_read));
+        });
+    }
+    else {
+        console.log('Error: ', fd);
+    }
+});

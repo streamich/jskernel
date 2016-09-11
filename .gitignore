@@ -5,4 +5,5 @@ node_modules/
 /libjs/types
 /libsys/build
 /node
+/js.js
 

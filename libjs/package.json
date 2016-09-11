@@ -1,7 +1,7 @@
 {
   "name": "libjs",
   "description": "POSIX/libc functions implemented in JavaScript",
-  "version": "1.0.12",
+  "version": "2.0.1",
   "main": "libjs.js",
   "keywords": [
     "libc",
@@ -30,7 +30,9 @@
     "libsys": "*",
     "debug": "*"
   },
+  "typings": "./libjs.d.ts",
   "scripts": {
-    "docs": "docco --output ./docs --layout linear libjs.ts platforms/linux_x86_64/types.ts"
+    "docs": "docco --output ./docs --layout linear libjs.ts platforms/linux_x86_64/types.ts",
+    "typing": "tsc --removeComments -d libjs.ts"
   }
 }

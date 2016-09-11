@@ -1,4 +1,5 @@
 
+declare var process;
 function noop() {}
 
 function createFakeAsyncs(fs: any) {

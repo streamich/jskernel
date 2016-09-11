@@ -19,9 +19,9 @@ function toNumber(num) {
 }
 var File = (function () {
     function File() {
-        this.is64 = true; // 64-bit file
-        this.isLE = true; // Little-endian
-        this.t = t64l; // t64l, t64b, t32l, or t32b
+        this.is64 = true;
+        this.isLE = true;
+        this.t = t64l;
         this.fh = new FileHeader(this);
         this.sh = [];
         this.ph = [];
@@ -34,27 +34,27 @@ var File = (function () {
         function setLE(tl, tb) {
             if (littleEndian) {
                 file.isLE = true;
-                file.fh.data.ident[5 /* DATA */] = 1 /* ELFDATA2LSB */;
+                file.fh.data.ident[5] = 1;
                 file.t = tl;
             }
             else {
                 file.isLE = false;
-                file.fh.data.ident[5 /* DATA */] = 2 /* ELFDATA2MSB */;
+                file.fh.data.ident[5] = 2;
                 file.t = tb;
             }
         }
         if (bits === 64) {
             file.is64 = true;
-            hdata.ident[4 /* CLASS */] = 2 /* ELFCLASS64 */;
+            hdata.ident[4] = 2;
             setLE(t64l, t64b);
         }
         else {
             file.is64 = false;
-            hdata.ident[4 /* CLASS */] = 1 /* ELFCLASS32 */;
+            hdata.ident[4] = 1;
             setLE(t32l, t32b);
         }
-        hdata.type = 2 /* EXEC */; // executable
-        hdata.machine = 62; // TODO: machine
+        hdata.type = 2;
+        hdata.machine = 62;
         hdata.entry = 4195456;
         return file;
     };
@@ -88,7 +88,6 @@ var File = (function () {
         }
         return size;
     };
-    // Calcualte section header and program header offsets once all data sizes are known.
     File.prototype.calculateOffsets = function () {
         var offset = this.fh.type.size;
         if (this.ph.length) {
@@ -147,7 +146,7 @@ var File = (function () {
             elf: arch + "-bit ELF file",
             fileHeader: this.fh.toJson(),
             sectionHeaders: [],
-            programHeaders: []
+            programHeaders: [],
         };
         for (var _i = 0, _a = this.sh; _i < _a.length; _i++) {
             var sh = _a[_i];
@@ -209,7 +208,7 @@ var FileHeader = (function (_super) {
             phnum: 0,
             shentsize: 0,
             shnum: 0,
-            shstrndx: 0
+            shstrndx: 0,
         };
     }
     FileHeader.prototype.write = function (ptr) {
@@ -222,25 +221,25 @@ var FileHeader = (function (_super) {
             (ptr.buf[ptr.off + 3] !== 0x46))
             throw Error('Invalid magic bytes 0x7F, E, L, F.');
         var parseEndiannes = (function (tl, tb) {
-            var endiannes = new t.Variable(t64l.char, ptr.offset(5 /* DATA */)).unpack();
-            if (endiannes === 1 /* ELFDATA2LSB */) {
+            var endiannes = new t.Variable(t64l.char, ptr.offset(5)).unpack();
+            if (endiannes === 1) {
                 this.file.isLE = true;
                 this.file.t = tl;
             }
-            else if (endiannes === 2 /* ELFDATA2MSB */) {
+            else if (endiannes === 2) {
                 this.file.isLE = false;
                 this.file.t = tb;
             }
             else
                 throw Error('Invalid indent[DATA] field.');
         }).bind(this);
-        var arch = new t.Variable(t64l.char, ptr.offset(4 /* CLASS */)).unpack();
+        var arch = new t.Variable(t64l.char, ptr.offset(4)).unpack();
         switch (arch) {
-            case 2 /* ELFCLASS64 */:
+            case 2:
                 this.file.is64 = true;
                 parseEndiannes(t64l, t64b);
                 break;
-            case 1 /* ELFCLASS32 */:
+            case 1:
                 this.file.is64 = false;
                 parseEndiannes(t32l, t32b);
                 break;
@@ -252,61 +251,61 @@ var FileHeader = (function (_super) {
     };
     FileHeader.prototype.validateMagicBytes = function () {
         var ident = this.data.ident;
-        if (ident[0 /* MAG0 */] != 0x7F)
+        if (ident[0] != 0x7F)
             return false;
-        if (ident[1 /* MAG1 */] != 0x45)
-            return false; // E
-        if (ident[2 /* MAG2 */] != 0x4C)
-            return false; // L
-        if (ident[3 /* MAG3 */] != 0x46)
-            return false; // F
+        if (ident[1] != 0x45)
+            return false;
+        if (ident[2] != 0x4C)
+            return false;
+        if (ident[3] != 0x46)
+            return false;
         return true;
     };
     FileHeader.prototype.toJson = function () {
         var ident = {};
         var json = { ident: ident };
-        switch (this.data.ident[4 /* CLASS */]) {
-            case 1 /* ELFCLASS32 */:
+        switch (this.data.ident[4]) {
+            case 1:
                 ident['class'] = '32-bit objects';
                 break;
-            case 2 /* ELFCLASS64 */:
+            case 2:
                 ident['class'] = '64-bit objects';
                 break;
         }
-        switch (this.data.ident[5 /* DATA */]) {
-            case 1 /* ELFDATA2LSB */:
+        switch (this.data.ident[5]) {
+            case 1:
                 ident['data'] = 'little-endian';
                 break;
-            case 2 /* ELFDATA2MSB */:
+            case 2:
                 ident['data'] = 'big-endian';
                 break;
         }
-        switch (this.data.ident[7 /* OSABI */]) {
-            case 0 /* ELFOSABI_SYSV */:
+        switch (this.data.ident[7]) {
+            case 0:
                 ident['osabi'] = 'System V ABI';
                 break;
-            case 1 /* ELFOSABI_HPUX */:
+            case 1:
                 ident['osabi'] = 'HP-UX operating system';
                 break;
-            case 255 /* ELFOSABI_STANDALONE */:
+            case 255:
                 ident['osabi'] = 'Standalone (embedded) application';
                 break;
-            default: ident['osabi'] = this.data.ident[7 /* OSABI */];
+            default: ident['osabi'] = this.data.ident[7];
         }
         switch (this.data.type) {
-            case 0 /* NONE */:
+            case 0:
                 json.type = 'No file type';
                 break;
-            case 1 /* REL */:
+            case 1:
                 json.type = 'Relocatable object file';
                 break;
-            case 2 /* EXEC */:
+            case 2:
                 json.type = 'Executable file';
                 break;
-            case 3 /* DYN */:
+            case 3:
                 json.type = 'Shared object file';
                 break;
-            case 4 /* CORE */:
+            case 4:
                 json.type = 'Core file';
                 break;
             default:
@@ -364,51 +363,51 @@ var SectionHeader = (function (_super) {
     SectionHeader.prototype.toJson = function () {
         var json = { name: this.getName() };
         switch (this.data.type) {
-            case 0 /* NULL */:
+            case 0:
                 json.type = 'NULL';
                 json.typeInfo = 'Marks an unused section header';
                 break;
-            case 1 /* PROGBITS */:
+            case 1:
                 json.type = 'PROGBITS';
                 json.typeInfo = 'Contains information defined by the program';
                 break;
-            case 2 /* SYMTAB */:
+            case 2:
                 json.type = 'SYMTAB';
                 json.typeInfo = 'Contains a linker symbol table';
                 break;
-            case 3 /* STRTAB */:
+            case 3:
                 json.type = 'STRTAB';
                 json.typeInfo = 'Contains a string table';
                 break;
-            case 4 /* RELA */:
+            case 4:
                 json.type = 'RELA';
                 json.typeInfo = 'Contains "Rela" type relocation entries';
                 break;
-            case 5 /* HASH */:
+            case 5:
                 json.type = 'HASH';
                 json.typeInfo = 'Contains a symbol hash table';
                 break;
-            case 6 /* DYNAMIC */:
+            case 6:
                 json.type = 'DYNAMIC';
                 json.typeInfo = 'Contains dynamic linking tables';
                 break;
-            case 7 /* NOTE */:
+            case 7:
                 json.type = 'NOTE';
                 json.typeInfo = 'Contains note information';
                 break;
-            case 8 /* NOBITS */:
+            case 8:
                 json.type = 'NOBITS';
                 json.typeInfo = 'Contains uninitialized space';
                 break;
-            case 9 /* REL */:
+            case 9:
                 json.type = 'REl';
                 json.typeInfo = 'Contains "Rel" type relocation entries';
                 break;
-            case 10 /* SHLIB */:
+            case 10:
                 json.type = 'SHLIB';
                 json.typeInfo = 'Reserved';
                 break;
-            case 11 /* DYNSYM */:
+            case 11:
                 json.type = 'DYNSYM';
                 json.typeInfo = 'Contains a dynamic loader symbol table';
                 break;
@@ -437,7 +436,7 @@ var ProgramHeader = (function (_super) {
             paddr: 0,
             size: 0,
             memsz: 0,
-            align: 0
+            align: 0,
         };
     }
     return ProgramHeader;

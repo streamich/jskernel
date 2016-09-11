@@ -1,0 +1,89 @@
+
+
+var css = .btn {
+	border: 1px solid red;
+	text-align: "center";
+}
+
+
+React.apply(css);
+
+{
+	'.btn': {
+		border: '1px solid red',
+		'text-align': '"center"',
+	}
+}
+
+function(css) {
+	return css({
+		'.btn': {
+			border: '1px solid red',
+			'text-align': '"center"',
+		}
+	});
+}
+
+
+export class Toolbar extends React.Componenet {
+	render() {
+		return (
+			<div className="test">
+				Hello World
+			</div>
+		);
+	}
+}
+
+h('div', {className: 'test'}, 'Hello World');
+
+function(h, p) {
+	return h('div', {className: 'test'}, 'Hello World');
+}
+
+
+
+var cfunc = (
+	int max(int a, int b) {
+		if(a > b) return a;
+		else return b;
+	}
+);
+
+
+function(_) {
+	_.func(_.t.int, 'max', [_.t.int, _.t.int], ['a', 'b'], _ => {
+		if(a['>'](b), _ => {
+			_.return(a);
+		}, _ => {
+			_.return(b);
+		});
+	});
+}
+
+
+var sb = cfunc.compile();
+
+sb.call([1, 2]);
+
+var assembly = (
+	mov rax, [rbp + 16]
+	add rax, rbx
+	ret
+);
+
+function(_) {
+	_('mov', [_.o.rax, _.o.rbp.disp(16)]);
+	_('add', [_.o.rax, _.o.rbx]);
+	_('ret');
+}
+
+
+var max = .c`
+	int max(int a, int b) {
+		if(a > b) return a;
+		else return b;
+	}
+`;
+
+

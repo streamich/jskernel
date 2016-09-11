@@ -1,5 +1,6 @@
 
-export var syscalls: any = {
+// TODO: put this in one file with `types`
+export var SYS = {
     // https://filippo.io/linux-syscall-table/
     // Linux:
     // apt-get install man manpages-dev

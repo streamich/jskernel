@@ -11,8 +11,8 @@ var serv_addr = {
     },
     sin_zero: [0, 0, 0, 0, 0, 0, 0, 0]
 };
-libjs.bind(fd, serv_addr);
-libjs.listen(fd, 10);
+// libjs.bind(fd, serv_addr);
+// libjs.listen(fd, 10);
 var client_addr_buf = new Buffer(defs.sockaddr_in.size);
 var sock = libjs.accept(fd, client_addr_buf);
 setInterval(function () {

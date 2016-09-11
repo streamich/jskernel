@@ -1,6 +1,6 @@
 "use strict";
 var libjs = require('../libjs');
-var sys = require('../sys');
+var sys = require('../node_modules/libsys/index');
 var key = 6566;
 var shmid = libjs.shmget(key, 1024, 512 /* CREAT */ | 438); // 438 = 0666
 // var shmid = libjs.shmget(key, 1024, libjs.IPC.CREAT);

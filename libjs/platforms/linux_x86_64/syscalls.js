@@ -1,5 +1,6 @@
 "use strict";
-exports.syscalls = {
+// TODO: put this in one file with `types`
+exports.SYS = {
     // https://filippo.io/linux-syscall-table/
     // Linux:
     // apt-get install man manpages-dev

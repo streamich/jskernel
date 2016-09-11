@@ -1,5 +1,5 @@
 {
-  "name": "elf",
+  "name": "elf-js",
   "description": "ELF file reader/writer",
   "version": "1.0.0",
   "keywords": [
