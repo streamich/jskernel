@@ -1,5 +1,3 @@
-![](FULL.gif)
-
 # FULL.js
 
 **What?** Node.js clone in pure JavaScript.
