@@ -1,20 +1,5 @@
 # jskernel
 
-## Repository Contents
-
- - `libsys` -- syscall function module for Node.js.
- - `static-buffer` -- `StaticBuffer` and `StaticArrayBuffer` implementations.
- - `typebase` -- basic *struct* reader/writer into/from `Buffer`.
- - `libjs` -- syscall wrapper.
- - `fslib` -- `require('fs')` implementation.
- - `libaio` -- Wrapper around asynchronous system calls.
- - `ass-js` -- Assembler.js, x86 assembler.
- - `cpuid` -- basic utility to work with `cpuid` system call from JavaScript.
- - `elf` -- ELF file reader/writer.
- - `f1` -- JavaScript runtime written in JavaScript that compiles JavaScript to machine code.
- - `full-js` -- Drop-in Node.js replacement, written in pure JavaScript.
- - `jsc` -- Write C in JavaScript and JIT compile.
-
 ## Proposal
 
 The Node.js exo-kernel dream: this is a proposal to create a JavaScript exo-kernel
@@ -249,8 +234,20 @@ Next time just do:
     docker start myjskernel
     docker exec -it myjskernel bash
     
-Typings:
 
-    tsd install node
+## Repository Contents
+
+ - `libsys` -- syscall function module for Node.js.
+ - `static-buffer` -- `StaticBuffer` and `StaticArrayBuffer` implementations.
+ - `typebase` -- basic *struct* reader/writer into/from `Buffer`.
+ - `libjs` -- syscall wrapper.
+ - `fslib` -- `require('fs')` implementation.
+ - `libaio` -- Wrapper around asynchronous system calls.
+ - `ass-js` -- Assembler.js, x86 assembler.
+ - `cpuid` -- basic utility to work with `cpuid` system call from JavaScript.
+ - `elf` -- ELF file reader/writer.
+ - `f1` -- JavaScript runtime written in JavaScript that compiles JavaScript to machine code.
+ - `full-js` -- Drop-in Node.js replacement, written in pure JavaScript.
+ - `jsc` -- Write C in JavaScript and JIT compile.
     
     
